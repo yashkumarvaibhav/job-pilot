@@ -46,6 +46,31 @@ describe("migrateDatabase", () => {
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
       ).toEqual({ count: 1 });
+
+      for (const indexName of [
+        "settings_workspace_idx",
+        "activity_event_workspace_id_id_unique",
+        "activity_event_workspace_at_idx",
+        "activity_event_workspace_entity_idx",
+      ]) {
+        const columns = client.sqlite
+          .prepare(
+            "select name from pragma_index_info(?) order by seqno",
+          )
+          .all(indexName) as { name: string }[];
+        expect(columns[0]?.name, indexName).toBe("workspace_id");
+      }
+
+      const activityForeignKeys = client.sqlite
+        .prepare(
+          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('activity_event')",
+        )
+        .all();
+      expect(activityForeignKeys).toContainEqual({
+        table: "workspace",
+        from: "workspace_id",
+        to: "id",
+      });
     } finally {
       client.close();
     }
