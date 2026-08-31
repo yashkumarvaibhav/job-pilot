@@ -1,9 +1,14 @@
 import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import {
+  type BetterSQLite3Database,
+  drizzle,
+} from "drizzle-orm/better-sqlite3";
+
+import * as schema from "./schema";
 
 export const SQLITE_BUSY_TIMEOUT_MS = 5_000;
 
-export type AppDatabase = ReturnType<typeof drizzle>;
+export type AppDatabase = BetterSQLite3Database<typeof schema>;
 
 export type DatabaseClient = {
   db: AppDatabase;
@@ -24,7 +29,7 @@ export function openDatabase(databasePath: string): DatabaseClient {
     sqlite.pragma(`busy_timeout = ${SQLITE_BUSY_TIMEOUT_MS}`);
 
     return {
-      db: drizzle(sqlite),
+      db: drizzle(sqlite, { schema }),
       sqlite,
       close: () => sqlite.close(),
     };
