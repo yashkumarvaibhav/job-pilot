@@ -1,6 +1,8 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnySQLiteColumn,
   check,
+  foreignKey,
   index,
   integer,
   sqliteTable,
@@ -35,6 +37,42 @@ export const workspace = sqliteTable(
     uniqueIndex("workspace_owner_user_id_unique").on(table.ownerUserId),
   ],
 );
+
+type WorkspaceEntityColumns = {
+  id: AnySQLiteColumn;
+  workspaceId: AnySQLiteColumn;
+};
+
+export function workspaceOwnedEntityColumns() {
+  return {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+  };
+}
+
+export function workspaceEntityKey(
+  tableName: string,
+  columns: WorkspaceEntityColumns,
+) {
+  return uniqueIndex(`${tableName}_workspace_id_id_unique`).on(
+    columns.workspaceId,
+    columns.id,
+  );
+}
+
+export function sameWorkspaceForeignKey(
+  name: string,
+  child: { workspaceId: AnySQLiteColumn; parentId: AnySQLiteColumn },
+  parent: WorkspaceEntityColumns,
+) {
+  return foreignKey({
+    name,
+    columns: [child.workspaceId, child.parentId],
+    foreignColumns: [parent.workspaceId, parent.id],
+  });
+}
 
 export const settings = sqliteTable(
   "settings",
@@ -124,10 +162,7 @@ export const accountToken = sqliteTable(
 export const activityEvent = sqliteTable(
   "activity_event",
   {
-    id: text("id").primaryKey(),
-    workspaceId: text("workspace_id")
-      .notNull()
-      .references(() => workspace.id, { onDelete: "cascade" }),
+    ...workspaceOwnedEntityColumns(),
     at: utcInstant("at").notNull(),
     kind: text("kind").notNull(),
     entityType: text("entity_type").notNull(),
@@ -138,10 +173,7 @@ export const activityEvent = sqliteTable(
       .default(sql`'{}'`),
   },
   (table) => [
-    uniqueIndex("activity_event_workspace_id_id_unique").on(
-      table.workspaceId,
-      table.id,
-    ),
+    workspaceEntityKey("activity_event", table),
     index("activity_event_workspace_at_idx").on(table.workspaceId, table.at),
     index("activity_event_workspace_entity_idx").on(
       table.workspaceId,
