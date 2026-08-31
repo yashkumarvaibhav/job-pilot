@@ -1,0 +1,37 @@
+import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
+
+import { ThemeToggle } from "@/components/theme-toggle";
+import { currentTenant } from "@/server/auth/current-session";
+
+/**
+ * Account access has no rail and stays at the comfortable density (UIUX.md).
+ * A signed-in visitor has no business here, so send them to Today.
+ */
+export default async function AccountAccessLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  if (await currentTenant()) {
+    redirect("/");
+  }
+
+  return (
+    <div className="auth-shell">
+      <header className="auth-topbar">
+        <span className="brand-lockup">
+          <span aria-hidden="true" className="brand-mark" />
+          <span className="brand-wordmark">
+            <strong>Job Pilot</strong>
+            <small>Off-campus</small>
+          </span>
+        </span>
+        <ThemeToggle />
+      </header>
+      <main className="auth-main" id="main-content" tabIndex={-1}>
+        {children}
+      </main>
+    </div>
+  );
+}

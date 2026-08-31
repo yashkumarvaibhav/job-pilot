@@ -9,6 +9,7 @@ import {
   railItems,
   routeIsActive,
 } from "@/lib/navigation";
+import { SignOutButton } from "./sign-out-button";
 import { ThemeToggle } from "./theme-toggle";
 
 function MobileIcon({ icon }: { icon: (typeof mobileItems)[number]["icon"] }) {
@@ -79,6 +80,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="tnum">0</span>
           </Link>
           <ThemeToggle />
+          <SignOutButton className="btn btn--ghost topbar-sign-out" />
         </div>
       </header>
 

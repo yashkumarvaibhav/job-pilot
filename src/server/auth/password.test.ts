@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  hashPassword,
-  isAcceptablePassword,
-  PASSWORD_MAX_LENGTH,
-  PASSWORD_MIN_LENGTH,
-  verifyPassword,
-} from "./password";
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/lib/account";
+import { hashPassword, isAcceptablePassword, verifyPassword } from "./password";
 
 describe("hashPassword", () => {
   it("encodes the algorithm, parameters, salt and derived key", async () => {

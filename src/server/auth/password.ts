@@ -1,6 +1,8 @@
 import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@/lib/account";
+
 const deriveKey = promisify(scrypt) as (
   password: string,
   salt: Buffer,
@@ -18,9 +20,6 @@ const BLOCK_SIZE = 8;
 const PARALLELISM = 1;
 const KEY_LENGTH = 64;
 const SALT_LENGTH = 16;
-
-export const PASSWORD_MIN_LENGTH = 12;
-export const PASSWORD_MAX_LENGTH = 200;
 
 export function isAcceptablePassword(password: string): boolean {
   return (

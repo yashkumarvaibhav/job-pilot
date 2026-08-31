@@ -1,13 +1,7 @@
 /**
- * Copy shared by the account-access screens and their routes. Login and
- * signup answer with one message each so neither becomes an address oracle
- * (§62, D-035); JP-0048 adds rate limiting behind the same wording.
+ * Request parsing for the account-access routes. The user-facing copy lives in
+ * `src/lib/account.ts` so the forms and the routes cannot drift apart.
  */
-export const SIGNUP_FAILED_MESSAGE =
-  "Could not create that account. Check your details and try again.";
-export const LOGIN_FAILED_MESSAGE = "Email or password not recognised";
-export const REQUEST_FAILED_MESSAGE = "Something went wrong. Try again.";
-
 export type Credentials = {
   email: string;
   password: string;

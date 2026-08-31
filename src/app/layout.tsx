@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Script from "next/script";
-import { AppShell } from "@/components/app-shell";
+import type { ReactNode } from "react";
 import "./globals.css";
 
 const themeBootstrap = `
@@ -18,7 +18,11 @@ export const metadata: Metadata = {
   description: "A personal operating system for an off-campus job search.",
 };
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
@@ -34,7 +38,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <a className="skip-link" href="#main-content">
           Skip to content
         </a>
-        <AppShell>{children}</AppShell>
+        {children}
       </body>
     </html>
   );

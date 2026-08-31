@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 
+import { LOGIN_FAILED_MESSAGE } from "@/lib/account";
 import { authenticateAccount } from "@/server/auth/accounts";
 import { establishSession } from "@/server/auth/current-session";
-import { LOGIN_FAILED_MESSAGE, readCredentials } from "@/server/auth/http";
+import { readCredentials } from "@/server/auth/http";
 import { getDatabase } from "@/server/db/runtime";
 
 export const runtime = "nodejs";

@@ -1,4 +1,6 @@
 import Link from "next/link";
+
+import { SignOutButton } from "@/components/sign-out-button";
 import { railItems } from "@/lib/navigation";
 
 const directMobileRoutes = new Set(["/", "/contacts", "/opportunities"]);
@@ -24,6 +26,7 @@ export default function MorePage() {
           ))}
         </ul>
       </nav>
+      <SignOutButton className="btn btn--ghost more-sign-out" />
     </section>
   );
 }

@@ -177,7 +177,7 @@ main:focus {
   color: var(--accent-hover);
 }
 
-#main-content {
+.app-shell > #main-content {
   grid-column: 2;
   grid-row: 2;
   width: min(100%, calc(var(--content-max) + 2 * var(--content-gutter)));
@@ -234,6 +234,178 @@ main:focus {
   background: var(--hover);
 }
 
+/* Kit patterns (brand-kit/patterns.md) — tokens only, no local palette. */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--target-min);
+  padding: var(--pad-control);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background var(--motion-fast) ease,
+    border-color var(--motion-fast) ease;
+}
+
+.btn:hover {
+  background: var(--accent-hover);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn--ghost {
+  border-color: var(--line);
+  background: var(--raised);
+  color: var(--ink);
+}
+
+.btn--ghost:hover {
+  border-color: var(--line-strong);
+  background: var(--hover);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.field label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.field input {
+  width: 100%;
+  min-height: var(--target-min);
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--raised);
+  color: var(--ink);
+}
+
+.field input:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.field-hint {
+  margin: 0;
+  color: var(--faint);
+  font-size: 0.78rem;
+}
+
+/* Errors carry an icon and words, never colour alone. */
+.form-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  color: var(--danger);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.form-alert svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+/* Account access — no rail, comfortable density (UIUX.md). */
+
+.auth-shell {
+  display: grid;
+  grid-template-rows: var(--shell-topbar-height) minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.auth-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--shell-topbar-height);
+  padding-inline: var(--content-gutter);
+  border-bottom: 1px solid var(--line);
+  background: var(--page);
+}
+
+.auth-main {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  padding: var(--space-8) var(--content-gutter);
+}
+
+.auth-card {
+  display: grid;
+  gap: var(--space-3);
+  width: min(100%, 26rem);
+  padding: var(--pad-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--raised);
+}
+
+.auth-card h1 {
+  font-size: var(--h2-size);
+  line-height: var(--h2-leading);
+  letter-spacing: -0.02em;
+}
+
+.auth-lede {
+  margin: 0;
+  color: var(--body);
+  font-family: var(--font-serif);
+}
+
+.auth-form {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-1);
+}
+
+.auth-switch {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+/* Inline, but still a 44px target (AGENTS.md accessibility rules). */
+.auth-switch a {
+  display: inline-block;
+  padding-block: var(--space-3);
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.more-sign-out {
+  justify-self: start;
+  margin-top: var(--space-4);
+}
+
 .mobile-nav {
   display: none;
 }
@@ -252,11 +424,12 @@ main:focus {
     height: calc(var(--shell-brand-mark) - var(--space-1));
   }
 
-  .rail {
+  .rail,
+  .topbar-sign-out {
     display: none;
   }
 
-  #main-content {
+  .app-shell > #main-content {
     grid-column: 1;
     padding: var(--content-gutter-narrow);
     padding-bottom: calc(
