@@ -1,0 +1,21 @@
+# Daily backup and retention sweep.
+#
+# Deliberately independent of job-pilot.service: no Requires=, no PartOf=, and
+# the app unit has no backup ExecStartPre. A routine backup failure is loud in
+# the journal and visible debt, never downtime (D-026).
+
+[Unit]
+Description=Job Pilot daily backup and retention sweep
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/siddhartha/job-pilot/app
+Environment=PATH=/home/siddhartha/.local/bin:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=-/home/siddhartha/job-pilot/app/.env
+# Prune first, and never let it block what follows: an over-budget or nearly
+# full backups directory must not stop the sweep that recovers the space, nor
+# today's snapshot. The budget breach is still printed to the journal.
+ExecStart=-/home/siddhartha/job-pilot/app/bin/backup --prune
+# The unit's own success or failure is then exactly "did today's verified
+# snapshot happen", which is the thing worth reading in the journal.
+ExecStart=/home/siddhartha/job-pilot/app/bin/backup

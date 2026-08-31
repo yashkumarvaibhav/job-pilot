@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Install (or refresh) the Job Pilot user units from deploy/, then verify them.
+# Idempotent, and it neither enables nor starts anything: those are separate,
+# deliberate acts, printed at the end.
+set -euo pipefail
+cd "$(dirname "$(readlink -f "$0")")/.."
+
+dest="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
+mkdir -p "$dest"
+for unit in job-pilot.service job-pilot-backup.service job-pilot-backup.timer; do
+  install -m 0644 "deploy/$unit" "$dest/$unit"
+  echo "installed $dest/$unit"
+done
+
+systemctl --user daemon-reload
+systemd-analyze --user verify "$dest/job-pilot.service" "$dest/job-pilot-backup.service" \
+  "$dest/job-pilot-backup.timer"
+echo "units verified"
+
+cat <<'NEXT'
+
+Next, deliberately:
+  npm run build                                   # with the service stopped
+  systemctl --user enable --now job-pilot.service
+  systemctl --user enable --now job-pilot-backup.timer
+NEXT

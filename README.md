@@ -63,3 +63,23 @@ the sessions and unused account tokens the snapshot carried.
 | --- | --- | --- |
 | `DATABASE_PATH` | `./var/job-pilot.sqlite` | database the tools read and migrate |
 | `BACKUP_BUDGET_MB` | `2048` | size ceiling reported after pruning |
+
+### The service
+
+`deploy/` holds the canonical user units; `bin/install-units` copies them into
+`~/.config/systemd/user`, reloads systemd and verifies them.
+
+```bash
+bin/install-units
+systemctl --user enable --now job-pilot.service        # serves 127.0.0.1:8061
+systemctl --user enable --now job-pilot-backup.timer   # daily backup and sweep
+curl http://127.0.0.1:8061/api/ready                   # {"ok":true}
+```
+
+The app unit runs `npm run db:migrate` before starting, so a schema change is
+always preceded by a verified snapshot while an ordinary restart takes no backup
+at all. The backup timer is independent of the app: a failed backup is loud in
+the journal and never stops the service.
+
+**Never run `npm run build` while `job-pilot.service` is active** — the build
+replaces `.next` underneath the running server. Stop the unit, build, start it.

@@ -1,0 +1,35 @@
+# Job Pilot production service.
+#
+# NEVER run `npm run build` in /home/siddhartha/job-pilot/app while this unit is
+# active: the build replaces `.next` underneath the running server and the site
+# starts serving half a build. Build first with the unit stopped, then start it.
+#
+# Loopback only. The public hostname is a separate, owner-executed Cloudflare
+# ingress change (JP-0019); this unit must never bind 0.0.0.0.
+
+[Unit]
+Description=Job Pilot Next.js app (:8061)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/siddhartha/job-pilot/app
+Environment=NODE_ENV=production
+Environment=PATH=/home/siddhartha/.local/bin:/usr/local/bin:/usr/bin:/bin
+# Gitignored secret file: TOKEN_KEY, CRON_SECRET and the Google client id and
+# secret once they exist. The leading dash keeps the service startable before
+# the owner has written it, which is the state the project is in today.
+EnvironmentFile=-/home/siddhartha/job-pilot/app/.env
+# The only production migration path (D-026). With nothing pending it exits
+# without taking a backup, so an ordinary restart is not coupled to routine
+# backup health; a pending migration takes and verifies a fresh backup
+# immediately before applying anything, and refuses to migrate if it fails.
+ExecStartPre=/home/siddhartha/.local/bin/npm run db:migrate
+ExecStart=/home/siddhartha/.local/bin/npm run start -- --hostname 127.0.0.1 --port 8061
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+
+[Install]
+WantedBy=default.target

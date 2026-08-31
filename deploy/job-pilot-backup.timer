@@ -1,0 +1,11 @@
+# Daily, and catches up after the machine was off (Persistent=true).
+
+[Unit]
+Description=Daily Job Pilot backup
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target
