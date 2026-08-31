@@ -222,6 +222,7 @@
 
   --target-min: 44px;
   --content-max: 1240px;
+  --measure-copy: 38rem;
   --content-gutter: 24px;
   --content-gutter-narrow: 16px;
   --shell-topbar-height: 64px;
