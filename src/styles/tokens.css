@@ -2,9 +2,10 @@
    BRAND KIT — canonical design tokens
    Yash Kumar Vaibhav · single source of truth for every project
 
-   Drop this file in, import it first, and style ONLY through these variables.
-   Never hardcode a hex in component code — if a value you need is missing,
-   add it here as a token rather than inlining it.
+   Drop this file in and style ONLY through these variables. Never hardcode a
+   hex in component code — if a value you need is missing, add it here as a
+   token rather than inlining it. In a Tailwind v4 project import this file
+   AFTER `tailwindcss`; see section 7 and Job Pilot D-041.
 
    Contents
      1. Fonts            self-hosted Newsreader
@@ -345,7 +346,16 @@ h3 { font-size: var(--h3-size); }
    Only needed in Tailwind projects. `inline` makes utilities resolve the LIVE
    custom property, so the runtime theme switch works — without it, utilities
    bake in the light value and dark mode silently breaks.
-   Gives you: bg-page text-ink border-line font-serif rounded-md shadow-sm … */
+   Gives you: bg-page text-ink border-line font-serif rounded-md shadow-sm …
+
+   IMPORT ORDER MATTERS (Job Pilot D-041). The --font-*, --radius-* and
+   --shadow-* keys below are already the canonical token names, so Tailwind
+   emits an unlayered `:root { --font-serif: var(--font-serif); … }` for them.
+   Those declarations reference themselves and are invalid at computed-value
+   time. Import Tailwind FIRST and this file SECOND, so section 2/5 above are
+   the later declarations and win. Reversed, headings lose Newsreader and every
+   radius and shadow silently resolves to nothing. Colour tokens are safe: the
+   bridge names them --color-*, which cannot collide. */
 
 @theme inline {
   --color-brand: var(--brand);

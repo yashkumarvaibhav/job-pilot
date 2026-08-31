@@ -1,5 +1,9 @@
-@import "../styles/tokens.css";
+/* Tailwind first: its `@theme inline` bridge emits `:root { --font-serif: var(--font-serif) }`
+   for every token whose name matches a Tailwind namespace. Imported after the kit those
+   self-references win and blank out the type, radius and shadow scales. Loaded first, the kit's
+   canonical values are the later declaration and survive. */
 @import "tailwindcss";
+@import "../styles/tokens.css";
 
 html,
 body {
