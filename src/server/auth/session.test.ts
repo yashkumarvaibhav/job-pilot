@@ -9,6 +9,7 @@ import {
   SESSION_ABSOLUTE_MS,
   SESSION_IDLE_MS,
   sessionCookieAttributes,
+  sessionCookieIsSecure,
   startSession,
 } from "./session";
 
@@ -181,6 +182,15 @@ describe("revokeSession", () => {
       false,
     );
     expect(revokeSession(fixture.client.db, "", at(3_000))).toBe(false);
+  });
+});
+
+describe("sessionCookieIsSecure", () => {
+  it("is on in production and off everywhere else", () => {
+    expect(sessionCookieIsSecure("production")).toBe(true);
+    expect(sessionCookieIsSecure("development")).toBe(false);
+    expect(sessionCookieIsSecure("test")).toBe(false);
+    expect(sessionCookieIsSecure(undefined)).toBe(false);
   });
 });
 

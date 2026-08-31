@@ -140,6 +140,13 @@ export type SessionCookieAttributes = {
   expires: Date;
 };
 
+/** Secure is on wherever the app is actually served over TLS (§62). */
+export function sessionCookieIsSecure(
+  nodeEnv: string | undefined = process.env.NODE_ENV,
+): boolean {
+  return nodeEnv === "production";
+}
+
 export function sessionCookieAttributes(options: {
   secure: boolean;
   expires: Date;

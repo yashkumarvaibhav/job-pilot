@@ -8,14 +8,11 @@ import {
   revokeSession,
   SESSION_COOKIE_NAME,
   sessionCookieAttributes,
+  sessionCookieIsSecure,
   startSession,
 } from "./session";
 
 export const LOGIN_PATH = "/login";
-
-function cookieIsSecure(): boolean {
-  return process.env.NODE_ENV === "production";
-}
 
 export async function readSessionToken(): Promise<string | undefined> {
   return (await cookies()).get(SESSION_COOKIE_NAME)?.value;
@@ -47,7 +44,7 @@ export async function establishSession(userId: string): Promise<void> {
     SESSION_COOKIE_NAME,
     session.token,
     sessionCookieAttributes({
-      secure: cookieIsSecure(),
+      secure: sessionCookieIsSecure(),
       expires: session.expiresAt,
     }),
   );
