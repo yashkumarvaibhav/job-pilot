@@ -39,7 +39,7 @@ yarn-error.log*
 
 # local development guidance (never tracked)
 /AGENTS.md
-/CLAUDE.md
+/CL?UDE.md
 
 # vercel
 .vercel
