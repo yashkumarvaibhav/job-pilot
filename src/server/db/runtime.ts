@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 
 import { type AppDatabase, type DatabaseClient, openDatabase } from "./client";
-import { productionDatabasePath } from "./migrate";
+import { productionDatabasePath } from "./paths";
 
 /**
  * One process, one connection (D-038). Nothing here migrates: the guarded

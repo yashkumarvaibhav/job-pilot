@@ -9,10 +9,6 @@ export type MigrationOptions = {
   migrationsFolder?: string;
 };
 
-export function productionDatabasePath(appRoot = process.cwd()): string {
-  return resolve(appRoot, "var", "job-pilot.sqlite");
-}
-
 export function migrateDatabase(
   databasePath: string,
   options: MigrationOptions = {},

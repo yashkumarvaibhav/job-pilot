@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { openDatabase } from "./client";
-import { migrateDatabase, productionDatabasePath } from "./migrate";
+import { migrateDatabase } from "./migrate";
 
 describe("migrateDatabase", () => {
   const temporaryDirectories: string[] = [];
@@ -74,11 +74,5 @@ describe("migrateDatabase", () => {
     } finally {
       client.close();
     }
-  });
-
-  it("defines the production location beneath the app root", () => {
-    expect(productionDatabasePath("/srv/job-pilot/app")).toBe(
-      "/srv/job-pilot/app/var/job-pilot.sqlite",
-    );
   });
 });

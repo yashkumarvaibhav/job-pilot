@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { productionDatabasePath } from "./migrate";
+import { productionDatabasePath } from "./paths";
 import { resolveDatabasePath } from "./runtime";
+
+describe("productionDatabasePath", () => {
+  it("sits beneath the app root", () => {
+    expect(productionDatabasePath("/srv/job-pilot/app")).toBe(
+      "/srv/job-pilot/app/var/job-pilot.sqlite",
+    );
+  });
+});
 
 describe("resolveDatabasePath", () => {
   it("prefers an explicit DATABASE_PATH", () => {
