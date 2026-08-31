@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Restore a Job Pilot backup, verifying it table by table.
+# Without --force it refuses to write over the live database.
+set -euo pipefail
+export JOB_PILOT_INVOKED_FROM="$PWD"
+cd "$(dirname "$(readlink -f "$0")")/.."
+exec node scripts/restore-cli.mjs "$@"

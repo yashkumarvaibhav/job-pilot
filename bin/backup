@@ -2,5 +2,6 @@
 # Take a verified backup of the Job Pilot database and its uploads.
 # Runs from anywhere: every path inside is resolved from the application root.
 set -euo pipefail
+export JOB_PILOT_INVOKED_FROM="$PWD"
 cd "$(dirname "$(readlink -f "$0")")/.."
 exec node scripts/backup-cli.mjs "$@"
