@@ -1,11 +1,10 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { join } from "node:path";
 
 import { openDatabase, type DatabaseClient } from "../server/db/client";
 import { createAccountFoundation } from "../server/db/foundation";
+import { migrateDatabase } from "../server/db/migrate";
 import type { TenantContext } from "../server/db/tenant";
 
 type FoundationTable =
@@ -39,13 +38,13 @@ export function createTenantTestFixture(
 ): BaseTenantTestFixture | SeededTenantTestFixture {
   const directory = mkdtempSync(join(tmpdir(), "job-pilot-tenant-"));
   const databasePath = join(directory, "test.sqlite");
-  const client = openDatabase(databasePath);
+  let client: DatabaseClient;
   let disposed = false;
 
   try {
-    migrate(client.db, { migrationsFolder: resolve(process.cwd(), "drizzle") });
+    migrateDatabase(databasePath);
+    client = openDatabase(databasePath);
   } catch (error) {
-    client.close();
     rmSync(directory, { force: true, recursive: true });
     throw error;
   }
