@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { railItems, routeIsActive } from "./navigation";
+import {
+  mobileItems,
+  mobileRouteIsActive,
+  railItems,
+  routeIsActive,
+} from "./navigation";
 
 describe("shell navigation", () => {
   it("keeps the authoritative rail names and routes in order", () => {
@@ -22,5 +27,18 @@ describe("shell navigation", () => {
     expect(routeIsActive("/", "/")).toBe(true);
     expect(routeIsActive("/contacts/person-1", "/contacts")).toBe(true);
     expect(routeIsActive("/contacts", "/")).toBe(false);
+  });
+
+  it("keeps five mobile destinations and groups secondary routes under More", () => {
+    expect(mobileItems.map(({ label }) => label)).toEqual([
+      "Today",
+      "Contacts",
+      "Opportunities",
+      "Add",
+      "More",
+    ]);
+    expect(mobileRouteIsActive("/analytics", "/more")).toBe(true);
+    expect(mobileRouteIsActive("/contacts/person-1", "/more")).toBe(false);
+    expect(mobileRouteIsActive("/contacts/person-1", "/contacts")).toBe(true);
   });
 });
