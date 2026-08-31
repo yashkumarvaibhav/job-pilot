@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Script from "next/script";
+import { AppShell } from "@/components/app-shell";
 import "./globals.css";
 
 const themeBootstrap = `
@@ -33,7 +34,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <a className="skip-link" href="#main-content">
           Skip to content
         </a>
-        {children}
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

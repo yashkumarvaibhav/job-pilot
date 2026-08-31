@@ -211,6 +211,26 @@
   --radius-md: 12px;
   --radius-lg: 16px;
 
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  --target-min: 44px;
+  --content-max: 1240px;
+  --content-gutter: 24px;
+  --content-gutter-narrow: 16px;
+  --shell-topbar-height: 64px;
+  --shell-rail-width: 224px;
+  --shell-brand-mark: 32px;
+  --shell-mobile-nav-height: 72px;
+  --chrome-blur: 16px;
+  --motion-fast: 160ms;
+
   --h1-size: clamp(2.8rem, 4vw, 4.6rem);
   --h1-leading: 0.96;
   --h1-tracking: -0.04em;
