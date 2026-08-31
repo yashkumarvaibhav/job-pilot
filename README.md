@@ -34,3 +34,32 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Operations
+
+Data safety runs from the command line, not from service startup: an ordinary
+restart never depends on backup health, while a schema change cannot happen
+without a verified snapshot behind it.
+
+```bash
+bin/backup                                   # verified snapshot of the database and uploads
+bin/backup --prune                           # expire old generations, then measure what remains
+bin/restore <backup-dir> --into /tmp/x.sqlite  # restore and prove it, without touching production
+npm run db:migrate                           # migrate; backs up first only when something is pending
+npm run backup:selftest                      # back up under a concurrent writer, restore, verify
+```
+
+A snapshot is written with `VACUUM INTO`, so it is one consistent file with no
+`-wal`/`-shm` sidecars and is safe to take while the service is serving.
+`manifest.json` beside it records the schema version, per-table row counts,
+byte sizes and a SHA-256 for every stored document. No environment value is
+ever copied into a backup.
+
+`bin/restore` refuses anything but a fully verified snapshot, and refuses to
+overwrite the live database unless `--force` is given; a forced restore revokes
+the sessions and unused account tokens the snapshot carried.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `DATABASE_PATH` | `./var/job-pilot.sqlite` | database the tools read and migrate |
+| `BACKUP_BUDGET_MB` | `2048` | size ceiling reported after pruning |
