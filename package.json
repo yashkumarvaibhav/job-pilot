@@ -6,6 +6,7 @@
     "dev": "next dev -H 127.0.0.1 -p 3061",
     "build": "next build",
     "start": "next start -H 127.0.0.1 -p 8061",
+    "db:migrate:dev": "node scripts/migrate-dev.mjs",
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest"
