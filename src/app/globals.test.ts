@@ -46,3 +46,21 @@ describe("globals.css import order", () => {
     }
   });
 });
+
+/**
+ * The kit's own first focusable element has to satisfy the kit's own rule.
+ * Padding plus line-height left it 39px tall, five pixels under the 44px
+ * minimum, which a browser pass on 8061 caught during the P00 demo.
+ */
+describe("the skip link is a real touch target", () => {
+  it("declares a 44px minimum height and centres its label", () => {
+    const rule = tokensCss.slice(
+      tokensCss.indexOf(".skip-link {"),
+      tokensCss.indexOf("}", tokensCss.indexOf(".skip-link {")),
+    );
+
+    expect(rule).toContain("min-height: 44px");
+    expect(rule).toContain("display: inline-flex");
+    expect(rule).toContain("align-items: center");
+  });
+});

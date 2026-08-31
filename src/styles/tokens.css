@@ -321,6 +321,11 @@ h3 { font-size: var(--h3-size); }
   left: 0.75rem;
   top: -3rem;
   z-index: 60;
+  /* 44px = minimum touch target. Padding and line-height alone left this at
+     39px, so the kit's own first focusable element failed the kit's own rule. */
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   padding: 0.5rem 0.875rem;
   border-radius: var(--radius-md);
   background: var(--accent);
