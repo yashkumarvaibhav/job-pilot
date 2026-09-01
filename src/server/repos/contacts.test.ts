@@ -89,6 +89,27 @@ describe("contact repository", () => {
     expect(listContacts(fixture.client.db, fixture.tenantB)).toEqual([]);
   });
 
+  it("saves and reloads a contact without a company or opportunity", () => {
+    const fixture = newFixture();
+
+    const created = createContact(fixture.client.db, fixture.tenantA, {
+      id: "independent-contact",
+      name: "Independent Contact",
+      relationship: "alumni",
+      networkingStatus: "ready_to_contact",
+    });
+
+    expect(created).toMatchObject({
+      id: "independent-contact",
+      companyId: null,
+      companyName: null,
+      name: "Independent Contact",
+    });
+    expect(
+      getContact(fixture.client.db, fixture.tenantA, "independent-contact"),
+    ).toEqual(created);
+  });
+
   it("scopes company links and foreign contact ids as not found without activity", () => {
     const fixture = newFixture();
     const privateCompany = createCompany(
