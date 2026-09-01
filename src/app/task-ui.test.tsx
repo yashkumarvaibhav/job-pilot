@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { calendarDateInZone } from "../domain/referral";
 import { createContact, updateContact } from "../server/repos/contacts";
 import { createTask } from "../server/repos/tasks";
 import { createTenantTestFixture } from "../test/tenant-fixture";
@@ -20,7 +21,7 @@ vi.mock("@/server/db/runtime", () => ({
   getDatabase: () => mocks.database,
 }));
 
-import Home from "./(app)/page";
+import Home from "./(app)/(today)/page";
 import TasksPage from "./(app)/tasks/page";
 
 describe("task screens", () => {
@@ -90,18 +91,19 @@ describe("task screens", () => {
 
   it("shows a contact next action and a same-day linked task on Today", async () => {
     const fixture = newFixture();
+    const asOfOn = calendarDateInZone("Asia/Kolkata");
     createContact(fixture.client.db, fixture.tenantA, {
       id: "rahul",
       name: "Rahul Sharma",
     });
     updateContact(fixture.client.db, fixture.tenantA, "rahul", {
       nextAction: "Follow up about Microsoft openings",
-      followUpOn: "2026-09-02",
+      followUpOn: asOfOn,
     });
     createTask(fixture.client.db, fixture.tenantA, {
       id: "task-resume",
       title: "Send resume",
-      dueOn: "2026-09-02",
+      dueOn: asOfOn,
       entityType: "contact",
       entityId: "rahul",
     });
@@ -109,7 +111,8 @@ describe("task screens", () => {
     const html = renderToStaticMarkup(await Home());
     expect(html).toContain("Follow up about Microsoft openings");
     expect(html).toContain("Send resume");
-    expect(html).toContain("Create task");
+    expect(html).toContain("Follow up");
+    expect(html).toContain("Complete");
     expect(html).toContain("Rahul Sharma");
     expect(html).toContain('class="tbl task-table"');
     expect(html).toContain('class="task-card-list"');

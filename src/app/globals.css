@@ -1086,6 +1086,14 @@ main:focus {
   line-height: 1.1;
 }
 
+.today-stat-tiles {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.pipeline-tiles {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
 .company-form-card--edit {
   max-width: 52rem;
 }
@@ -1097,7 +1105,8 @@ main:focus {
 .application-page,
 .referral-page,
 .referral-detail,
-.task-page {
+.task-page,
+.today-page {
   display: grid;
   align-content: start;
   gap: var(--space-8);
@@ -1921,5 +1930,25 @@ main:focus {
 
   .activity-timeline > li {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .today-stat-tiles,
+  .pipeline-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .today-stat-tiles .tile,
+  .pipeline-tiles .tile {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .today-stat-tiles .tile:nth-child(2n),
+  .pipeline-tiles .tile:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .today-stat-tiles .tile:nth-last-child(-n + 2),
+  .pipeline-tiles .tile:nth-last-child(-n + 2) {
+    border-bottom: 0;
   }
 }

@@ -213,9 +213,11 @@ export function TaskCompleteButton({ taskId }: { taskId: string }) {
 }
 
 export function ConvertDueItemButton({
+  label = "Create task",
   sourceKey,
   title,
 }: {
+  label?: string;
   sourceKey: string;
   title: string;
 }) {
@@ -248,13 +250,13 @@ export function ConvertDueItemButton({
   return (
     <span className="task-complete">
       <button
-        aria-label={`Create task: ${title}`}
+        aria-label={`${label}: ${title}`}
         className="btn"
         disabled={pending}
         onClick={() => void convert()}
         type="button"
       >
-        {pending ? "Creating…" : "Create task"}
+        {pending ? "Working…" : label}
       </button>
       {message ? (
         <span className="form-alert" role="alert">

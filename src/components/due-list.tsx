@@ -1,14 +1,28 @@
 import Link from "next/link";
 
-import { ConvertDueItemButton } from "@/components/task-forms";
+import { ConvertDueItemButton, TaskCompleteButton } from "@/components/task-forms";
 import { taskEntityHref } from "@/components/task-status";
+import {
+  TODAY_EMPTY,
+  todayDoNowHeading,
+  todayDoNowVerbForKey,
+} from "@/domain/today";
 import type { DueItem } from "@/server/repos/tasks";
 
-export function DueItemCollection({ rows }: { rows: DueItem[] }) {
+export function DueItemCollection({
+  empty = TODAY_EMPTY,
+  rows,
+}: {
+  empty?: string;
+  rows: DueItem[];
+}) {
   if (rows.length === 0) {
     return (
       <div className="data-state data-state--empty">
-        <p>Nothing due yet. Add a next action or a task to start the loop.</p>
+        <p>{empty}</p>
+        <Link className="btn" href="/add">
+          Add
+        </Link>
       </div>
     );
   }
@@ -21,6 +35,7 @@ export function DueItemCollection({ rows }: { rows: DueItem[] }) {
             <tr>
               <th scope="col">Action</th>
               <th scope="col">Entity</th>
+              <th scope="col">Reason</th>
               <th scope="col">Due</th>
               <th scope="col">Next step</th>
             </tr>
@@ -28,9 +43,10 @@ export function DueItemCollection({ rows }: { rows: DueItem[] }) {
           <tbody>
             {rows.map((row) => {
               const href = taskEntityHref(row.entityType, row.entityId);
+              const verb = todayDoNowVerbForKey(row.sourceKey);
               return (
                 <tr key={row.sourceKey}>
-                  <td>{row.title}</td>
+                  <td>{verb}</td>
                   <td>
                     {href ? (
                       <Link className="table-link" href={href}>
@@ -40,13 +56,17 @@ export function DueItemCollection({ rows }: { rows: DueItem[] }) {
                       row.entityLabel
                     )}
                   </td>
+                  <td>{row.title}</td>
                   <td className="tnum">{row.dueOn ?? "—"}</td>
                   <td>
                     {row.origin === "derived" ? (
                       <ConvertDueItemButton
+                        label={verb}
                         sourceKey={row.sourceKey}
                         title={row.title}
                       />
+                    ) : row.taskId ? (
+                      <TaskCompleteButton taskId={row.taskId} />
                     ) : (
                       "Open task"
                     )}
@@ -60,11 +80,18 @@ export function DueItemCollection({ rows }: { rows: DueItem[] }) {
       <ul aria-label="Due items" className="task-card-list">
         {rows.map((row) => {
           const href = taskEntityHref(row.entityType, row.entityId);
+          const verb = todayDoNowVerbForKey(row.sourceKey);
+          const heading = todayDoNowHeading(
+            row.sourceKey,
+            verb,
+            row.entityLabel,
+          );
           return (
             <li className="task-list-card" key={row.sourceKey}>
               <span className="task-list-card__heading">
-                <strong>{row.title}</strong>
+                <strong>{heading}</strong>
               </span>
+              <span>{row.title}</span>
               <span>
                 {href ? (
                   <Link className="inline-link" href={href}>
@@ -79,9 +106,12 @@ export function DueItemCollection({ rows }: { rows: DueItem[] }) {
               </span>
               {row.origin === "derived" ? (
                 <ConvertDueItemButton
+                  label={verb}
                   sourceKey={row.sourceKey}
                   title={row.title}
                 />
+              ) : row.taskId ? (
+                <TaskCompleteButton taskId={row.taskId} />
               ) : null}
             </li>
           );
