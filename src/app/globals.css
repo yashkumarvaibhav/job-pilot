@@ -1090,6 +1090,161 @@ main:focus {
   max-width: 52rem;
 }
 
+/* Opportunity CRM — compact list, stacked narrow cards, and full field capture. */
+
+.opportunity-page,
+.opportunity-detail {
+  display: grid;
+  align-content: start;
+  gap: var(--space-8);
+}
+
+.opportunity-create-panel {
+  display: contents;
+}
+
+.opportunity-create-panel > .btn,
+.company-required {
+  justify-self: end;
+}
+
+.company-required {
+  display: grid;
+  justify-items: end;
+  gap: var(--space-1);
+}
+
+.company-required p {
+  max-width: 16rem;
+  margin: 0;
+  color: var(--faint);
+  font-size: 0.78rem;
+  text-align: right;
+}
+
+.filter-tabs {
+  display: flex;
+  width: fit-content;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--raised);
+}
+
+.filter-tabs a {
+  display: inline-flex;
+  min-height: var(--target-min);
+  align-items: center;
+  padding-inline: var(--space-4);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.filter-tabs a:hover,
+.filter-tabs a[aria-current="page"] {
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+}
+
+.opportunity-form-card {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: var(--space-3);
+}
+
+.opportunity-form-card > p {
+  max-width: var(--measure-copy);
+  margin: 0;
+  color: var(--muted);
+}
+
+.opportunity-form,
+.opportunity-form-grid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.opportunity-form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.opportunity-form > .btn {
+  justify-self: start;
+}
+
+.opportunity-form-card--edit {
+  max-width: 64rem;
+}
+
+.opportunity-stage-chip {
+  border-color: var(--line-strong);
+  background: transparent;
+  color: var(--accent);
+}
+
+.opportunity-stage-chip svg {
+  width: var(--space-3);
+  height: var(--space-3);
+}
+
+.opportunity-card-list {
+  display: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.opportunity-field-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4) var(--space-8);
+  margin: 0;
+}
+
+.opportunity-field-grid div {
+  min-width: 0;
+}
+
+.opportunity-field-grid dt {
+  color: var(--faint);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.opportunity-field-grid dd {
+  overflow-wrap: anywhere;
+  margin: var(--space-1) 0 0;
+  color: var(--ink);
+}
+
+.inline-link {
+  color: var(--accent);
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+
+.mono-value {
+  font-family: var(--font-mono);
+}
+
+.jd-snapshot {
+  max-width: var(--measure-copy);
+  padding: var(--pad-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--raised);
+  color: var(--body);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
 .skeleton {
   overflow: hidden;
   border-radius: var(--radius-md);
@@ -1187,7 +1342,9 @@ main:focus {
   }
 
   .company-page,
-  .company-detail {
+  .company-detail,
+  .opportunity-page,
+  .opportunity-detail {
     gap: var(--space-6);
   }
 
@@ -1200,8 +1357,23 @@ main:focus {
     justify-self: start;
   }
 
+  .opportunity-create-panel > .btn,
+  .company-required {
+    justify-self: start;
+  }
+
+  .company-required {
+    justify-items: start;
+  }
+
+  .company-required p {
+    text-align: left;
+  }
+
   .company-form-grid,
-  .company-field-grid {
+  .company-field-grid,
+  .opportunity-form-grid,
+  .opportunity-field-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -1209,9 +1381,45 @@ main:focus {
     display: none;
   }
 
+  .opportunity-table-wrap {
+    display: none;
+  }
+
   .company-card-list {
     display: grid;
     gap: var(--space-3);
+  }
+
+  .opportunity-card-list {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .opportunity-list-card {
+    display: grid;
+    min-height: var(--target-min);
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--raised);
+    color: var(--muted);
+    font-size: 0.82rem;
+    text-decoration: none;
+  }
+
+  .opportunity-list-card:hover {
+    border-color: var(--line-strong);
+    background: var(--hover);
+  }
+
+  .opportunity-list-card__heading {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    color: var(--ink);
   }
 
   .company-list-card {

@@ -76,3 +76,11 @@ export function isOpportunitySelectableStage(
 export function isOpportunityBucket(value: unknown): value is OpportunityBucket {
   return typeof value === "string" && opportunityBucketValues.has(value);
 }
+
+export function opportunityStageLabel(value: OpportunityStage): string {
+  return OPPORTUNITY_STAGES.find((stage) => stage.value === value)!.label;
+}
+
+export function opportunityBucketLabel(value: OpportunityBucket): string {
+  return OPPORTUNITY_BUCKETS.find((bucket) => bucket.value === value)!.label;
+}
