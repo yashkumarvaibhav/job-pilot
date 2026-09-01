@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -80,6 +80,9 @@ describe("demo provisioning", () => {
         database.prepare("select count(*) from contact_method where value like '%invalid.test'").pluck().get(),
       ).toBe(1);
       expect(database.pragma("integrity_check", { simple: true })).toBe("ok");
+      expect(statSync(result.databasePath).mode & 0o777).toBe(0o600);
+      expect(statSync(fixture.env.UPLOADS_ROOT!).mode & 0o777).toBe(0o700);
+      expect(statSync(fixture.env.BACKUPS_ROOT!).mode & 0o777).toBe(0o700);
     } finally {
       database.close();
     }

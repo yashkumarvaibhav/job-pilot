@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { randomBytes, scryptSync } from "node:crypto";
-import { mkdirSync, rmSync } from "node:fs";
+import { chmodSync, mkdirSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 
 import Database from "better-sqlite3";
@@ -272,6 +272,13 @@ export function provisionDemo({
   mkdirSync(configuration.uploadsRoot, { recursive: true });
   mkdirSync(configuration.backupsRoot, { recursive: true });
   mkdirSync(configuration.demoRoot, { recursive: true });
+  for (const directory of [
+    configuration.demoRoot,
+    configuration.uploadsRoot,
+    configuration.backupsRoot,
+  ]) {
+    chmodSync(directory, 0o700);
+  }
 
   const sqlite = new Database(configuration.databasePath);
   try {
@@ -283,6 +290,7 @@ export function provisionDemo({
   } finally {
     sqlite.close();
   }
+  chmodSync(configuration.databasePath, 0o600);
 
   return {
     databasePath: configuration.databasePath,
