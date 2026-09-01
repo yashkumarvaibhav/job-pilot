@@ -1,0 +1,4 @@
+Name,Email,Company
+Public Person,same@invalid.test,New Company
+Duplicate Person,SAME@invalid.test,New Company
+,broken@invalid.test,Half Company

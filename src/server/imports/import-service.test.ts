@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createTenantTestFixture } from "../../test/tenant-fixture";
@@ -29,24 +31,32 @@ describe("CSV import apply", () => {
     });
   }
 
+  function fixtureCsv(name: "companies" | "contacts" | "opportunities") {
+    return readFileSync(
+      new URL(`../../test/fixtures/import/${name}.csv`, import.meta.url),
+      "utf8",
+    );
+  }
+
   it("creates valid companies, skips bad and exact duplicate rows, and makes re-import idempotent", () => {
     const fixture = newFixture();
     createCompany(fixture.client.db, fixture.tenantA, { name: "Existing" });
     const request = {
       entitySet: "companies" as const,
-      csv: "Company,Website\nExisting,\nNew Co,https://new.invalid.test\n,https://bad.invalid.test",
-      mapping: { name: "Company", website: "Website" },
+      csv: fixtureCsv("companies"),
+      mapping: { name: "Company", website: "Website", notes: "Notes" },
       createMissingCompanies: false,
     };
     const beforeEvents = fixture.rowCount("activity_event");
 
     expect(apply(fixture, request)).toMatchObject({
       dryRun: false,
-      summary: { created: 1, warned: 0, skipped: 2 },
+      summary: { created: 1, warned: 0, skipped: 3 },
       rows: [
         { line: 2, status: "skipped" },
         { line: 3, status: "created" },
         { line: 4, status: "skipped" },
+        { line: 5, status: "skipped" },
       ],
     });
     expect(fixture.rowCount("company")).toBe(2);
@@ -55,7 +65,7 @@ describe("CSV import apply", () => {
     expect(apply(fixture, request).summary).toEqual({
       created: 0,
       warned: 0,
-      skipped: 3,
+      skipped: 4,
     });
     expect(fixture.rowCount("company")).toBe(2);
   });
@@ -117,16 +127,17 @@ describe("CSV import apply", () => {
 
     const result = apply(fixture, {
       entitySet: "contacts",
-      csv: "Name,Email,Company\nPublic Person,same@invalid.test,New Company\n,broken@invalid.test,Half Company",
+      csv: fixtureCsv("contacts"),
       mapping: { name: "Name", email: "Email", company: "Company" },
       createMissingCompanies: true,
     });
 
     expect(result).toMatchObject({
-      summary: { created: 0, warned: 1, skipped: 1 },
+      summary: { created: 0, warned: 1, skipped: 2 },
       rows: [
         { line: 2, status: "created-with-warning" },
-        { line: 3, status: "skipped", reason: "Contact name is required." },
+        { line: 3, status: "skipped" },
+        { line: 4, status: "skipped", reason: "Contact name is required." },
       ],
     });
     expect(
@@ -158,11 +169,11 @@ describe("CSV import apply", () => {
 
     const common = {
       entitySet: "opportunities" as const,
-      csv: "Company,Role,Job ID\nAcme,Engineer,J-1\nMissing Co,Analyst,J-2",
+      csv: fixtureCsv("opportunities"),
       mapping: { company: "Company", role: "Role", jobId: "Job ID" },
     };
     expect(apply(fixture, { ...common, createMissingCompanies: false })).toMatchObject({
-      summary: { created: 1, warned: 0, skipped: 1 },
+      summary: { created: 1, warned: 0, skipped: 2 },
     });
     expect(
       fixture.client.sqlite
@@ -171,7 +182,7 @@ describe("CSV import apply", () => {
     ).toEqual({ count: 1 });
 
     const warned = apply(fixture, { ...common, createMissingCompanies: true });
-    expect(warned.summary).toEqual({ created: 0, warned: 1, skipped: 1 });
+    expect(warned.summary).toEqual({ created: 0, warned: 1, skipped: 2 });
     expect(warned.rows[1]).toMatchObject({
       line: 3,
       status: "created-with-warning",

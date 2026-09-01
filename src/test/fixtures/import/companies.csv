@@ -1,0 +1,5 @@
+Company,Website,Notes
+Existing,,already stored
+New Co,https://new.invalid.test,"quoted, note"
+New Co,https://new.invalid.test,duplicate in this file
+,https://broken.invalid.test,missing required name
