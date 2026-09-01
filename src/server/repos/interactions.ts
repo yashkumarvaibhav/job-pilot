@@ -10,7 +10,7 @@ import {
 } from "../../domain/interaction";
 import { logEvent } from "../db/activity";
 import type { AppDatabase, AppTransaction } from "../db/client";
-import { company, contact, interaction } from "../db/schema";
+import { company, contact, interaction, opportunity } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
 
 export type Interaction = typeof interaction.$inferSelect;
@@ -123,6 +123,29 @@ function requireOwnedCompany(
   }
 }
 
+function requireOwnedOpportunity(
+  transaction: AppTransaction,
+  tenant: TenantContext,
+  opportunityId: string | null,
+): void {
+  if (opportunityId === null) {
+    return;
+  }
+  const found = transaction
+    .select({ id: opportunity.id })
+    .from(opportunity)
+    .where(
+      and(
+        eq(opportunity.workspaceId, tenant.workspaceId),
+        eq(opportunity.id, opportunityId),
+      ),
+    )
+    .get();
+  if (!found) {
+    throw new InteractionInputError("Opportunity not found.");
+  }
+}
+
 function resolveOpenNeedReply(
   transaction: AppTransaction,
   tenant: TenantContext,
@@ -212,6 +235,7 @@ export function createInteraction(
       );
     }
     requireOwnedCompany(transaction, tenant, companyId);
+    requireOwnedOpportunity(transaction, tenant, opportunityId);
 
     const row = transaction
       .insert(interaction)

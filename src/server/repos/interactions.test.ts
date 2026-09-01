@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createTenantTestFixture } from "../../test/tenant-fixture";
 import { createCompany } from "./companies";
 import { createContact } from "./contacts";
+import { createOpportunity } from "./opportunities";
 import {
   InteractionInputError,
   countUnresolvedNeedReply,
@@ -91,6 +92,15 @@ describe("interaction repository", () => {
 
   it("scopes an opportunity timeline to rows linked to that opportunity", () => {
     const fixture = newFixture();
+    const company = createCompany(fixture.client.db, fixture.tenantA, {
+      id: "company-a",
+      name: "Company A",
+    });
+    const opportunity = createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "sde-182763",
+      companyId: company.id,
+      role: "SDE I",
+    });
     const contact = createContact(fixture.client.db, fixture.tenantA, {
       id: "rahul",
       name: "Rahul Sharma",
@@ -107,7 +117,7 @@ describe("interaction repository", () => {
     createInteraction(fixture.client.db, fixture.tenantA, {
       id: "job-specific",
       contactId: contact.id,
-      opportunityId: "sde-182763",
+      opportunityId: opportunity.id,
       channel: "email",
       direction: "outbound",
       body: "Referral request - SDE I",
@@ -271,6 +281,15 @@ describe("interaction repository", () => {
       companyId: privateCompany.id,
       name: "Private Person",
     });
+    const privateOpportunity = createOpportunity(
+      fixture.client.db,
+      fixture.tenantB,
+      {
+        id: "private-job",
+        companyId: privateCompany.id,
+        role: "Private Role",
+      },
+    );
     const ownContact = createContact(fixture.client.db, fixture.tenantA, {
       id: "own-contact",
       name: "Own Person",
@@ -281,6 +300,15 @@ describe("interaction repository", () => {
       createInteraction(fixture.client.db, fixture.tenantA, {
         contactId: privateContact.id,
         channel: "whatsapp",
+        direction: "outbound",
+        body: "Must not land",
+      }),
+    ).toThrowError(InteractionInputError);
+    expect(() =>
+      createInteraction(fixture.client.db, fixture.tenantA, {
+        contactId: ownContact.id,
+        opportunityId: privateOpportunity.id,
+        channel: "email",
         direction: "outbound",
         body: "Must not land",
       }),
@@ -311,7 +339,7 @@ describe("interaction repository", () => {
       {
         id: "private-log",
         contactId: privateContact.id,
-        opportunityId: "private-job",
+        opportunityId: privateOpportunity.id,
         referralId: "private-referral",
         channel: "email",
         direction: "inbound",
