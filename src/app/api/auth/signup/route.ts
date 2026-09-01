@@ -5,10 +5,21 @@ import { registerAccount } from "@/server/auth/accounts";
 import { establishSession } from "@/server/auth/current-session";
 import { readCredentials } from "@/server/auth/http";
 import { getDatabase } from "@/server/db/runtime";
+import {
+  DEMO_SIGNUP_CLOSED_MESSAGE,
+  isDemoMode,
+} from "@/server/demo-mode";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  if (isDemoMode()) {
+    return NextResponse.json(
+      { error: DEMO_SIGNUP_CLOSED_MESSAGE },
+      { status: 403 },
+    );
+  }
+
   const credentials = await readCredentials(request);
 
   if (!credentials) {

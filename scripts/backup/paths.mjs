@@ -11,7 +11,8 @@ export const DEFAULT_UPLOADS_DIRECTORY = "./var/uploads";
 
 /**
  * Resolve every path the tools touch, relative to the application root.
- * `DATABASE_PATH` is the one env override the app itself already honours.
+ * Deployment-specific roots are explicit env overrides so a synthetic demo
+ * cannot share mutable storage with a private workspace deployment.
  */
 export function resolveBackupPaths(options = {}) {
   const { appRoot = process.cwd(), env = process.env } = options;
@@ -24,7 +25,15 @@ export function resolveBackupPaths(options = {}) {
   return {
     appRoot: root,
     databasePath,
-    backupsRoot: resolve(root, options.backupsRoot ?? DEFAULT_BACKUPS_DIRECTORY),
-    uploadsRoot: resolve(root, options.uploadsRoot ?? DEFAULT_UPLOADS_DIRECTORY),
+    backupsRoot: resolve(
+      root,
+      options.backupsRoot ??
+        env.BACKUPS_ROOT?.trim() ??
+        DEFAULT_BACKUPS_DIRECTORY,
+    ),
+    uploadsRoot: resolve(
+      root,
+      options.uploadsRoot ?? env.UPLOADS_ROOT?.trim() ?? DEFAULT_UPLOADS_DIRECTORY,
+    ),
   };
 }
