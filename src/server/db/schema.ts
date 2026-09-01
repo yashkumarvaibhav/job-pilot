@@ -10,6 +10,12 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
+import {
+  DEFAULT_NETWORKING_STATUS,
+  type ContactMethodKind,
+  type ContactRelationship,
+  type NetworkingStatus,
+} from "../../domain/contact";
 import { DEFAULT_TIME_ZONE } from "./timezone";
 
 const utcInstant = (name: string) => integer(name, { mode: "timestamp_ms" });
@@ -201,5 +207,111 @@ export const company = sqliteTable(
     workspaceEntityKey("company", table),
     index("company_workspace_name_idx").on(table.workspaceId, table.name),
     check("company_name_not_blank", sql`length(trim(${table.name})) > 0`),
+  ],
+);
+
+export const contact = sqliteTable(
+  "contact",
+  {
+    ...workspaceOwnedEntityColumns(),
+    companyId: text("company_id"),
+    name: text("name").notNull(),
+    designation: text("designation"),
+    relationship: text("relationship")
+      .$type<ContactRelationship>()
+      .notNull()
+      .default("unknown_cold_contact"),
+    source: text("source"),
+    location: text("location"),
+    notes: text("notes"),
+    tagsJson: text("tags_json", { mode: "json" })
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'`),
+    preferredContactChannel: text("preferred_contact_channel").$type<
+      ContactMethodKind | null
+    >(),
+    networkingStatus: text("networking_status")
+      .$type<NetworkingStatus>()
+      .notNull()
+      .default(DEFAULT_NETWORKING_STATUS),
+    lastInteractionAt: utcInstant("last_interaction_at"),
+    nextAction: text("next_action"),
+    followUpOn: text("follow_up_on"),
+    createdAt: utcInstant("created_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("contact", table),
+    index("contact_workspace_name_idx").on(table.workspaceId, table.name),
+    index("contact_workspace_company_idx").on(
+      table.workspaceId,
+      table.companyId,
+    ),
+    index("contact_workspace_status_idx").on(
+      table.workspaceId,
+      table.networkingStatus,
+    ),
+    index("contact_workspace_follow_up_idx").on(
+      table.workspaceId,
+      table.followUpOn,
+    ),
+    sameWorkspaceForeignKey(
+      "contact_company_fk",
+      { workspaceId: table.workspaceId, parentId: table.companyId },
+      company,
+    ),
+    check("contact_name_not_blank", sql`length(trim(${table.name})) > 0`),
+    check(
+      "contact_relationship_valid",
+      sql`${table.relationship} in ('friend', 'college_friend', 'alumni', 'employee', 'recruiter', 'hiring_manager', 'former_employee', 'mutual_connection', 'community_contact', 'unknown_cold_contact', 'other')`,
+    ),
+    check(
+      "contact_networking_status_valid",
+      sql`${table.networkingStatus} in ('not_contacted', 'ready_to_contact', 'contacted', 'waiting_for_reply', 'checking_for_openings', 'follow_up_later', 'opening_found', 'referral_discussion', 'referral_promised', 'no_openings_currently', 'keep_in_touch', 'do_not_contact', 'inactive')`,
+    ),
+    check(
+      "contact_preferred_channel_valid",
+      sql`${table.preferredContactChannel} is null or ${table.preferredContactChannel} in ('email', 'linkedin', 'phone', 'whatsapp', 'other')`,
+    ),
+  ],
+);
+
+export const contactMethod = sqliteTable(
+  "contact_method",
+  {
+    ...workspaceOwnedEntityColumns(),
+    contactId: text("contact_id").notNull(),
+    kind: text("kind").$type<ContactMethodKind>().notNull(),
+    value: text("value").notNull(),
+    valueNormalized: text("value_normalized").notNull(),
+    isPrimary: integer("is_primary", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    createdAt: utcInstant("created_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("contact_method", table),
+    index("contact_method_workspace_contact_idx").on(
+      table.workspaceId,
+      table.contactId,
+    ),
+    uniqueIndex("contact_method_workspace_kind_value_unique").on(
+      table.workspaceId,
+      table.kind,
+      table.valueNormalized,
+    ),
+    sameWorkspaceForeignKey(
+      "contact_method_contact_fk",
+      { workspaceId: table.workspaceId, parentId: table.contactId },
+      contact,
+    ).onDelete("cascade"),
+    check(
+      "contact_method_kind_valid",
+      sql`${table.kind} in ('email', 'linkedin', 'phone', 'whatsapp', 'other')`,
+    ),
+    check(
+      "contact_method_value_not_blank",
+      sql`length(trim(${table.value})) > 0 and length(trim(${table.valueNormalized})) > 0`,
+    ),
   ],
 );

@@ -15,6 +15,17 @@ export const CONTACT_RELATIONSHIPS = [
 export type ContactRelationship =
   (typeof CONTACT_RELATIONSHIPS)[number]["value"];
 
+export const CONTACT_METHOD_KINDS = [
+  { value: "email", label: "Email" },
+  { value: "linkedin", label: "LinkedIn" },
+  { value: "phone", label: "Phone" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "other", label: "Other" },
+] as const;
+
+export type ContactMethodKind =
+  (typeof CONTACT_METHOD_KINDS)[number]["value"];
+
 export const NETWORKING_STATUSES = [
   { value: "not_contacted", label: "Not Contacted" },
   { value: "ready_to_contact", label: "Ready to Contact" },
@@ -43,6 +54,9 @@ const networkingStatusValues = new Set<string>(
 const relationshipValues = new Set<string>(
   CONTACT_RELATIONSHIPS.map(({ value }) => value),
 );
+const methodKindValues = new Set<string>(
+  CONTACT_METHOD_KINDS.map(({ value }) => value),
+);
 
 export function isNetworkingStatus(value: unknown): value is NetworkingStatus {
   return typeof value === "string" && networkingStatusValues.has(value);
@@ -52,6 +66,10 @@ export function isContactRelationship(
   value: unknown,
 ): value is ContactRelationship {
   return typeof value === "string" && relationshipValues.has(value);
+}
+
+export function isContactMethodKind(value: unknown): value is ContactMethodKind {
+  return typeof value === "string" && methodKindValues.has(value);
 }
 
 export class NetworkingStatusTransitionError extends Error {
