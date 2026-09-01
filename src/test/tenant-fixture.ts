@@ -16,7 +16,8 @@ type FoundationTable =
   | "activity_event"
   | "company"
   | "contact"
-  | "contact_method";
+  | "contact_method"
+  | "interaction";
 
 type BaseTenantTestFixture = {
   client: DatabaseClient;

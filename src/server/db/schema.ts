@@ -16,6 +16,10 @@ import {
   type ContactRelationship,
   type NetworkingStatus,
 } from "../../domain/contact";
+import type {
+  InteractionChannel,
+  InteractionDirection,
+} from "../../domain/interaction";
 import { DEFAULT_TIME_ZONE } from "./timezone";
 
 const utcInstant = (name: string) => integer(name, { mode: "timestamp_ms" });
@@ -312,6 +316,81 @@ export const contactMethod = sqliteTable(
     check(
       "contact_method_value_not_blank",
       sql`length(trim(${table.value})) > 0 and length(trim(${table.valueNormalized})) > 0`,
+    ),
+  ],
+);
+
+export const interaction = sqliteTable(
+  "interaction",
+  {
+    ...workspaceOwnedEntityColumns(),
+    contactId: text("contact_id"),
+    companyId: text("company_id"),
+    opportunityId: text("opportunity_id"),
+    referralId: text("referral_id"),
+    channel: text("channel").$type<InteractionChannel>().notNull(),
+    direction: text("direction").$type<InteractionDirection>().notNull(),
+    occurredAt: utcInstant("occurred_at").notNull(),
+    body: text("body").notNull().default(""),
+    emailMessageId: text("email_message_id"),
+    requiresReply: integer("requires_reply", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    replyResolvedAt: utcInstant("reply_resolved_at"),
+    createdAt: utcInstant("created_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("interaction", table),
+    index("interaction_workspace_contact_idx").on(
+      table.workspaceId,
+      table.contactId,
+    ),
+    index("interaction_workspace_company_idx").on(
+      table.workspaceId,
+      table.companyId,
+    ),
+    index("interaction_workspace_opportunity_idx").on(
+      table.workspaceId,
+      table.opportunityId,
+    ),
+    index("interaction_workspace_referral_idx").on(
+      table.workspaceId,
+      table.referralId,
+    ),
+    index("interaction_workspace_occurred_idx").on(
+      table.workspaceId,
+      table.occurredAt,
+    ),
+    index("interaction_workspace_need_reply_idx").on(
+      table.workspaceId,
+      table.requiresReply,
+      table.replyResolvedAt,
+    ),
+    sameWorkspaceForeignKey(
+      "interaction_contact_fk",
+      { workspaceId: table.workspaceId, parentId: table.contactId },
+      contact,
+    ),
+    sameWorkspaceForeignKey(
+      "interaction_company_fk",
+      { workspaceId: table.workspaceId, parentId: table.companyId },
+      company,
+    ),
+    check(
+      "interaction_context_present",
+      sql`${table.contactId} is not null or ${table.companyId} is not null or ${table.opportunityId} is not null or ${table.referralId} is not null`,
+    ),
+    check(
+      "interaction_channel_valid",
+      sql`${table.channel} in ('email', 'linkedin_dm', 'linkedin_connection_note', 'whatsapp', 'phone', 'telegram', 'slack_discord', 'company_referral_portal', 'alumni_network', 'college_network', 'in_person', 'other')`,
+    ),
+    check(
+      "interaction_direction_valid",
+      sql`${table.direction} in ('outbound', 'inbound')`,
+    ),
+    check(
+      "interaction_requires_reply_inbound",
+      sql`${table.requiresReply} = false or ${table.direction} = 'inbound'`,
     ),
   ],
 );

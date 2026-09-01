@@ -39,6 +39,7 @@ describe("migrateDatabase", () => {
           "company",
           "contact",
           "contact_method",
+          "interaction",
           "settings",
           "user_account",
           "workspace",
@@ -48,7 +49,7 @@ describe("migrateDatabase", () => {
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 3 });
+      ).toEqual({ count: 4 });
 
       for (const indexName of [
         "company_workspace_id_id_unique",
@@ -61,6 +62,13 @@ describe("migrateDatabase", () => {
         "contact_method_workspace_id_id_unique",
         "contact_method_workspace_contact_idx",
         "contact_method_workspace_kind_value_unique",
+        "interaction_workspace_id_id_unique",
+        "interaction_workspace_contact_idx",
+        "interaction_workspace_company_idx",
+        "interaction_workspace_opportunity_idx",
+        "interaction_workspace_referral_idx",
+        "interaction_workspace_occurred_idx",
+        "interaction_workspace_need_reply_idx",
         "settings_workspace_idx",
         "activity_event_workspace_id_id_unique",
         "activity_event_workspace_at_idx",
@@ -198,6 +206,58 @@ describe("migrateDatabase", () => {
       expect(contactMethodForeignKeys).toEqual([
         { table: "contact", from: "workspace_id", to: "workspace_id" },
         { table: "contact", from: "contact_id", to: "id" },
+      ]);
+
+      const interactionColumns = client.sqlite
+        .prepare(
+          "select name, \"notnull\", dflt_value from pragma_table_info('interaction') order by cid",
+        )
+        .all() as {
+        name: string;
+        notnull: number;
+        dflt_value: string | null;
+      }[];
+      expect(interactionColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "contact_id",
+        "company_id",
+        "opportunity_id",
+        "referral_id",
+        "channel",
+        "direction",
+        "occurred_at",
+        "body",
+        "email_message_id",
+        "requires_reply",
+        "reply_resolved_at",
+        "created_at",
+      ]);
+      expect(
+        interactionColumns.find((column) => column.name === "requires_reply")
+          ?.dflt_value,
+      ).toBe("false");
+      expect(
+        interactionColumns.find((column) => column.name === "body")?.dflt_value,
+      ).toBe("''");
+
+      const interactionContactForeignKeys = client.sqlite
+        .prepare(
+          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('interaction') where \"table\" = 'contact' order by seq",
+        )
+        .all();
+      expect(interactionContactForeignKeys).toEqual([
+        { table: "contact", from: "workspace_id", to: "workspace_id" },
+        { table: "contact", from: "contact_id", to: "id" },
+      ]);
+      const interactionCompanyForeignKeys = client.sqlite
+        .prepare(
+          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('interaction') where \"table\" = 'company' order by seq",
+        )
+        .all();
+      expect(interactionCompanyForeignKeys).toEqual([
+        { table: "company", from: "workspace_id", to: "workspace_id" },
+        { table: "company", from: "company_id", to: "id" },
       ]);
     } finally {
       client.close();
