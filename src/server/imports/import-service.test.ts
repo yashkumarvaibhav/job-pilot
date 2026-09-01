@@ -4,7 +4,7 @@ import { createTenantTestFixture } from "../../test/tenant-fixture";
 import { createCompany } from "../repos/companies";
 import { createContact } from "../repos/contacts";
 import { createOpportunity } from "../repos/opportunities";
-import { executeImport, type ImportRequest } from "./import-service";
+import { executeImport, planImport, type ImportRequest } from "./import-service";
 
 describe("CSV import apply", () => {
   const fixtures: { dispose: () => void }[] = [];
@@ -58,6 +58,49 @@ describe("CSV import apply", () => {
       skipped: 3,
     });
     expect(fixture.rowCount("company")).toBe(2);
+  });
+
+  it("reports later exact duplicates inside one dry-run file", () => {
+    const fixture = newFixture();
+
+    const cases: ImportRequest[] = [
+      {
+        entitySet: "companies",
+        dryRun: true,
+        csv: "Name\nAcme\nAcme",
+        mapping: { name: "Name" },
+        createMissingCompanies: false,
+      },
+      {
+        entitySet: "contacts",
+        dryRun: true,
+        csv: "Name,Email\nOne,SAME@invalid.test\nTwo,same@invalid.test",
+        mapping: { name: "Name", email: "Email" },
+        createMissingCompanies: false,
+      },
+    ];
+    const acme = createCompany(fixture.client.db, fixture.tenantA, {
+      name: "Opportunity Co",
+    });
+    void acme;
+    cases.push({
+      entitySet: "opportunities",
+      dryRun: true,
+      csv: "Company,Role,Job ID\nOpportunity Co,One,J-1\nOpportunity Co,Two,J-1",
+      mapping: { company: "Company", role: "Role", jobId: "Job ID" },
+      createMissingCompanies: false,
+    });
+
+    for (const request of cases) {
+      const result = planImport(fixture.client.db, fixture.tenantA, request);
+      expect(result.rows).toHaveLength(2);
+      expect(result.rows[0].status).toBe("would-create");
+      expect(result.rows[1]).toMatchObject({
+        line: 3,
+        status: "would-skip",
+      });
+      expect(result.rows[1].reason).toContain("earlier CSV row");
+    }
   });
 
   it("imports a contact and missing company in one row without seeing another workspace's email", () => {

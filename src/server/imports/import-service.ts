@@ -479,15 +479,39 @@ export function planImport(
   }
   validateMappedHeaders(document, request);
 
-  const rows = document.rows.map((row) => {
+  const rows: ImportReportRow[] = [];
+  const seenPreviewKeys = new Set<string>();
+  for (const row of document.rows) {
+    let planned =
+      request.entitySet === "companies"
+        ? planCompany(database, tenant, document, row, request.mapping)
+        : request.entitySet === "contacts"
+          ? planContact(database, tenant, document, row, request)
+          : planOpportunity(database, tenant, document, row, request);
+    let previewKey = "";
     if (request.entitySet === "companies") {
-      return planCompany(database, tenant, document, row, request.mapping);
+      previewKey = mapped(document, row, request.mapping, "name");
+    } else if (request.entitySet === "contacts") {
+      previewKey =
+        normalizeEmail(mapped(document, row, request.mapping, "email")) ?? "";
+    } else {
+      const companyName = mapped(document, row, request.mapping, "company");
+      const jobId = mapped(document, row, request.mapping, "jobId");
+      previewKey = companyName && jobId ? `${companyName}\u0000${jobId}` : "";
     }
-    if (request.entitySet === "contacts") {
-      return planContact(database, tenant, document, row, request);
+    if (planned.status !== "would-skip" && previewKey) {
+      if (seenPreviewKeys.has(previewKey)) {
+        planned = report(
+          row.line,
+          "would-skip",
+          "Exact duplicate repeats an earlier CSV row under this phase's declared key.",
+        );
+      } else {
+        seenPreviewKeys.add(previewKey);
+      }
     }
-    return planOpportunity(database, tenant, document, row, request);
-  });
+    rows.push(planned);
+  }
   const summary = { wouldCreate: 0, wouldWarn: 0, wouldSkip: 0 };
   for (const row of rows) {
     if (row.status === "would-create") summary.wouldCreate += 1;
