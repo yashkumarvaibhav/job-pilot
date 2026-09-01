@@ -11,6 +11,8 @@ const TEXT_FIELDS = [
   "type",
   "locations",
   "notes",
+  "nextAction",
+  "nextActionDue",
 ] as const;
 const ALLOWED_FIELDS = new Set<string>(["name", "target", ...TEXT_FIELDS]);
 
@@ -91,6 +93,8 @@ export function companyResponse(company: Company) {
     locations: company.locations,
     target: company.target,
     notes: company.notes,
+    nextAction: company.nextAction,
+    nextActionDue: company.nextActionDue,
     createdAt: company.createdAt.toISOString(),
   };
 }

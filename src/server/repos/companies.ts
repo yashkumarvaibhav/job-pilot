@@ -19,6 +19,8 @@ export type CreateCompanyInput = {
   locations?: string | null;
   target?: boolean;
   notes?: string | null;
+  nextAction?: string | null;
+  nextActionDue?: string | null;
   now?: Date;
 };
 
@@ -33,6 +35,8 @@ export type UpdateCompanyInput = Partial<
     | "locations"
     | "target"
     | "notes"
+    | "nextAction"
+    | "nextActionDue"
   >
 >;
 
@@ -60,6 +64,27 @@ function optionalText(value: string | null | undefined): string | null {
 
   const normalized = value.trim();
   return normalized.length > 0 ? normalized : null;
+}
+
+function optionalDate(
+  value: string | null | undefined,
+  label: string,
+): string | null {
+  const normalized = optionalText(value);
+  if (normalized === null) {
+    return null;
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    throw new CompanyInputError(`${label} must use YYYY-MM-DD.`);
+  }
+  const parsed = new Date(`${normalized}T00:00:00.000Z`);
+  if (
+    Number.isNaN(parsed.valueOf()) ||
+    parsed.toISOString().slice(0, 10) !== normalized
+  ) {
+    throw new CompanyInputError(`${label} must be a real calendar date.`);
+  }
+  return normalized;
 }
 
 function optionalHttpUrl(
@@ -114,6 +139,8 @@ export function createCompanyInTransaction(
       locations: optionalText(input.locations),
       target: input.target ?? false,
       notes: optionalText(input.notes),
+      nextAction: optionalText(input.nextAction),
+      nextActionDue: optionalDate(input.nextActionDue, "Next action due"),
       createdAt: now,
     })
     .returning()
@@ -170,6 +197,13 @@ function updateValues(input: UpdateCompanyInput) {
     values.locations = optionalText(input.locations);
   if (input.target !== undefined) values.target = input.target;
   if (input.notes !== undefined) values.notes = optionalText(input.notes);
+  if (input.nextAction !== undefined)
+    values.nextAction = optionalText(input.nextAction);
+  if (input.nextActionDue !== undefined)
+    values.nextActionDue = optionalDate(
+      input.nextActionDue,
+      "Next action due",
+    );
 
   return values;
 }

@@ -68,6 +68,7 @@ export type CreateOpportunityInput = {
   bucket?: OpportunityBucket;
   stage?: OpportunitySelectableStage;
   nextAction?: string | null;
+  nextActionDue?: string | null;
   now?: Date;
 };
 
@@ -98,6 +99,7 @@ export type UpdateOpportunityInput = Partial<
     | "bucket"
     | "stage"
     | "nextAction"
+    | "nextActionDue"
   >
 >;
 
@@ -439,6 +441,7 @@ export function createOpportunityInTransaction(
       bucket: validBucket(input.bucket ?? DEFAULT_OPPORTUNITY_BUCKET),
       stage: validSelectableStage(input.stage ?? DEFAULT_OPPORTUNITY_STAGE),
       nextAction: optionalText(input.nextAction),
+      nextActionDue: optionalDate(input.nextActionDue, "Next action due"),
       createdAt: now,
     })
     .run();
@@ -593,6 +596,11 @@ function updateValues(input: UpdateOpportunityInput) {
     values.stage = validSelectableStage(input.stage);
   if (input.nextAction !== undefined)
     values.nextAction = optionalText(input.nextAction);
+  if (input.nextActionDue !== undefined)
+    values.nextActionDue = optionalDate(
+      input.nextActionDue,
+      "Next action due",
+    );
 
   return values;
 }

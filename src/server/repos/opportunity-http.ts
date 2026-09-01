@@ -28,6 +28,7 @@ const TEXT_FIELDS = [
   "bucket",
   "stage",
   "nextAction",
+  "nextActionDue",
 ] as const;
 const ALLOWED_FIELDS = new Set<string>([
   ...TEXT_FIELDS,
