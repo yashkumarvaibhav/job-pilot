@@ -12,12 +12,13 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:company": "vitest run src/server/db/migrate.test.ts src/server/repos/companies.test.ts src/app/api/companies/company-routes.test.ts src/app/company-ui.test.tsx",
-    "test:contact": "vitest run src/domain/contact.test.ts src/server/db/migrate.test.ts src/server/repos/contacts.test.ts src/app/api/contacts/contact-routes.test.ts",
+    "test:contact": "vitest run src/domain/contact.test.ts src/server/db/migrate.test.ts src/server/repos/contacts.test.ts src/app/api/contacts/contact-routes.test.ts src/app/contact-ui.test.tsx",
     "test:watch": "vitest"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.2",
+    "lucide-react": "^1.38.0",
     "next": "16.3.3",
     "react": "19.2.8",
     "react-dom": "19.2.8"
