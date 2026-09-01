@@ -259,6 +259,8 @@ describe("contact screens", () => {
     expect(html).toContain("opportunity-table");
     expect(html).toContain("opportunity-card-list");
     expect(html).toContain("SDE opening. Job ID 182763");
+    expect(html).toContain("Referral requests");
+    expect(html).toContain("No referral requests for this person yet.");
   });
 
   it("uses one Contact not found state for missing and foreign ids", async () => {

@@ -1094,7 +1094,9 @@ main:focus {
 
 .opportunity-page,
 .opportunity-detail,
-.application-page {
+.application-page,
+.referral-page,
+.referral-detail {
   display: grid;
   align-content: start;
   gap: var(--space-8);
@@ -1167,18 +1169,22 @@ main:focus {
 .opportunity-form,
 .opportunity-form-grid,
 .application-form,
-.application-form-grid {
+.application-form-grid,
+.referral-form,
+.referral-form-grid {
   display: grid;
   gap: var(--space-4);
 }
 
 .opportunity-form-grid,
-.application-form-grid {
+.application-form-grid,
+.referral-form-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .opportunity-form > .btn,
-.application-form > .btn {
+.application-form > .btn,
+.referral-form > .btn {
   justify-self: start;
 }
 
@@ -1209,12 +1215,28 @@ main:focus {
   font-size: 0.78rem;
 }
 
+.referral-stage-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.referral-stage-filter .field {
+  min-width: 12rem;
+}
+
+.referral-stage-filter .btn {
+  min-height: var(--target-min);
+}
+
 .application-block {
   scroll-margin-top: calc(var(--target-min) + var(--space-8));
 }
 
 .opportunity-card-list,
-.application-card-list {
+.application-card-list,
+.referral-card-list {
   display: none;
   margin: 0;
   padding: 0;
@@ -1396,7 +1418,9 @@ main:focus {
   .company-detail,
   .opportunity-page,
   .opportunity-detail,
-  .application-page {
+  .application-page,
+  .referral-page,
+  .referral-detail {
     gap: var(--space-6);
   }
 
@@ -1430,7 +1454,8 @@ main:focus {
   .company-field-grid,
   .opportunity-form-grid,
   .opportunity-field-grid,
-  .application-form-grid {
+  .application-form-grid,
+  .referral-form-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -1439,7 +1464,8 @@ main:focus {
   }
 
   .opportunity-table-wrap,
-  .application-table-wrap {
+  .application-table-wrap,
+  .referral-table-wrap {
     display: none;
   }
 
@@ -1449,13 +1475,15 @@ main:focus {
   }
 
   .opportunity-card-list,
-  .application-card-list {
+  .application-card-list,
+  .referral-card-list {
     display: grid;
     gap: var(--space-3);
   }
 
   .opportunity-list-card,
-  .application-list-card {
+  .application-list-card,
+  .referral-list-card {
     display: grid;
     min-height: var(--target-min);
     gap: var(--space-2);
@@ -1469,13 +1497,15 @@ main:focus {
   }
 
   .opportunity-list-card:hover,
-  .application-list-card:hover {
+  .application-list-card:hover,
+  .referral-list-card:hover {
     border-color: var(--line-strong);
     background: var(--hover);
   }
 
   .opportunity-list-card__heading,
-  .application-list-card__heading {
+  .application-list-card__heading,
+  .referral-list-card__heading {
     display: flex;
     min-width: 0;
     align-items: center;

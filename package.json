@@ -20,6 +20,7 @@
     "test:opportunity": "vitest run src/domain/opportunity.test.ts src/server/db/migrate.test.ts src/server/repos/opportunities.test.ts src/app/api/opportunities/opportunity-routes.test.ts src/app/opportunity-ui.test.tsx",
     "test:opportunity-contact": "vitest run src/server/db/migrate.test.ts src/server/repos/opportunity-contacts.test.ts src/app/api/opportunities/opportunity-contact-routes.test.ts src/app/contact-ui.test.tsx src/app/opportunity-ui.test.tsx",
     "test:application": "vitest run src/domain/application.test.ts src/server/db/migrate.test.ts src/server/repos/applications.test.ts src/app/api/applications/application-routes.test.ts src/app/application-ui.test.tsx src/app/opportunity-ui.test.tsx",
+    "test:referral": "vitest run src/domain/referral.test.ts src/server/db/migrate.test.ts src/server/repos/referrals.test.ts src/app/api/referrals/referral-routes.test.ts src/app/referral-ui.test.tsx src/app/opportunity-ui.test.tsx src/app/contact-ui.test.tsx",
     "test:watch": "vitest"
   },
   "dependencies": {

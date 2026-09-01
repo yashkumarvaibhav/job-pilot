@@ -146,6 +146,15 @@ export function transitionReferralStage(
   return next;
 }
 
+export function calendarDateInZone(timeZone: string, now = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+}
+
 export function shiftCalendarDate(value: string, days: number): string {
   const parsed = new Date(`${value}T00:00:00.000Z`);
   parsed.setUTCDate(parsed.getUTCDate() + days);

@@ -10,6 +10,8 @@ import {
 } from "@/components/application-status";
 import { LinkContactForm } from "@/components/opportunity-contact-forms";
 import { OpportunityEditForm } from "@/components/opportunity-form";
+import { ReferralCreateForm } from "@/components/referral-forms";
+import { ReferralCollection } from "@/components/referral-list";
 import { requireTenant } from "@/server/auth/current-session";
 import { getWorkspaceSettings } from "@/server/db/foundation";
 import { getDatabase } from "@/server/db/runtime";
@@ -20,6 +22,8 @@ import {
   getOpportunity,
   listOpportunityContacts,
 } from "@/server/repos/opportunities";
+import { listReferrals } from "@/server/repos/referrals";
+import { calendarDateInZone } from "@/domain/referral";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -78,13 +82,19 @@ export default async function OpportunityDetailPage({ params }: Props) {
   }).format(new Date());
   const linkedContacts = listOpportunityContacts(database, tenant, row.id);
   const linkedIds = new Set(linkedContacts.map((item) => item.contactId));
-  const linkableContacts = listContacts(database, tenant)
+  const allContacts = listContacts(database, tenant);
+  const linkableContacts = allContacts
     .filter((item) => !linkedIds.has(item.id))
     .map((item) => ({
       id: item.id,
       name: item.name,
       companyName: item.companyName,
     }));
+  const asOfOn = calendarDateInZone(timeZone);
+  const referrals = listReferrals(database, tenant, {
+    asOfOn,
+    opportunityId: row.id,
+  });
   const fields = [
     ["Job ID", row.jobId],
     ["Job URL", row.url],
@@ -197,6 +207,39 @@ export default async function OpportunityDetailPage({ params }: Props) {
           </>
         )}
         <LinkContactForm contacts={linkableContacts} opportunityId={row.id} />
+      </section>
+      <section
+        aria-labelledby="opportunity-referrals"
+        className="detail-section"
+      >
+        <h2 id="opportunity-referrals">Referral requests</h2>
+        <ReferralCollection
+          empty="No referral requests for this opening yet."
+          labelledBy="opportunity-referrals"
+          rows={referrals}
+        />
+        {allContacts.length === 0 ? (
+          <p className="section-empty">
+            Add a contact before asking for a referral.
+          </p>
+        ) : (
+          <ReferralCreateForm
+            contacts={allContacts.map(({ id: contactId, name }) => ({
+              id: contactId,
+              name,
+            }))}
+            defaultOpportunityId={row.id}
+            defaultRequestedOn={asOfOn}
+            defaultStage="requested"
+            opportunities={[
+              {
+                id: row.id,
+                role: row.role,
+                companyName: row.companyName,
+              },
+            ]}
+          />
+        )}
       </section>
       <section
         aria-labelledby="application-heading"

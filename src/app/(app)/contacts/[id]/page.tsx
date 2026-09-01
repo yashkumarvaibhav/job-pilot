@@ -15,6 +15,8 @@ import {
   MarkRepliedButton,
 } from "@/components/interaction-form";
 import { FromConversationPanel } from "@/components/opportunity-contact-forms";
+import { ReferralCreateForm } from "@/components/referral-forms";
+import { ReferralCollection } from "@/components/referral-list";
 import { RolledUpStageChip } from "@/components/application-status";
 import {
   formatInteractionOccurredAt,
@@ -27,7 +29,9 @@ import { DEFAULT_TIME_ZONE } from "@/server/db/timezone";
 import { listCompanies } from "@/server/repos/companies";
 import { getContact } from "@/server/repos/contacts";
 import { listInteractions } from "@/server/repos/interactions";
-import { listContactOpportunities } from "@/server/repos/opportunities";
+import { listContactOpportunities, listOpportunities } from "@/server/repos/opportunities";
+import { listReferrals } from "@/server/repos/referrals";
+import { calendarDateInZone } from "@/domain/referral";
 
 type ContactDetailPageProps = { params: Promise<{ id: string }> };
 
@@ -73,6 +77,18 @@ export default async function ContactDetailPage({
   const timeZone =
     getWorkspaceSettings(database, tenant, tenant.workspaceId)?.timezone ??
     DEFAULT_TIME_ZONE;
+  const asOfOn = calendarDateInZone(timeZone);
+  const referrals = listReferrals(database, tenant, {
+    asOfOn,
+    contactId: contact.id,
+  });
+  const opportunityOptions = listOpportunities(database, tenant, "all").map(
+    (row) => ({
+      id: row.id,
+      role: row.role,
+      companyName: row.companyName,
+    }),
+  );
   return (
     <article className="contact-detail">
       <Link className="back-link" href="/contacts">
@@ -293,6 +309,25 @@ export default async function ContactDetailPage({
             </ul>
           </>
         )}
+      </section>
+
+      <section
+        aria-labelledby="contact-referrals"
+        className="detail-section"
+      >
+        <h2 id="contact-referrals">Referral requests</h2>
+        <ReferralCollection
+          empty="No referral requests for this person yet."
+          labelledBy="contact-referrals"
+          rows={referrals}
+        />
+        <ReferralCreateForm
+          contacts={[{ id: contact.id, name: contact.name }]}
+          defaultContactId={contact.id}
+          defaultRequestedOn={asOfOn}
+          defaultStage="requested"
+          opportunities={opportunityOptions}
+        />
       </section>
 
       <section aria-labelledby="edit-contact" className="detail-section">

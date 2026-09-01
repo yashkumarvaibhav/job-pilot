@@ -4,6 +4,7 @@ import { createTenantTestFixture } from "../../test/tenant-fixture";
 import { createCompany } from "./companies";
 import { createContact } from "./contacts";
 import { createOpportunity } from "./opportunities";
+import { createReferral } from "./referrals";
 import {
   InteractionInputError,
   countUnresolvedNeedReply,
@@ -294,6 +295,12 @@ describe("interaction repository", () => {
       id: "own-contact",
       name: "Own Person",
     });
+    createReferral(fixture.client.db, fixture.tenantB, {
+      id: "private-referral",
+      contactId: privateContact.id,
+      opportunityId: privateOpportunity.id,
+      channel: "email",
+    });
     const before = fixture.rowCount("activity_event");
 
     expect(() =>
@@ -317,6 +324,15 @@ describe("interaction repository", () => {
       createInteraction(fixture.client.db, fixture.tenantA, {
         contactId: ownContact.id,
         companyId: privateCompany.id,
+        channel: "email",
+        direction: "outbound",
+        body: "Must not land",
+      }),
+    ).toThrowError(InteractionInputError);
+    expect(() =>
+      createInteraction(fixture.client.db, fixture.tenantA, {
+        contactId: ownContact.id,
+        referralId: "private-referral",
         channel: "email",
         direction: "outbound",
         body: "Must not land",

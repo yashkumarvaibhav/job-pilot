@@ -129,6 +129,9 @@ describe("opportunity screens", () => {
     expect(html).toContain("Mark applied");
     expect(html).toContain("Pursuit stage");
     expect(html).toContain('id="application"');
+    expect(html).toContain("Referral requests");
+    expect(html).toContain("No referral requests for this opening yet.");
+    expect(html).toContain("Add a contact before asking for a referral.");
   });
 
   it("lists a linked contact and the remaining picker on opportunity detail", async () => {
