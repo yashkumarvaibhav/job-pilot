@@ -57,6 +57,26 @@ describe("import route", () => {
     });
   });
 
+  it("allows an authenticated workspace to import in public application mode", async () => {
+    newFixture();
+    process.env.JOB_PILOT_DEPLOYMENT_MODE = "public";
+
+    const response = await POST(
+      request({
+        entitySet: "companies",
+        dryRun: true,
+        csv: "Name\nPublic Workspace Company",
+        mapping: { name: "Name" },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      dryRun: true,
+      summary: { wouldCreate: 1, wouldWarn: 0, wouldSkip: 0 },
+    });
+  });
+
   function newFixture() {
     const fixture = createTenantTestFixture();
     fixtures.push(fixture);

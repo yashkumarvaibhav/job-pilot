@@ -63,4 +63,22 @@ describe("demo authentication surfaces", () => {
       error: "Public account creation is closed for this demo.",
     });
   });
+
+  it("renders ordinary account access in public application mode", () => {
+    process.env.JOB_PILOT_DEPLOYMENT_MODE = "public";
+
+    const loginHtml = renderToStaticMarkup(<LoginPage />);
+    const signupHtml = renderToStaticMarkup(<SignupPage />);
+
+    expect(loginHtml).toContain("Job Pilot keeps one private workspace for each account.");
+    expect(loginHtml).toContain("No account yet?");
+    expect(loginHtml).toContain("Create account");
+    expect(loginHtml).not.toContain("Demo environment");
+
+    expect(signupHtml).toContain("Create account");
+    expect(signupHtml).toContain("Email");
+    expect(signupHtml).toContain("Password");
+    expect(signupHtml).toContain("Confirm password");
+    expect(signupHtml).not.toContain("Public account creation is closed");
+  });
 });

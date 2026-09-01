@@ -23,6 +23,7 @@ function safeDemoEnvironment(overrides: Record<string, string> = {}) {
 describe("demo deployment safety", () => {
   it("enables demo behaviour only for the explicit deployment mode", () => {
     expect(isDemoMode({ JOB_PILOT_DEPLOYMENT_MODE: "demo" })).toBe(true);
+    expect(isDemoMode({ JOB_PILOT_DEPLOYMENT_MODE: "public" })).toBe(false);
     expect(isDemoMode({ JOB_PILOT_DEPLOYMENT_MODE: "production" })).toBe(false);
     expect(isDemoMode({})).toBe(false);
   });
