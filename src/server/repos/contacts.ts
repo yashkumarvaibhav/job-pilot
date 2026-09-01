@@ -306,51 +306,54 @@ export function createContact(
   tenant: TenantContext,
   input: CreateContactInput,
 ): ContactDetail {
+  return database.transaction((transaction) =>
+    createContactInTransaction(transaction, tenant, input),
+  );
+}
+
+export function createContactInTransaction(
+  transaction: AppTransaction,
+  tenant: TenantContext,
+  input: CreateContactInput,
+): ContactDetail {
   const id = input.id ?? randomUUID();
   const now = input.now ?? new Date();
   const methods = prepareMethods(input.methods);
-
-  database.transaction((transaction) => {
-    const companyId = optionalText(input.companyId);
-    requireOwnedCompany(transaction, tenant, companyId);
-    transaction
-      .insert(contact)
-      .values({
-        id,
-        workspaceId: tenant.workspaceId,
-        companyId,
-        name: requiredName(input.name),
-        designation: optionalText(input.designation),
-        relationship: relationship(
-          input.relationship ?? "unknown_cold_contact",
-        ),
-        source: optionalText(input.source),
-        location: optionalText(input.location),
-        notes: optionalText(input.notes),
-        tagsJson: normalizedTags(input.tags),
-        preferredContactChannel:
-          input.preferredContactChannel === undefined
-            ? null
-            : preferredChannel(input.preferredContactChannel),
-        networkingStatus: status(
-          input.networkingStatus ?? DEFAULT_NETWORKING_STATUS,
-        ),
-        lastInteractionAt: validInstant(input.lastInteractionAt),
-        nextAction: optionalText(input.nextAction),
-        followUpOn: validFollowUpOn(input.followUpOn),
-        createdAt: now,
-      })
-      .run();
-    insertMethods(transaction, tenant, id, methods, now);
-    logEvent(transaction, tenant, {
-      at: now,
-      kind: "CONTACT_CREATED",
-      entityType: "contact",
-      entityId: id,
-    });
+  const companyId = optionalText(input.companyId);
+  requireOwnedCompany(transaction, tenant, companyId);
+  transaction
+    .insert(contact)
+    .values({
+      id,
+      workspaceId: tenant.workspaceId,
+      companyId,
+      name: requiredName(input.name),
+      designation: optionalText(input.designation),
+      relationship: relationship(input.relationship ?? "unknown_cold_contact"),
+      source: optionalText(input.source),
+      location: optionalText(input.location),
+      notes: optionalText(input.notes),
+      tagsJson: normalizedTags(input.tags),
+      preferredContactChannel:
+        input.preferredContactChannel === undefined
+          ? null
+          : preferredChannel(input.preferredContactChannel),
+      networkingStatus: status(input.networkingStatus ?? DEFAULT_NETWORKING_STATUS),
+      lastInteractionAt: validInstant(input.lastInteractionAt),
+      nextAction: optionalText(input.nextAction),
+      followUpOn: validFollowUpOn(input.followUpOn),
+      createdAt: now,
+    })
+    .run();
+  insertMethods(transaction, tenant, id, methods, now);
+  logEvent(transaction, tenant, {
+    at: now,
+    kind: "CONTACT_CREATED",
+    entityType: "contact",
+    entityId: id,
   });
 
-  return getContact(database, tenant, id)!;
+  return getContact(transaction, tenant, id)!;
 }
 
 export function listContacts(
@@ -374,7 +377,7 @@ export function listContacts(
 }
 
 export function getContact(
-  database: AppDatabase,
+  database: AppDatabase | AppTransaction,
   tenant: TenantContext,
   id: string,
 ): ContactDetail | undefined {

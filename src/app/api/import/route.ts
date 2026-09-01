@@ -5,7 +5,7 @@ import { getDatabase } from "@/server/db/runtime";
 import {
   ImportInputError,
   importFields,
-  planImport,
+  executeImport,
   readEntitySet,
   readImportBody,
   readMappingBody,
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
 
   try {
     const body: unknown = await request.json();
-    return NextResponse.json(planImport(getDatabase(), tenant, readImportBody(body)));
+    return NextResponse.json(executeImport(getDatabase(), tenant, readImportBody(body)));
   } catch (error) {
     if (error instanceof ImportInputError || error instanceof SyntaxError) {
       return NextResponse.json(

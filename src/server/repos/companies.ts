@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq } from "drizzle-orm";
 
 import { logEvent } from "../db/activity";
-import type { AppDatabase } from "../db/client";
+import type { AppDatabase, AppTransaction } from "../db/client";
 import { company } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
 
@@ -89,37 +89,44 @@ export function createCompany(
   tenant: TenantContext,
   input: CreateCompanyInput,
 ): Company {
+  return database.transaction((transaction) =>
+    createCompanyInTransaction(transaction, tenant, input),
+  );
+}
+
+export function createCompanyInTransaction(
+  transaction: AppTransaction,
+  tenant: TenantContext,
+  input: CreateCompanyInput,
+): Company {
   const id = input.id ?? randomUUID();
   const now = input.now ?? new Date();
+  const created = transaction
+    .insert(company)
+    .values({
+      id,
+      workspaceId: tenant.workspaceId,
+      name: requiredName(input.name),
+      website: optionalHttpUrl(input.website, "Website"),
+      careersUrl: optionalHttpUrl(input.careersUrl, "Careers URL"),
+      industry: optionalText(input.industry),
+      type: optionalText(input.type),
+      locations: optionalText(input.locations),
+      target: input.target ?? false,
+      notes: optionalText(input.notes),
+      createdAt: now,
+    })
+    .returning()
+    .get();
 
-  return database.transaction((transaction) => {
-    const created = transaction
-      .insert(company)
-      .values({
-        id,
-        workspaceId: tenant.workspaceId,
-        name: requiredName(input.name),
-        website: optionalHttpUrl(input.website, "Website"),
-        careersUrl: optionalHttpUrl(input.careersUrl, "Careers URL"),
-        industry: optionalText(input.industry),
-        type: optionalText(input.type),
-        locations: optionalText(input.locations),
-        target: input.target ?? false,
-        notes: optionalText(input.notes),
-        createdAt: now,
-      })
-      .returning()
-      .get();
-
-    logEvent(transaction, tenant, {
-      at: now,
-      kind: "COMPANY_CREATED",
-      entityType: "company",
-      entityId: created.id,
-    });
-
-    return created;
+  logEvent(transaction, tenant, {
+    at: now,
+    kind: "COMPANY_CREATED",
+    entityType: "company",
+    entityId: created.id,
   });
+
+  return created;
 }
 
 export function listCompanies(

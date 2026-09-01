@@ -400,7 +400,7 @@ function contactHasLoggedOpening(
   );
 }
 
-function writeOpportunity(
+export function createOpportunityInTransaction(
   transaction: AppTransaction,
   tenant: TenantContext,
   input: CreateOpportunityInput,
@@ -497,7 +497,7 @@ export function createOpportunity(
   input: CreateOpportunityInput,
 ): OpportunityListItem {
   return database.transaction((transaction) =>
-    writeOpportunity(transaction, tenant, input),
+    createOpportunityInTransaction(transaction, tenant, input),
   );
 }
 
@@ -776,7 +776,7 @@ export function createOpportunityFromConversation(
 
     const companyId =
       optionalText(input.companyId) ?? ownedContact.companyId ?? "";
-    const created = writeOpportunity(transaction, tenant, {
+      const created = createOpportunityInTransaction(transaction, tenant, {
       id: input.id,
       companyId,
       role: input.role,

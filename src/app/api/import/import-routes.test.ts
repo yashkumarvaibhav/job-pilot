@@ -177,17 +177,32 @@ describe("import route", () => {
     });
   });
 
+  it("applies valid rows and continues past a malformed row", async () => {
+    const fixture = newFixture();
+    const beforeEvents = fixture.rowCount("activity_event");
+    const response = await POST(
+      request({
+        entitySet: "companies",
+        dryRun: false,
+        csv: "Company\nCreated Co\n",
+        mapping: { name: "Company" },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      dryRun: false,
+      summary: { created: 1, warned: 0, skipped: 0 },
+    });
+    expect(fixture.rowCount("company")).toBe(1);
+    expect(fixture.rowCount("activity_event") - beforeEvents).toBe(1);
+  });
+
   it("rejects implicit mappings, writes, unknown fields and malformed CSV", async () => {
     const fixture = newFixture();
 
     for (const body of [
       { entitySet: "companies", dryRun: true, csv: "Name\nAcme" },
-      {
-        entitySet: "companies",
-        dryRun: false,
-        csv: "Name\nAcme",
-        mapping: { name: "Name" },
-      },
       {
         entitySet: "companies",
         dryRun: true,

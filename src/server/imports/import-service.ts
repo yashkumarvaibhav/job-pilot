@@ -12,9 +12,24 @@ import {
   isOpportunitySelectableStage,
 } from "../../domain/opportunity";
 import { normalizeEmail } from "../auth/email";
-import type { AppDatabase } from "../db/client";
+import type { AppDatabase, AppTransaction } from "../db/client";
 import { company, contactMethod, opportunity } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
+import {
+  CompanyInputError,
+  createCompanyInTransaction,
+  type CreateCompanyInput,
+} from "../repos/companies";
+import {
+  ContactInputError,
+  createContactInTransaction,
+  type CreateContactInput,
+} from "../repos/contacts";
+import {
+  createOpportunityInTransaction,
+  OpportunityInputError,
+  type CreateOpportunityInput,
+} from "../repos/opportunities";
 
 export const IMPORT_ENTITY_SETS = [
   "companies",
@@ -103,6 +118,18 @@ export type ImportPlan = {
     wouldSkip: number;
   };
   rows: ImportReportRow[];
+};
+
+export type ImportApplyResult = {
+  entitySet: ImportEntitySet;
+  dryRun: false;
+  duplicateCheck: string;
+  summary: { created: number; warned: number; skipped: number };
+  rows: Array<{
+    line: number;
+    status: "created" | "created-with-warning" | "skipped";
+    reason: string;
+  }>;
 };
 
 export class ImportInputError extends Error {
@@ -269,7 +296,7 @@ function validateMappedHeaders(document: CsvDocument, request: ImportRequest) {
 }
 
 function planCompany(
-  database: AppDatabase,
+  database: AppDatabase | AppTransaction,
   tenant: TenantContext,
   document: CsvDocument,
   row: CsvRow,
@@ -301,7 +328,7 @@ function planCompany(
 }
 
 function companyByName(
-  database: AppDatabase,
+  database: AppDatabase | AppTransaction,
   tenant: TenantContext,
   name: string,
 ) {
@@ -313,7 +340,7 @@ function companyByName(
 }
 
 function planContact(
-  database: AppDatabase,
+  database: AppDatabase | AppTransaction,
   tenant: TenantContext,
   document: CsvDocument,
   row: CsvRow,
@@ -368,7 +395,7 @@ function planContact(
 }
 
 function planOpportunity(
-  database: AppDatabase,
+  database: AppDatabase | AppTransaction,
   tenant: TenantContext,
   document: CsvDocument,
   row: CsvRow,
@@ -474,4 +501,191 @@ export function planImport(
         ? "Exact normalized contact email within your workspace; rows without email are warned."
         : "Exact company and job ID within your workspace; rows without job ID are warned.";
   return { entitySet: request.entitySet, dryRun: true, duplicateCheck, summary, rows };
+}
+
+function companyInput(
+  document: CsvDocument,
+  row: CsvRow,
+  mapping: Record<string, string>,
+): CreateCompanyInput {
+  return {
+    name: mapped(document, row, mapping, "name"),
+    website: mapped(document, row, mapping, "website"),
+    careersUrl: mapped(document, row, mapping, "careersUrl"),
+    industry: mapped(document, row, mapping, "industry"),
+    type: mapped(document, row, mapping, "type"),
+    locations: mapped(document, row, mapping, "locations"),
+    target: booleanValue(mapped(document, row, mapping, "target")) ?? false,
+    notes: mapped(document, row, mapping, "notes"),
+  };
+}
+
+function contactInput(
+  document: CsvDocument,
+  row: CsvRow,
+  mapping: Record<string, string>,
+  companyId: string | null,
+): CreateContactInput {
+  const email = mapped(document, row, mapping, "email");
+  const relationship = mapped(document, row, mapping, "relationship");
+  const networkingStatus = mapped(document, row, mapping, "networkingStatus");
+  return {
+    companyId,
+    name: mapped(document, row, mapping, "name"),
+    designation: mapped(document, row, mapping, "designation"),
+    relationship: relationship
+      ? (relationship as CreateContactInput["relationship"])
+      : undefined,
+    source: mapped(document, row, mapping, "source"),
+    location: mapped(document, row, mapping, "location"),
+    notes: mapped(document, row, mapping, "notes"),
+    networkingStatus: networkingStatus
+      ? (networkingStatus as CreateContactInput["networkingStatus"])
+      : undefined,
+    nextAction: mapped(document, row, mapping, "nextAction"),
+    followUpOn: mapped(document, row, mapping, "followUpOn"),
+    methods: email
+      ? [{ kind: "email", value: email, isPrimary: true }]
+      : [],
+  };
+}
+
+function opportunityInput(
+  document: CsvDocument,
+  row: CsvRow,
+  mapping: Record<string, string>,
+  companyId: string,
+): CreateOpportunityInput {
+  const interestScore = mapped(document, row, mapping, "interestScore");
+  const bucket = mapped(document, row, mapping, "bucket");
+  const stage = mapped(document, row, mapping, "stage");
+  return {
+    companyId,
+    role: mapped(document, row, mapping, "role"),
+    jobId: mapped(document, row, mapping, "jobId"),
+    url: mapped(document, row, mapping, "url"),
+    location: mapped(document, row, mapping, "location"),
+    workMode: mapped(document, row, mapping, "workMode"),
+    employmentType: mapped(document, row, mapping, "employmentType"),
+    experienceRequirement: mapped(document, row, mapping, "experienceRequirement"),
+    source: mapped(document, row, mapping, "source"),
+    discoveredOn: mapped(document, row, mapping, "discoveredOn"),
+    postedOn: mapped(document, row, mapping, "postedOn"),
+    deadlineOn: mapped(document, row, mapping, "deadlineOn"),
+    compensation: mapped(document, row, mapping, "compensation"),
+    priority: mapped(document, row, mapping, "priority"),
+    interestScore: interestScore ? Number(interestScore) : null,
+    eligibility: mapped(document, row, mapping, "eligibility"),
+    referralPreferred:
+      booleanValue(mapped(document, row, mapping, "referralPreferred")) ?? false,
+    jdSnapshot: mapped(document, row, mapping, "jdSnapshot"),
+    notes: mapped(document, row, mapping, "notes"),
+    bucket: bucket ? (bucket as CreateOpportunityInput["bucket"]) : undefined,
+    stage: stage ? (stage as CreateOpportunityInput["stage"]) : undefined,
+    nextAction: mapped(document, row, mapping, "nextAction"),
+  };
+}
+
+function duplicateCheck(entitySet: ImportEntitySet): string {
+  return entitySet === "companies"
+    ? "Exact company name within your workspace."
+    : entitySet === "contacts"
+      ? "Exact normalized contact email within your workspace; rows without email are warned."
+      : "Exact company and job ID within your workspace; rows without job ID are warned.";
+}
+
+export function executeImport(
+  database: AppDatabase,
+  tenant: TenantContext,
+  request: ImportRequest,
+): ImportPlan | ImportApplyResult {
+  if (request.dryRun) return planImport(database, tenant, request);
+  let document: CsvDocument;
+  try {
+    document = parseCsv(request.csv);
+  } catch (error) {
+    if (error instanceof CsvImportError) throw new ImportInputError(error.message);
+    throw error;
+  }
+  validateMappedHeaders(document, request);
+
+  const rows: ImportApplyResult["rows"] = [];
+  for (const row of document.rows) {
+    try {
+      const applied = database.transaction((transaction) => {
+        const planned =
+          request.entitySet === "companies"
+            ? planCompany(transaction, tenant, document, row, request.mapping)
+            : request.entitySet === "contacts"
+              ? planContact(transaction, tenant, document, row, request)
+              : planOpportunity(transaction, tenant, document, row, request);
+        if (planned.status === "would-skip") {
+          return { line: row.line, status: "skipped" as const, reason: planned.reason };
+        }
+
+        if (request.entitySet === "companies") {
+          createCompanyInTransaction(
+            transaction,
+            tenant,
+            companyInput(document, row, request.mapping),
+          );
+        } else {
+          const companyName = mapped(document, row, request.mapping, "company");
+          let ownedCompany = companyName
+            ? companyByName(transaction, tenant, companyName)
+            : undefined;
+          if (!ownedCompany && companyName && request.createMissingCompanies) {
+            ownedCompany = createCompanyInTransaction(transaction, tenant, {
+              name: companyName,
+            });
+          }
+          if (request.entitySet === "contacts") {
+            createContactInTransaction(
+              transaction,
+              tenant,
+              contactInput(document, row, request.mapping, ownedCompany?.id ?? null),
+            );
+          } else {
+            createOpportunityInTransaction(
+              transaction,
+              tenant,
+              opportunityInput(document, row, request.mapping, ownedCompany!.id),
+            );
+          }
+        }
+        return {
+          line: row.line,
+          status:
+            planned.status === "would-warn"
+              ? ("created-with-warning" as const)
+              : ("created" as const),
+          reason: planned.status === "would-warn" ? planned.reason : "Imported.",
+        };
+      });
+      rows.push(applied);
+    } catch (error) {
+      if (
+        error instanceof CompanyInputError ||
+        error instanceof ContactInputError ||
+        error instanceof OpportunityInputError
+      ) {
+        rows.push({ line: row.line, status: "skipped", reason: error.message });
+      } else {
+        throw error;
+      }
+    }
+  }
+  const summary = { created: 0, warned: 0, skipped: 0 };
+  for (const row of rows) {
+    if (row.status === "created") summary.created += 1;
+    if (row.status === "created-with-warning") summary.warned += 1;
+    if (row.status === "skipped") summary.skipped += 1;
+  }
+  return {
+    entitySet: request.entitySet,
+    dryRun: false,
+    duplicateCheck: duplicateCheck(request.entitySet),
+    summary,
+    rows,
+  };
 }
