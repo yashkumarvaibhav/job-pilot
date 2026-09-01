@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTenantTestFixture } from "../test/tenant-fixture";
 import { createCompany } from "../server/repos/companies";
 import { createContact } from "../server/repos/contacts";
+import { createInteraction } from "../server/repos/interactions";
 
 const mocks = vi.hoisted(() => ({
   database: undefined as unknown,
@@ -150,6 +151,63 @@ describe("contact screens", () => {
       "Inactive",
     ]) {
       expect(html).toContain(status);
+    }
+  });
+
+  it("lists every §11 channel on the log form and renders logged rows", async () => {
+    const fixture = newFixture();
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "rahul",
+      name: "Rahul Sharma",
+    });
+    createInteraction(fixture.client.db, fixture.tenantA, {
+      id: "whatsapp-out",
+      contactId: "rahul",
+      channel: "whatsapp",
+      direction: "outbound",
+      body: "Are there any SWE openings in your team/company?",
+      occurredAt: new Date("2026-08-30T10:32:00.000Z"),
+    });
+    createInteraction(fixture.client.db, fixture.tenantA, {
+      id: "whatsapp-in",
+      contactId: "rahul",
+      channel: "whatsapp",
+      direction: "inbound",
+      body: "Let me check. Give me 2-3 days.",
+      requiresReply: true,
+      occurredAt: new Date("2026-08-30T11:14:00.000Z"),
+    });
+
+    const html = renderToStaticMarkup(
+      await ContactDetailPage({ params: Promise.resolve({ id: "rahul" }) }),
+    );
+
+    expect(html).toContain("Log interaction");
+    expect(html).toContain("Nothing here is sent.");
+    expect(html).toContain("Are there any SWE openings in your team/company?");
+    expect(html).toContain("Let me check. Give me 2-3 days.");
+    expect(html).toContain("Needs my reply");
+    expect(html).toContain("Mark replied");
+    expect(html).toContain("16:02");
+    expect(html).toContain('class="tnum"');
+    expect(html).not.toContain(
+      "No interactions yet. Log a WhatsApp, a LinkedIn note, or an email.",
+    );
+    for (const channel of [
+      "Email",
+      "LinkedIn DM",
+      "LinkedIn connection note",
+      "WhatsApp",
+      "Phone",
+      "Telegram",
+      "Slack / Discord",
+      "Company referral portal",
+      "Alumni network",
+      "College network",
+      "In-person",
+      "Other",
+    ]) {
+      expect(html).toContain(channel);
     }
   });
 

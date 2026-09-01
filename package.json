@@ -13,7 +13,7 @@
     "test": "vitest run",
     "test:company": "vitest run src/server/db/migrate.test.ts src/server/repos/companies.test.ts src/app/api/companies/company-routes.test.ts src/app/company-ui.test.tsx",
     "test:contact": "vitest run src/domain/contact.test.ts src/server/db/migrate.test.ts src/server/repos/contacts.test.ts src/app/api/contacts/contact-routes.test.ts src/app/contact-ui.test.tsx",
-    "test:interaction": "vitest run src/domain/interaction.test.ts src/server/db/migrate.test.ts src/server/repos/interactions.test.ts src/app/api/contacts/interaction-routes.test.ts",
+    "test:interaction": "vitest run src/domain/interaction.test.ts src/server/db/migrate.test.ts src/server/repos/interactions.test.ts src/app/api/contacts/interaction-routes.test.ts src/app/contact-ui.test.tsx",
     "test:watch": "vitest"
   },
   "dependencies": {

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   INTERACTION_CHANNELS,
   INTERACTION_DIRECTIONS,
+  formatInteractionOccurredAt,
   isInteractionChannel,
   isInteractionDirection,
 } from "./interaction";
@@ -34,5 +35,20 @@ describe("interaction domain", () => {
     expect(isInteractionChannel("linkedin")).toBe(false);
     expect(isInteractionDirection("inbound")).toBe(true);
     expect(isInteractionDirection("received")).toBe(false);
+  });
+
+  it("formats occurred-at instants in the workspace timezone", () => {
+    expect(
+      formatInteractionOccurredAt(
+        new Date("2026-08-30T10:32:00.000Z"),
+        "Asia/Kolkata",
+      ),
+    ).toMatch(/30 Aug 2026/);
+    expect(
+      formatInteractionOccurredAt(
+        new Date("2026-08-30T10:32:00.000Z"),
+        "Asia/Kolkata",
+      ),
+    ).toMatch(/16:02/);
   });
 });

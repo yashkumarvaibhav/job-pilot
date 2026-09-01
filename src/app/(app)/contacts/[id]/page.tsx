@@ -1,16 +1,30 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { Reply } from "lucide-react";
+
 import { ContactEditForm } from "@/components/contact-form";
 import {
   contactMethodKindLabel,
   ContactStatusChip,
   relationshipLabel,
 } from "@/components/contact-status";
+import { InteractionChannelMark } from "@/components/interaction-channel";
+import {
+  InteractionLogForm,
+  MarkRepliedButton,
+} from "@/components/interaction-form";
+import {
+  formatInteractionOccurredAt,
+  interactionDirectionLabel,
+} from "@/domain/interaction";
 import { requireTenant } from "@/server/auth/current-session";
+import { getWorkspaceSettings } from "@/server/db/foundation";
 import { getDatabase } from "@/server/db/runtime";
+import { DEFAULT_TIME_ZONE } from "@/server/db/timezone";
 import { listCompanies } from "@/server/repos/companies";
 import { getContact } from "@/server/repos/contacts";
+import { listInteractions } from "@/server/repos/interactions";
 
 type ContactDetailPageProps = { params: Promise<{ id: string }> };
 
@@ -45,6 +59,12 @@ export default async function ContactDetailPage({
   }
 
   const companies = listCompanies(database, tenant);
+  const interactions = listInteractions(database, tenant, {
+    contactId: contact.id,
+  });
+  const timeZone =
+    getWorkspaceSettings(database, tenant, tenant.workspaceId)?.timezone ??
+    DEFAULT_TIME_ZONE;
   return (
     <article className="contact-detail">
       <Link className="back-link" href="/contacts">
@@ -125,11 +145,54 @@ export default async function ContactDetailPage({
         )}
       </section>
 
+      <section aria-labelledby="log-interaction" className="detail-section">
+        <h2 id="log-interaction">Log interaction</h2>
+        <p className="field-hint">
+          Record a WhatsApp, LinkedIn note, or email. Nothing here is sent.
+        </p>
+        <InteractionLogForm contactId={contact.id} />
+      </section>
+
       <section aria-labelledby="contact-timeline" className="detail-section">
         <h2 id="contact-timeline">Interaction timeline</h2>
-        <p className="section-empty">
-          No interactions yet. Log a WhatsApp, a LinkedIn note, or an email.
-        </p>
+        {interactions.length === 0 ? (
+          <p className="section-empty">
+            No interactions yet. Log a WhatsApp, a LinkedIn note, or an email.
+          </p>
+        ) : (
+          <ol className="interaction-timeline">
+            {interactions.map((row) => {
+              const needsReply =
+                row.requiresReply && row.replyResolvedAt === null;
+              return (
+                <li key={row.id}>
+                  <div className="interaction-timeline__meta">
+                    <InteractionChannelMark channel={row.channel} />
+                    <span className="interaction-direction">
+                      {interactionDirectionLabel(row.direction)}
+                    </span>
+                    <time className="tnum" dateTime={row.occurredAt.toISOString()}>
+                      {formatInteractionOccurredAt(row.occurredAt, timeZone)}
+                    </time>
+                  </div>
+                  {row.body ? <p>{row.body}</p> : null}
+                  {needsReply ? (
+                    <div className="interaction-need-reply">
+                      <span className="chip contact-status-chip" data-tone="warning">
+                        <Reply aria-hidden="true" />
+                        Needs my reply
+                      </span>
+                      <MarkRepliedButton
+                        contactId={contact.id}
+                        interactionId={row.id}
+                      />
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ol>
+        )}
       </section>
 
       <section aria-labelledby="edit-contact" className="detail-section">
