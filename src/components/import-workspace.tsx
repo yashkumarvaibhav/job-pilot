@@ -206,6 +206,13 @@ export function ImportWorkspace() {
       setFileName(file.name);
       setCsv(contents);
       setHeaders(document.headers);
+      setMapping((current) =>
+        Object.fromEntries(
+          Object.entries(current).filter(([, header]) =>
+            document.headers.includes(header),
+          ),
+        ),
+      );
     } catch (error) {
       setFileName("");
       setCsv("");
@@ -221,7 +228,12 @@ export function ImportWorkspace() {
   function changeMapping(field: string, header: string) {
     setMapping((current) => {
       const next = { ...current };
-      if (header) next[field] = header;
+      if (header) {
+        for (const [otherField, otherHeader] of Object.entries(next)) {
+          if (otherField !== field && otherHeader === header) delete next[otherField];
+        }
+        next[field] = header;
+      }
       else delete next[field];
       return next;
     });
@@ -230,7 +242,10 @@ export function ImportWorkspace() {
 
   const requiredReady = FIELD_CONFIG[entitySet]
     .filter((field) => field.required)
-    .every((field) => mapping[field.value]);
+    .every(
+      (field) =>
+        mapping[field.value] && headers.includes(mapping[field.value]),
+    );
   const canPreview =
     csv.length > 0 && requiredReady && !pending && !loadingMapping;
 
@@ -318,7 +333,7 @@ export function ImportWorkspace() {
             type="file"
           />
           <p className="field-hint">
-            {fileName || "CSV only, up to 2 MB. Your file is not accepted by the public demo."}
+            {fileName || "CSV only, up to 2 MB. Public demo uploads remain disabled."}
           </p>
         </div>
         {entitySet !== "companies" ? (
