@@ -936,6 +936,10 @@ main:focus {
   border: 0;
 }
 
+.quick-add-fields > .field {
+  min-width: 0;
+}
+
 .quick-add-fields > .quick-add-wide,
 .quick-add-fields > .quick-add-empty {
   grid-column: 1 / -1;
@@ -970,6 +974,11 @@ main:focus {
     margin: var(--space-2) auto 0;
     border-radius: 999px;
     background: var(--line-strong);
+    touch-action: none;
+  }
+
+  .quick-add-header {
+    touch-action: none;
   }
 
   .quick-add-header,

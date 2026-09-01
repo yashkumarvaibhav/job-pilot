@@ -19,6 +19,14 @@ type FocusContainer = {
 
 type TabKey = Pick<KeyboardEvent, "key" | "shiftKey" | "preventDefault">;
 
+type Point = { x: number; y: number };
+
+export function isQuickAddDismissSwipe(start: Point, end: Point) {
+  const horizontal = Math.abs(end.x - start.x);
+  const vertical = end.y - start.y;
+  return vertical >= 72 && vertical > horizontal * 1.25;
+}
+
 export function trapDialogTab(
   container: FocusContainer,
   event: TabKey,
@@ -55,6 +63,25 @@ export function QuickAddDialog({
   title: string;
 }) {
   const dialogRef = useRef<HTMLElement>(null);
+  const dragStart = useRef<Point | null>(null);
+
+  function beginDismissGesture(event: React.PointerEvent<HTMLElement>) {
+    if (event.pointerType === "mouse") return;
+    dragStart.current = { x: event.clientX, y: event.clientY };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function finishDismissGesture(event: React.PointerEvent<HTMLElement>) {
+    const start = dragStart.current;
+    dragStart.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    if (
+      start &&
+      isQuickAddDismissSwipe(start, { x: event.clientX, y: event.clientY })
+    ) onClose();
+  }
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -101,8 +128,19 @@ export function QuickAddDialog({
         ref={dialogRef}
         role="dialog"
       >
-        <span aria-hidden="true" className="quick-add-grabber" />
-        <header className="quick-add-header">
+        <span
+          aria-hidden="true"
+          className="quick-add-grabber"
+          onPointerCancel={() => { dragStart.current = null; }}
+          onPointerDown={beginDismissGesture}
+          onPointerUp={finishDismissGesture}
+        />
+        <header
+          className="quick-add-header"
+          onPointerCancel={() => { dragStart.current = null; }}
+          onPointerDown={beginDismissGesture}
+          onPointerUp={finishDismissGesture}
+        >
           <div>
             <p className="eyebrow">Quick add</p>
             <h2 id="quick-add-title">{title}</h2>

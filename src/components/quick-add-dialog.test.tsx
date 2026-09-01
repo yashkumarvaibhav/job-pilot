@@ -4,7 +4,11 @@ import { join } from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-import { QuickAddDialog, trapDialogTab } from "./quick-add-dialog";
+import {
+  isQuickAddDismissSwipe,
+  QuickAddDialog,
+  trapDialogTab,
+} from "./quick-add-dialog";
 
 describe("quick-add dialog", () => {
   it("renders the modal contract and an explicit close control", () => {
@@ -39,6 +43,13 @@ describe("quick-add dialog", () => {
     expect(first.focus).toHaveBeenCalledOnce();
     expect(backward.preventDefault).toHaveBeenCalledOnce();
     expect(last.focus).toHaveBeenCalledOnce();
+  });
+
+  it("dismisses only a deliberate downward swipe", () => {
+    expect(isQuickAddDismissSwipe({ x: 190, y: 20 }, { x: 195, y: 110 })).toBe(true);
+    expect(isQuickAddDismissSwipe({ x: 190, y: 110 }, { x: 190, y: 20 })).toBe(false);
+    expect(isQuickAddDismissSwipe({ x: 20, y: 20 }, { x: 130, y: 85 })).toBe(false);
+    expect(isQuickAddDismissSwipe({ x: 190, y: 20 }, { x: 190, y: 70 })).toBe(false);
   });
 
   it("uses kit tokens for a raised dialog and a mobile bottom sheet", () => {
