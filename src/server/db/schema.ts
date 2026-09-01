@@ -35,6 +35,15 @@ import {
   DEFAULT_REFERRAL_STAGE,
   type ReferralStage,
 } from "../../domain/referral";
+import {
+  DEFAULT_TASK_PRIORITY,
+  DEFAULT_TASK_SOURCE,
+  DEFAULT_TASK_STATUS,
+  type TaskLinkType,
+  type TaskPriority,
+  type TaskSource,
+  type TaskStatus,
+} from "../../domain/task";
 import { DEFAULT_TIME_ZONE } from "./timezone";
 
 const utcInstant = (name: string) => integer(name, { mode: "timestamp_ms" });
@@ -244,11 +253,17 @@ export const company = sqliteTable(
     locations: text("locations"),
     target: integer("target", { mode: "boolean" }).notNull().default(false),
     notes: text("notes"),
+    nextAction: text("next_action"),
+    nextActionDue: text("next_action_due"),
     createdAt: utcInstant("created_at").notNull(),
   },
   (table) => [
     workspaceEntityKey("company", table),
     index("company_workspace_name_idx").on(table.workspaceId, table.name),
+    index("company_workspace_next_action_due_idx").on(
+      table.workspaceId,
+      table.nextActionDue,
+    ),
     check("company_name_not_blank", sql`length(trim(${table.name})) > 0`),
   ],
 );
@@ -398,6 +413,7 @@ export const opportunity = sqliteTable(
       .notNull()
       .default(DEFAULT_OPPORTUNITY_STAGE),
     nextAction: text("next_action"),
+    nextActionDue: text("next_action_due"),
     createdAt: utcInstant("created_at").notNull(),
   },
   (table) => [
@@ -417,6 +433,10 @@ export const opportunity = sqliteTable(
     index("opportunity_workspace_deadline_idx").on(
       table.workspaceId,
       table.deadlineOn,
+    ),
+    index("opportunity_workspace_next_action_due_idx").on(
+      table.workspaceId,
+      table.nextActionDue,
     ),
     uniqueIndex("opportunity_workspace_company_job_id_unique").on(
       table.workspaceId,
@@ -675,3 +695,67 @@ export const application = sqliteTable(
     ),
   ],
 );
+
+export const task = sqliteTable(
+  "task",
+  {
+    ...workspaceOwnedEntityColumns(),
+    title: text("title").notNull(),
+    description: text("description"),
+    dueOn: text("due_on"),
+    priority: text("priority")
+      .$type<TaskPriority>()
+      .notNull()
+      .default(DEFAULT_TASK_PRIORITY),
+    status: text("status")
+      .$type<TaskStatus>()
+      .notNull()
+      .default(DEFAULT_TASK_STATUS),
+    source: text("source")
+      .$type<TaskSource>()
+      .notNull()
+      .default(DEFAULT_TASK_SOURCE),
+    entityType: text("entity_type").$type<TaskLinkType | null>(),
+    entityId: text("entity_id"),
+    derivedFromKey: text("derived_from_key"),
+    createdByRule: integer("created_by_rule", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    completedAt: utcInstant("completed_at"),
+    createdAt: utcInstant("created_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("task", table),
+    index("task_workspace_status_idx").on(table.workspaceId, table.status),
+    index("task_workspace_due_idx").on(table.workspaceId, table.dueOn),
+    index("task_workspace_derived_from_key_idx").on(
+      table.workspaceId,
+      table.derivedFromKey,
+    ),
+    index("task_workspace_entity_idx").on(
+      table.workspaceId,
+      table.entityType,
+      table.entityId,
+    ),
+    check("task_title_not_blank", sql`length(trim(${table.title})) > 0`),
+    check(
+      "task_priority_valid",
+      sql`${table.priority} in ('low', 'medium', 'high')`,
+    ),
+    check("task_status_valid", sql`${table.status} in ('open', 'completed')`),
+    check("task_source_valid", sql`${table.source} in ('manual', 'rule')`),
+    check(
+      "task_link_pair",
+      sql`(${table.entityType} is null and ${table.entityId} is null) or (${table.entityType} is not null and ${table.entityId} is not null)`,
+    ),
+    check(
+      "task_entity_type_valid",
+      sql`${table.entityType} is null or ${table.entityType} in ('company', 'contact', 'opportunity', 'application', 'referral')`,
+    ),
+    check(
+      "task_completed_at_matches_status",
+      sql`(${table.status} = 'completed' and ${table.completedAt} is not null) or (${table.status} <> 'completed' and ${table.completedAt} is null)`,
+    ),
+  ],
+);
+

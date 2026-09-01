@@ -46,6 +46,7 @@ describe("migrateDatabase", () => {
           "application",
           "referral_request",
           "settings",
+          "task",
           "user_account",
           "workspace",
         ]),
@@ -54,11 +55,12 @@ describe("migrateDatabase", () => {
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 9 });
+      ).toEqual({ count: 10 });
 
       for (const indexName of [
         "company_workspace_id_id_unique",
         "company_workspace_name_idx",
+        "company_workspace_next_action_due_idx",
         "contact_workspace_id_id_unique",
         "contact_workspace_name_idx",
         "contact_workspace_company_idx",
@@ -80,6 +82,7 @@ describe("migrateDatabase", () => {
         "opportunity_workspace_bucket_idx",
         "opportunity_workspace_stage_idx",
         "opportunity_workspace_deadline_idx",
+        "opportunity_workspace_next_action_due_idx",
         "opportunity_workspace_company_job_id_unique",
         "opportunity_contact_workspace_id_id_unique",
         "opportunity_contact_workspace_pair_unique",
@@ -95,6 +98,11 @@ describe("migrateDatabase", () => {
         "referral_request_workspace_stage_idx",
         "referral_request_workspace_requested_on_idx",
         "referral_request_workspace_follow_up_idx",
+        "task_workspace_id_id_unique",
+        "task_workspace_status_idx",
+        "task_workspace_due_idx",
+        "task_workspace_derived_from_key_idx",
+        "task_workspace_entity_idx",
         "settings_workspace_idx",
         "activity_event_workspace_id_id_unique",
         "activity_event_workspace_at_idx",
@@ -140,6 +148,8 @@ describe("migrateDatabase", () => {
         "target",
         "notes",
         "created_at",
+        "next_action",
+        "next_action_due",
       ]);
       expect(companyColumns.find((column) => column.name === "name")?.notnull).toBe(
         1,
@@ -332,6 +342,7 @@ describe("migrateDatabase", () => {
         "stage",
         "next_action",
         "created_at",
+        "next_action_due",
       ]);
       expect(
         opportunityColumns.find((column) => column.name === "bucket")
@@ -503,6 +514,57 @@ describe("migrateDatabase", () => {
         { table: "referral_request", from: "workspace_id", to: "workspace_id" },
         { table: "referral_request", from: "referral_id", to: "id" },
       ]);
+
+      const taskColumns = client.sqlite
+        .prepare(
+          "select name, \"notnull\", dflt_value from pragma_table_info('task') order by cid",
+        )
+        .all() as {
+        name: string;
+        notnull: number;
+        dflt_value: string | null;
+      }[];
+      expect(taskColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "title",
+        "description",
+        "due_on",
+        "priority",
+        "status",
+        "source",
+        "entity_type",
+        "entity_id",
+        "derived_from_key",
+        "created_by_rule",
+        "completed_at",
+        "created_at",
+      ]);
+      expect(
+        taskColumns.find((column) => column.name === "status")?.dflt_value,
+      ).toBe("'open'");
+      expect(
+        taskColumns.find((column) => column.name === "priority")?.dflt_value,
+      ).toBe("'medium'");
+      expect(
+        taskColumns.find((column) => column.name === "source")?.dflt_value,
+      ).toBe("'manual'");
+      expect(
+        taskColumns.find((column) => column.name === "title")?.notnull,
+      ).toBe(1);
+      expect(
+        taskColumns.find((column) => column.name === "entity_id")?.notnull,
+      ).toBe(0);
+      const taskForeignKeys = client.sqlite
+        .prepare(
+          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('task')",
+        )
+        .all();
+      expect(taskForeignKeys).toContainEqual({
+        table: "workspace",
+        from: "workspace_id",
+        to: "id",
+      });
     } finally {
       client.close();
     }

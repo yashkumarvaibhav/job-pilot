@@ -1,0 +1,2376 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "1a5630f9-e16d-4961-b89d-c97f99b1e6c9",
+  "prevId": "c08f2150-89ff-4546-b417-63dfa14e142e",
+  "tables": {
+    "account_token": {
+      "name": "account_token",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "token_digest": {
+          "name": "token_digest",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "used_at": {
+          "name": "used_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "account_token_token_digest_unique": {
+          "name": "account_token_token_digest_unique",
+          "columns": [
+            "token_digest"
+          ],
+          "isUnique": true
+        },
+        "account_token_user_purpose_idx": {
+          "name": "account_token_user_purpose_idx",
+          "columns": [
+            "user_id",
+            "purpose"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "account_token_user_id_user_account_id_fk": {
+          "name": "account_token_user_id_user_account_id_fk",
+          "tableFrom": "account_token",
+          "tableTo": "user_account",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "account_token_purpose_valid": {
+          "name": "account_token_purpose_valid",
+          "value": "\"account_token\".\"purpose\" in ('verify_email', 'reset_password')"
+        }
+      }
+    },
+    "activity_event": {
+      "name": "activity_event",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "at": {
+          "name": "at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "entity_type": {
+          "name": "entity_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload_json": {
+          "name": "payload_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'{}'"
+        }
+      },
+      "indexes": {
+        "activity_event_workspace_id_id_unique": {
+          "name": "activity_event_workspace_id_id_unique",
+          "columns": [
+            "workspace_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "activity_event_workspace_at_idx": {
+          "name": "activity_event_workspace_at_idx",
+          "columns": [
+            "workspace_id",
+            "at"
+          ],
+          "isUnique": false
+        },
+        "activity_event_workspace_entity_idx": {
+          "name": "activity_event_workspace_entity_idx",
+          "columns": [
+            "workspace_id",
+            "entity_type",
+            "entity_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "activity_event_workspace_id_workspace_id_fk": {
+          "name": "activity_event_workspace_id_workspace_id_fk",
+          "tableFrom": "activity_event",
+          "tableTo": "workspace",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "application": {
+      "name": "application",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "opportunity_id": {
+          "name": "opportunity_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "portal": {
+          "name": "portal",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "applied_on": {
+          "name": "applied_on",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "application_external_id": {
+          "name": "application_external_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "referrer": {
+          "name": "referrer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "resume_version_id": {
+          "name": "resume_version_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "stage": {
+          "name": "stage",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'applied'"
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "application_workspace_id_id_unique": {
+          "name": "application_workspace_id_id_unique",
+          "columns": [
+            "workspace_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "application_workspace_opportunity_unique": {
+          "name": "application_workspace_opportunity_unique",
+          "columns": [
+            "workspace_id",
+            "opportunity_id"
+          ],
+          "isUnique": true
+        },
+        "application_workspace_stage_idx": {
+          "name": "application_workspace_stage_idx",
+          "columns": [
+            "workspace_id",
+            "stage"
+          ],
+          "isUnique": false
+        },
+        "application_workspace_applied_on_idx": {
+          "name": "application_workspace_applied_on_idx",
+          "columns": [
+            "workspace_id",
+            "applied_on"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "application_workspace_id_workspace_id_fk": {
+          "name": "application_workspace_id_workspace_id_fk",
+          "tableFrom": "application",
+          "tableTo": "workspace",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "application_opportunity_fk": {
+          "name": "application_opportunity_fk",
+          "tableFrom": "application",
+          "tableTo": "opportunity",
+          "columnsFrom": [
+            "workspace_id",
+            "opportunity_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "application_portal_not_blank": {
+          "name": "application_portal_not_blank",
+          "value": "length(trim(\"application\".\"portal\")) > 0"
+        },
+        "application_stage_valid": {
+          "name": "application_stage_valid",
+          "value": "\"application\".\"stage\" in ('applied', 'application_confirmed', 'under_review', 'oa_received', 'oa_completed', 'interview_scheduled', 'interview_round_1', 'interview_round_2', 'hiring_manager', 'hr', 'offer', 'rejected', 'withdrawn', 'ghosted')"
+        }
+      }
+    },
+    "auth_session": {
+      "name": "auth_session",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "token_digest": {
+          "name": "token_digest",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_seen_at": {
+          "name": "last_seen_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "idle_expires_at": {
+          "name": "idle_expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "absolute_expires_at": {
+          "name": "absolute_expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "auth_session_token_digest_unique": {
+          "name": "auth_session_token_digest_unique",
+          "columns": [
+            "token_digest"
+          ],
+          "isUnique": true
+        },
+        "auth_session_user_id_idx": {
+          "name": "auth_session_user_id_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        },
+        "auth_session_user_expiry_idx": {
+          "name": "auth_session_user_expiry_idx",
+          "columns": [
+            "user_id",
+            "idle_expires_at",
+            "absolute_expires_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "auth_session_user_id_user_account_id_fk": {
+          "name": "auth_session_user_id_user_account_id_fk",
+          "tableFrom": "auth_session",
+          "tableTo": "user_account",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "company": {
+      "name": "company",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "website": {
+          "name": "website",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "careers_url": {
+          "name": "careers_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "industry": {
+          "name": "industry",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "locations": {
+          "name": "locations",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "target": {
+          "name": "target",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "next_action": {
+          "name": "next_action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "next_action_due": {
+          "name": "next_action_due",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "company_workspace_id_id_unique": {
+          "name": "company_workspace_id_id_unique",
+          "columns": [
+            "workspace_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "company_workspace_name_idx": {
+          "name": "company_workspace_name_idx",
+          "columns": [
+            "workspace_id",
+            "name"
+          ],
+          "isUnique": false
+        },
+        "company_workspace_next_action_due_idx": {
+          "name": "company_workspace_next_action_due_idx",
+          "columns": [
+            "workspace_id",
+            "next_action_due"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "company_workspace_id_workspace_id_fk": {
+          "name": "company_workspace_id_workspace_id_fk",
+          "tableFrom": "company",
+          "tableTo": "workspace",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "company_name_not_blank": {
+          "name": "company_name_not_blank",
+          "value": "length(trim(\"company\".\"name\")) > 0"
+        }
+      }
+    },
+    "contact": {
+      "name": "contact",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "designation": {
+          "name": "designation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "relationship": {
+          "name": "relationship",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'unknown_cold_contact'"
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "location": {
+          "name": "location",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "tags_json": {
+          "name": "tags_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'[]'"
+        },
+        "preferred_contact_channel": {
+          "name": "preferred_contact_channel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "networking_status": {
+          "name": "networking_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'not_contacted'"
+        },
+        "last_interaction_at": {
+          "name": "last_interaction_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "next_action": {
+          "name": "next_action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "follow_up_on": {
+          "name": "follow_up_on",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "contact_workspace_id_id_unique": {
+          "name": "contact_workspace_id_id_unique",
+          "columns": [
+            "workspace_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "contact_workspace_name_idx": {
+          "name": "contact_workspace_name_idx",
+          "columns": [
+            "workspace_id",
+            "name"
+          ],
+          "isUnique": false
+        },
+        "contact_workspace_company_idx": {
+          "name": "contact_workspace_company_idx",
+          "columns": [
+            "workspace_id",
+            "company_id"
+          ],
+          "isUnique": false
+        },
+        "contact_workspace_status_idx": {
+          "name": "contact_workspace_status_idx",
+          "columns": [
+            "workspace_id",
+            "networking_status"
+          ],
+          "isUnique": false
+        },
+        "contact_workspace_follow_up_idx": {
+          "name": "contact_workspace_follow_up_idx",
+          "columns": [
+            "workspace_id",
+            "follow_up_on"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "contact_workspace_id_workspace_id_fk": {
+          "name": "contact_workspace_id_workspace_id_fk",
+          "tableFrom": "contact",
+          "tableTo": "workspace",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "contact_company_fk": {
+          "name": "contact_company_fk",
+          "tableFrom": "contact",
+          "tableTo": "company",
+          "columnsFrom": [
+            "workspace_id",
+            "company_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "contact_name_not_blank": {
+          "name": "contact_name_not_blank",
+          "value": "length(trim(\"contact\".\"name\")) > 0"
+        },
+        "contact_relationship_valid": {
+          "name": "contact_relationship_valid",
+          "value": "\"contact\".\"relationship\" in ('friend', 'college_friend', 'alumni', 'employee', 'recruiter', 'hiring_manager', 'former_employee', 'mutual_connection', 'community_contact', 'unknown_cold_contact', 'other')"
+        },
+        "contact_networking_status_valid": {
+          "name": "contact_networking_status_valid",
+          "value": "\"contact\".\"networking_status\" in ('not_contacted', 'ready_to_contact', 'contacted', 'waiting_for_reply', 'checking_for_openings', 'follow_up_later', 'opening_found', 'referral_discussion', 'referral_promised', 'no_openings_currently', 'keep_in_touch', 'do_not_contact', 'inactive')"
+        },
+        "contact_preferred_channel_valid": {
+          "name": "contact_preferred_channel_valid",
+          "value": "\"contact\".\"preferred_contact_channel\" is null or \"contact\".\"preferred_contact_channel\" in ('email', 'linkedin', 'phone', 'whatsapp', 'other')"
+        }
+      }
+    },
+    "contact_method": {
+      "name": "contact_method",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "contact_id": {
+          "name": "contact_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value_normalized": {
+          "name": "value_normalized",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "is_primary": {
+          "name": "is_primary",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "contact_method_workspace_id_id_unique": {
+          "name": "contact_method_workspace_id_id_unique",
+          "columns": [
+            "workspace_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "contact_method_workspace_contact_idx": {
+          "name": "contact_method_workspace_contact_idx",
+          "columns": [
+            "workspace_id",
+            "contact_id"
+          ],
+          "isUnique": false
+        },
+        "contact_method_workspace_kind_value_unique": {
+          "name": "contact_method_workspace_kind_value_unique",
+          "columns": [
+            "workspace_id",
+            "kind",
+            "value_normalized"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "contact_method_workspace_id_workspace_id_fk": {
+          "name": "contact_method_workspace_id_workspace_id_fk",
+          "tableFrom": "contact_method",
+          "tableTo": "workspace",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "contact_method_contact_fk": {
+          "name": "contact_method_contact_fk",
+          "tableFrom": "contact_method",
+          "tableTo": "contact",
+          "columnsFrom": [
+            "workspace_id",
+            "contact_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "contact_method_kind_valid": {
+          "name": "contact_method_kind_valid",
+          "value": "\"contact_method\".\"kind\" in ('email', 'linkedin', 'phone', 'whatsapp', 'other')"
+        },
+        "contact_method_value_not_blank": {
+          "name": "contact_method_value_not_blank",
+          "value": "length(trim(\"contact_method\".\"value\")) > 0 and length(trim(\"contact_method\".\"value_normalized\")) > 0"
+        }
+      }
+    },
+    "import_mapping": {
+      "name": "import_mapping",
+      "columns": {
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "entity_set": {
+          "name": "entity_set",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "mapping_json": {
+          "name": "mapping_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "import_mapping_workspace_idx": {
+          "name": "import_mapping_workspace_idx",
+          "columns": [
+            "workspace_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "import_mapping_workspace_id_workspace_id_fk": {
+          "name": "import_mapping_workspace_id_workspace_id_fk",
+          "tableFrom": "import_mapping",
+          "tableTo": "workspace",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "import_mapping_workspace_id_entity_set_pk": {
+          "columns": [
+            "workspace_id",
+            "entity_set"
+          ],
+          "name": "import_mapping_workspace_id_entity_set_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "import_mapping_entity_set_valid": {
+          "name": "import_mapping_entity_set_valid",
+          "value": "\"import_mapping\".\"entity_set\" in ('companies', 'contacts', 'opportunities')"
+        }
+      }
+    },
+    "interaction": {
+      "name": "interaction",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "contact_id": {
+          "name": "contact_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "opportunity_id": {
+          "name": "opportunity_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "referral_id": {
+          "name": "referral_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "channel": {
+          "name": "channel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "direction": {
+          "name": "direction",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "email_message_id": {
+          "name": "email_message_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "requires_reply": {
+          "name": "requires_reply",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "reply_resolved_at": {
+          "name": "reply_resolved_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "interaction_workspace_id_id_unique": {
+          "name": "interaction_workspace_id_id_unique",
+          "columns": [
+            "workspace_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "interaction_workspace_contact_idx": {
+          "name": "interaction_workspace_contact_idx",
+          "columns": [
+            "workspace_id",
+            "contact_id"
+          ],
+          "isUnique": false
+        },
+        "interaction_workspace_company_idx": {
+          "name": "interaction_workspace_company_idx",
+          "columns": [
+            "workspace_id",
+            "company_id"
+          ],
+          "isUnique": false
+        },
+        "interaction_workspace_opportunity_idx": {
+          "name": "interaction_workspace_opportunity_idx",
+          "columns": [
+            "workspace_id",
+            "opportunity_id"
+          ],
+          "isUnique": false
+        },
+        "interaction_workspace_referral_idx": {
+          "name": "interaction_workspace_referral_idx",
+          "columns": [
+            "workspace_id",
+            "referral_id"
+          ],
+          "isUnique": false
+        },
+        "interaction_workspace_occurred_idx": {
+          "name": "interaction_workspace_occurred_idx",
+          "columns": [
+            "workspace_id",
+            "occurred_at"
+          ],
+          "isUnique": false
+        },
+        "interaction_workspace_need_reply_idx": {
+          "name": "interaction_workspace_need_reply_idx",
+          "columns": [
+            "workspace_id",
+            "requires_reply",
+            "reply_resolved_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "interaction_workspace_id_workspace_id_fk": {
+          "name": "interaction_workspace_id_workspace_id_fk",
+          "tableFrom": "interaction",
+          "tableTo": "workspace",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "interaction_contact_fk": {
+          "name": "interaction_contact_fk",
+          "tableFrom": "interaction",
+          "tableTo": "contact",
+          "columnsFrom": [
+            "workspace_id",
+            "contact_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "interaction_company_fk": {
+          "name": "interaction_company_fk",
+          "tableFrom": "interaction",
+          "tableTo": "company",
+          "columnsFrom": [
+            "workspace_id",
+            "company_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "interaction_opportunity_fk": {
+          "name": "interaction_opportunity_fk",
+          "tableFrom": "interaction",
+          "tableTo": "opportunity",
+          "columnsFrom": [
+            "workspace_id",
+            "opportunity_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "interaction_referral_fk": {
+          "name": "interaction_referral_fk",
+          "tableFrom": "interaction",
+          "tableTo": "referral_request",
+          "columnsFrom": [
+            "workspace_id",
+            "referral_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "interaction_context_present": {
+          "name": "interaction_context_present",
+          "value": "\"interaction\".\"contact_id\" is not null or \"interaction\".\"company_id\" is not null or \"interaction\".\"opportunity_id\" is not null or \"interaction\".\"referral_id\" is not null"
+        },
+        "interaction_channel_valid": {
+          "name": "interaction_channel_valid",
+          "value": "\"interaction\".\"channel\" in ('email', 'linkedin_dm', 'linkedin_connection_note', 'whatsapp', 'phone', 'telegram', 'slack_discord', 'company_referral_portal', 'alumni_network', 'college_network', 'in_person', 'other')"
+        },
+        "interaction_direction_valid": {
+          "name": "interaction_direction_valid",
+          "value": "\"interaction\".\"direction\" in ('outbound', 'inbound')"
+        },
+        "interaction_requires_reply_inbound": {
+          "name": "interaction_requires_reply_inbound",
+          "value": "\"interaction\".\"requires_reply\" = false or \"interaction\".\"direction\" = 'inbound'"
+        }
+      }
+    },
+    "opportunity": {
+      "name": "opportunity",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "job_id": {
+          "name": "job_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "location": {
+          "name": "location",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "work_mode": {
+          "name": "work_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "employment_type": {
+          "name": "employment_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "experience_requirement": {
+          "name": "experience_requirement",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "discovered_on": {
+          "name": "discovered_on",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "posted_on": {
+          "name": "posted_on",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "deadline_on": {
+          "name": "deadline_on",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "compensation": {
+          "name": "compensation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "priority": {
+          "name": "priority",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "interest_score": {
+          "name": "interest_score",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "eligibility": {
+          "name": "eligibility",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "referral_preferred": {
+          "name": "referral_preferred",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "resume_version_id": {
+          "name": "resume_version_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "jd_snapshot": {
+          "name": "jd_snapshot",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "tags_json": {
+          "name": "tags_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'[]'"
+        },
+        "bucket": {
+          "name": "bucket",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'saved'"
+        },
+        "stage": {
+          "name": "stage",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'discovered'"
+        },
+        "next_action": {
+          "name": "next_action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "next_action_due": {
+          "name": "next_action_due",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "opportunity_workspace_id_id_unique": {
+          "name": "opportunity_workspace_id_id_unique",
+          "columns": [
+            "workspace_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "opportunity_workspace_company_idx": {
+          "name": "opportunity_workspace_company_idx",
+          "columns": [
+            "workspace_id",
+            "company_id"
+          ],
+          "isUnique": false
+        },
+        "opportunity_workspace_bucket_idx": {
+          "name": "opportunity_workspace_bucket_idx",
+          "columns": [
+            "workspace_id",
+            "bucket"
+          ],
+          "isUnique": false
+        },
+        "opportunity_workspace_stage_idx": {
+          "name": "opportunity_workspace_stage_idx",
+          "columns": [
+            "workspace_id",
+            "stage"
+          ],
+          "isUnique": false
+        },
+        "opportunity_workspace_deadline_idx": {
+          "name": "opportunity_workspace_deadline_idx",
+          "columns": [
+            "workspace_id",
+            "deadline_on"
+          ],
+          "isUnique": false
+        },
+        "opportunity_workspace_next_action_due_idx": {
+          "name": "opportunity_workspace_next_action_due_idx",
+          "columns": [
+            "workspace_id",
+            "next_action_due"
+          ],
+          "isUnique": false
+        },
+        "opportunity_workspace_company_job_id_unique": {
+          "name": "opportunity_workspace_company_job_id_unique",
+          "columns": [
+            "workspace_id",
+            "company_id",
+            "job_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "opportunity_workspace_id_workspace_id_fk": {
+          "name": "opportunity_workspace_id_workspace_id_fk",
+          "tableFrom": "opportunity",
+          "tableTo": "workspace",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "opportunity_company_fk": {
+          "name": "opportunity_company_fk",
+          "tableFrom": "opportunity",
+          "tableTo": "company",
+          "columnsFrom": [
+            "workspace_id",
+            "company_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "opportunity_role_not_blank": {
+          "name": "opportunity_role_not_blank",
+          "value": "length(trim(\"opportunity\".\"role\")) > 0"
+        },
+        "opportunity_bucket_valid": {
+          "name": "opportunity_bucket_valid",
+          "value": "\"opportunity\".\"bucket\" in ('saved', 'active')"
+        },
+        "opportunity_stage_valid": {
+          "name": "opportunity_stage_valid",
+          "value": "\"opportunity\".\"stage\" in ('discovered', 'saved', 'interested', 'pursuing', 'finding_contacts', 'finding_referral', 'referral_requested', 'referral_promised', 'referral_received', 'ready_to_apply', 'applied', 'ghosted', 'position_closed', 'withdrawn', 'not_eligible', 'duplicate', 'no_longer_interested', 'expired')"
+        }
+      }
+    },
+    "opportunity_contact": {
+      "name": "opportunity_contact",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "opportunity_id": {
+          "name": "opportunity_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "contact_id": {
+          "name": "contact_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "opportunity_contact_workspace_id_id_unique": {
+          "name": "opportunity_contact_workspace_id_id_unique",
+          "columns": [
+            "workspace_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "opportunity_contact_workspace_pair_unique": {
+          "name": "opportunity_contact_workspace_pair_unique",
+          "columns": [
+            "workspace_id",
+            "opportunity_id",
+            "contact_id"
+          ],
+          "isUnique": true
+        },
+        "opportunity_contact_workspace_opportunity_idx": {
+          "name": "opportunity_contact_workspace_opportunity_idx",
+          "columns": [
+            "workspace_id",
+            "opportunity_id"
+          ],
+          "isUnique": false
+        },
+        "opportunity_contact_workspace_contact_idx": {
+          "name": "opportunity_contact_workspace_contact_idx",
+          "columns": [
+            "workspace_id",
+            "contact_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "opportunity_contact_workspace_id_workspace_id_fk": {
+          "name": "opportunity_contact_workspace_id_workspace_id_fk",
+          "tableFrom": "opportunity_contact",
+          "tableTo": "workspace",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "opportunity_contact_opportunity_fk": {
+          "name": "opportunity_contact_opportunity_fk",
+          "tableFrom": "opportunity_contact",
+          "tableTo": "opportunity",
+          "columnsFrom": [
+            "workspace_id",
+            "opportunity_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "opportunity_contact_contact_fk": {
+          "name": "opportunity_contact_contact_fk",
+          "tableFrom": "opportunity_contact",
+          "tableTo": "contact",
+          "columnsFrom": [
+            "workspace_id",
+            "contact_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "referral_request": {
+      "name": "referral_request",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "contact_id": {
+          "name": "contact_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "opportunity_id": {
+          "name": "opportunity_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "requested_on": {
+          "name": "requested_on",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "channel": {
+          "name": "channel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "resume_shared": {
+          "name": "resume_shared",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "job_id_shared": {
+          "name": "job_id_shared",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "job_url_shared": {
+          "name": "job_url_shared",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "stage": {
+          "name": "stage",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'potential_contact'"
+        },
+        "follow_up_on": {
+          "name": "follow_up_on",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "received_on": {
+          "name": "received_on",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "confirmation": {
+          "name": "confirmation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "next_action": {
+          "name": "next_action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "referral_request_workspace_id_id_unique": {
+          "name": "referral_request_workspace_id_id_unique",
+          "columns": [
+            "workspace_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "referral_request_workspace_contact_idx": {
+          "name": "referral_request_workspace_contact_idx",
+          "columns": [
+            "workspace_id",
+            "contact_id"
+          ],
+          "isUnique": false
+        },
+        "referral_request_workspace_opportunity_idx": {
+          "name": "referral_request_workspace_opportunity_idx",
+          "columns": [
+            "workspace_id",
+            "opportunity_id"
+          ],
+          "isUnique": false
+        },
+        "referral_request_workspace_stage_idx": {
+          "name": "referral_request_workspace_stage_idx",
+          "columns": [
+            "workspace_id",
+            "stage"
+          ],
+          "isUnique": false
+        },
+        "referral_request_workspace_requested_on_idx": {
+          "name": "referral_request_workspace_requested_on_idx",
+          "columns": [
+            "workspace_id",
+            "requested_on"
+          ],
+          "isUnique": false
+        },
+        "referral_request_workspace_follow_up_idx": {
+          "name": "referral_request_workspace_follow_up_idx",
+          "columns": [
+            "workspace_id",
+            "follow_up_on"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "referral_request_workspace_id_workspace_id_fk": {
+          "name": "referral_request_workspace_id_workspace_id_fk",
+          "tableFrom": "referral_request",
+          "tableTo": "workspace",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "referral_request_contact_fk": {
+          "name": "referral_request_contact_fk",
+          "tableFrom": "referral_request",
+          "tableTo": "contact",
+          "columnsFrom": [
+            "workspace_id",
+            "contact_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "referral_request_opportunity_fk": {
+          "name": "referral_request_opportunity_fk",
+          "tableFrom": "referral_request",
+          "tableTo": "opportunity",
+          "columnsFrom": [
+            "workspace_id",
+            "opportunity_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "referral_request_channel_valid": {
+          "name": "referral_request_channel_valid",
+          "value": "\"referral_request\".\"channel\" in ('email', 'linkedin_dm', 'linkedin_connection_note', 'whatsapp', 'phone', 'telegram', 'slack_discord', 'company_referral_portal', 'alumni_network', 'college_network', 'in_person', 'other')"
+        },
+        "referral_request_stage_valid": {
+          "name": "referral_request_stage_valid",
+          "value": "\"referral_request\".\"stage\" in ('potential_contact', 'ready_to_contact', 'requested', 'seen_acknowledged', 'asked_for_resume', 'resume_sent', 'agreed_to_refer', 'referral_promised', 'referral_submitted', 'referral_received', 'declined', 'no_response', 'expired', 'cancelled')"
+        }
+      }
+    },
+    "settings": {
+      "name": "settings",
+      "columns": {
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "university": {
+          "name": "university",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'Asia/Kolkata'"
+        },
+        "scoring_weights_json": {
+          "name": "scoring_weights_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'{}'"
+        },
+        "quiet_start": {
+          "name": "quiet_start",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "quiet_end": {
+          "name": "quiet_end",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "digest_hour": {
+          "name": "digest_hour",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "settings_workspace_idx": {
+          "name": "settings_workspace_idx",
+          "columns": [
+            "workspace_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "settings_workspace_id_workspace_id_fk": {
+          "name": "settings_workspace_id_workspace_id_fk",
+          "tableFrom": "settings",
+          "tableTo": "workspace",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "settings_timezone_not_blank": {
+          "name": "settings_timezone_not_blank",
+          "value": "length(trim(\"settings\".\"timezone\")) > 0"
+        },
+        "settings_quiet_start_range": {
+          "name": "settings_quiet_start_range",
+          "value": "\"settings\".\"quiet_start\" is null or \"settings\".\"quiet_start\" between 0 and 1439"
+        },
+        "settings_quiet_end_range": {
+          "name": "settings_quiet_end_range",
+          "value": "\"settings\".\"quiet_end\" is null or \"settings\".\"quiet_end\" between 0 and 1439"
+        },
+        "settings_digest_hour_range": {
+          "name": "settings_digest_hour_range",
+          "value": "\"settings\".\"digest_hour\" is null or \"settings\".\"digest_hour\" between 0 and 23"
+        }
+      }
+    },
+    "task": {
+      "name": "task",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "due_on": {
+          "name": "due_on",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "priority": {
+          "name": "priority",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'medium'"
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'open'"
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'manual'"
+        },
+        "entity_type": {
+          "name": "entity_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "derived_from_key": {
+          "name": "derived_from_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_by_rule": {
+          "name": "created_by_rule",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "task_workspace_id_id_unique": {
+          "name": "task_workspace_id_id_unique",
+          "columns": [
+            "workspace_id",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "task_workspace_status_idx": {
+          "name": "task_workspace_status_idx",
+          "columns": [
+            "workspace_id",
+            "status"
+          ],
+          "isUnique": false
+        },
+        "task_workspace_due_idx": {
+          "name": "task_workspace_due_idx",
+          "columns": [
+            "workspace_id",
+            "due_on"
+          ],
+          "isUnique": false
+        },
+        "task_workspace_derived_from_key_idx": {
+          "name": "task_workspace_derived_from_key_idx",
+          "columns": [
+            "workspace_id",
+            "derived_from_key"
+          ],
+          "isUnique": false
+        },
+        "task_workspace_entity_idx": {
+          "name": "task_workspace_entity_idx",
+          "columns": [
+            "workspace_id",
+            "entity_type",
+            "entity_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "task_workspace_id_workspace_id_fk": {
+          "name": "task_workspace_id_workspace_id_fk",
+          "tableFrom": "task",
+          "tableTo": "workspace",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "task_title_not_blank": {
+          "name": "task_title_not_blank",
+          "value": "length(trim(\"task\".\"title\")) > 0"
+        },
+        "task_priority_valid": {
+          "name": "task_priority_valid",
+          "value": "\"task\".\"priority\" in ('low', 'medium', 'high')"
+        },
+        "task_status_valid": {
+          "name": "task_status_valid",
+          "value": "\"task\".\"status\" in ('open', 'completed')"
+        },
+        "task_source_valid": {
+          "name": "task_source_valid",
+          "value": "\"task\".\"source\" in ('manual', 'rule')"
+        },
+        "task_link_pair": {
+          "name": "task_link_pair",
+          "value": "(\"task\".\"entity_type\" is null and \"task\".\"entity_id\" is null) or (\"task\".\"entity_type\" is not null and \"task\".\"entity_id\" is not null)"
+        },
+        "task_entity_type_valid": {
+          "name": "task_entity_type_valid",
+          "value": "\"task\".\"entity_type\" is null or \"task\".\"entity_type\" in ('company', 'contact', 'opportunity', 'application', 'referral')"
+        },
+        "task_completed_at_matches_status": {
+          "name": "task_completed_at_matches_status",
+          "value": "(\"task\".\"status\" = 'completed' and \"task\".\"completed_at\" is not null) or (\"task\".\"status\" <> 'completed' and \"task\".\"completed_at\" is null)"
+        }
+      }
+    },
+    "user_account": {
+      "name": "user_account",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email_normalized": {
+          "name": "email_normalized",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email_verified_at": {
+          "name": "email_verified_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'active'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "user_account_email_normalized_unique": {
+          "name": "user_account_email_normalized_unique",
+          "columns": [
+            "email_normalized"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "workspace": {
+      "name": "workspace",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_user_id": {
+          "name": "owner_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "workspace_owner_user_id_unique": {
+          "name": "workspace_owner_user_id_unique",
+          "columns": [
+            "owner_user_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "workspace_owner_user_id_user_account_id_fk": {
+          "name": "workspace_owner_user_id_user_account_id_fk",
+          "tableFrom": "workspace",
+          "tableTo": "user_account",
+          "columnsFrom": [
+            "owner_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}
