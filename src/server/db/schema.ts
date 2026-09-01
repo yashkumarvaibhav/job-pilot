@@ -30,6 +30,10 @@ import {
   type OpportunityBucket,
   type OpportunityStage,
 } from "../../domain/opportunity";
+import {
+  DEFAULT_REFERRAL_STAGE,
+  type ReferralStage,
+} from "../../domain/referral";
 import { DEFAULT_TIME_ZONE } from "./timezone";
 
 const utcInstant = (name: string) => integer(name, { mode: "timestamp_ms" });
@@ -411,6 +415,77 @@ export const opportunity = sqliteTable(
   ],
 );
 
+export const referralRequest = sqliteTable(
+  "referral_request",
+  {
+    ...workspaceOwnedEntityColumns(),
+    contactId: text("contact_id").notNull(),
+    opportunityId: text("opportunity_id"),
+    requestedOn: text("requested_on"),
+    channel: text("channel").$type<InteractionChannel>().notNull(),
+    resumeShared: integer("resume_shared", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    jobIdShared: integer("job_id_shared", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    jobUrlShared: integer("job_url_shared", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    stage: text("stage")
+      .$type<ReferralStage>()
+      .notNull()
+      .default(DEFAULT_REFERRAL_STAGE),
+    followUpOn: text("follow_up_on"),
+    receivedOn: text("received_on"),
+    confirmation: text("confirmation"),
+    nextAction: text("next_action"),
+    notes: text("notes"),
+    createdAt: utcInstant("created_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("referral_request", table),
+    index("referral_request_workspace_contact_idx").on(
+      table.workspaceId,
+      table.contactId,
+    ),
+    index("referral_request_workspace_opportunity_idx").on(
+      table.workspaceId,
+      table.opportunityId,
+    ),
+    index("referral_request_workspace_stage_idx").on(
+      table.workspaceId,
+      table.stage,
+    ),
+    index("referral_request_workspace_requested_on_idx").on(
+      table.workspaceId,
+      table.requestedOn,
+    ),
+    index("referral_request_workspace_follow_up_idx").on(
+      table.workspaceId,
+      table.followUpOn,
+    ),
+    sameWorkspaceForeignKey(
+      "referral_request_contact_fk",
+      { workspaceId: table.workspaceId, parentId: table.contactId },
+      contact,
+    ),
+    sameWorkspaceForeignKey(
+      "referral_request_opportunity_fk",
+      { workspaceId: table.workspaceId, parentId: table.opportunityId },
+      opportunity,
+    ),
+    check(
+      "referral_request_channel_valid",
+      sql`${table.channel} in ('email', 'linkedin_dm', 'linkedin_connection_note', 'whatsapp', 'phone', 'telegram', 'slack_discord', 'company_referral_portal', 'alumni_network', 'college_network', 'in_person', 'other')`,
+    ),
+    check(
+      "referral_request_stage_valid",
+      sql`${table.stage} in ('potential_contact', 'ready_to_contact', 'requested', 'seen_acknowledged', 'asked_for_resume', 'resume_sent', 'agreed_to_refer', 'referral_promised', 'referral_submitted', 'referral_received', 'declined', 'no_response', 'expired', 'cancelled')`,
+    ),
+  ],
+);
+
 export const interaction = sqliteTable(
   "interaction",
   {
@@ -471,6 +546,11 @@ export const interaction = sqliteTable(
       "interaction_opportunity_fk",
       { workspaceId: table.workspaceId, parentId: table.opportunityId },
       opportunity,
+    ),
+    sameWorkspaceForeignKey(
+      "interaction_referral_fk",
+      { workspaceId: table.workspaceId, parentId: table.referralId },
+      referralRequest,
     ),
     check(
       "interaction_context_present",

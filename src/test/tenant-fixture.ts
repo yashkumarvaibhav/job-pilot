@@ -20,7 +20,8 @@ type FoundationTable =
   | "interaction"
   | "opportunity"
   | "opportunity_contact"
-  | "application";
+  | "application"
+  | "referral_request";
 
 type BaseTenantTestFixture = {
   client: DatabaseClient;

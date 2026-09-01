@@ -163,7 +163,7 @@ async function concurrentWriterCase() {
     );
     check(
       "the manifest records a schema version",
-      backup.manifest.schema.latestTag === "0006_application",
+      backup.manifest.schema.latestTag === "0007_referral_request",
       backup.manifest.schema.latestTag ?? "none",
     );
 

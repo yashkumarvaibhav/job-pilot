@@ -43,6 +43,7 @@ describe("migrateDatabase", () => {
           "opportunity",
           "opportunity_contact",
           "application",
+          "referral_request",
           "settings",
           "user_account",
           "workspace",
@@ -52,7 +53,7 @@ describe("migrateDatabase", () => {
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 7 });
+      ).toEqual({ count: 8 });
 
       for (const indexName of [
         "company_workspace_id_id_unique",
@@ -86,6 +87,12 @@ describe("migrateDatabase", () => {
         "application_workspace_opportunity_unique",
         "application_workspace_stage_idx",
         "application_workspace_applied_on_idx",
+        "referral_request_workspace_id_id_unique",
+        "referral_request_workspace_contact_idx",
+        "referral_request_workspace_opportunity_idx",
+        "referral_request_workspace_stage_idx",
+        "referral_request_workspace_requested_on_idx",
+        "referral_request_workspace_follow_up_idx",
         "settings_workspace_idx",
         "activity_event_workspace_id_id_unique",
         "activity_event_workspace_at_idx",
@@ -426,6 +433,73 @@ describe("migrateDatabase", () => {
       expect(applicationOpportunityForeignKeys).toEqual([
         { table: "opportunity", from: "workspace_id", to: "workspace_id" },
         { table: "opportunity", from: "opportunity_id", to: "id" },
+      ]);
+
+      const referralColumns = client.sqlite
+        .prepare(
+          "select name, \"notnull\", dflt_value from pragma_table_info('referral_request') order by cid",
+        )
+        .all() as {
+        name: string;
+        notnull: number;
+        dflt_value: string | null;
+      }[];
+      expect(referralColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "contact_id",
+        "opportunity_id",
+        "requested_on",
+        "channel",
+        "resume_shared",
+        "job_id_shared",
+        "job_url_shared",
+        "stage",
+        "follow_up_on",
+        "received_on",
+        "confirmation",
+        "next_action",
+        "notes",
+        "created_at",
+      ]);
+      expect(
+        referralColumns.find((column) => column.name === "contact_id")?.notnull,
+      ).toBe(1);
+      expect(
+        referralColumns.find((column) => column.name === "opportunity_id")
+          ?.notnull,
+      ).toBe(0);
+      expect(
+        referralColumns.find((column) => column.name === "stage")?.dflt_value,
+      ).toBe("'potential_contact'");
+
+      const referralContactForeignKeys = client.sqlite
+        .prepare(
+          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('referral_request') where \"table\" = 'contact' order by seq",
+        )
+        .all();
+      expect(referralContactForeignKeys).toEqual([
+        { table: "contact", from: "workspace_id", to: "workspace_id" },
+        { table: "contact", from: "contact_id", to: "id" },
+      ]);
+      const referralOpportunityForeignKeys = client.sqlite
+        .prepare(
+          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('referral_request') where \"table\" = 'opportunity' order by seq",
+        )
+        .all();
+      expect(referralOpportunityForeignKeys).toEqual([
+        { table: "opportunity", from: "workspace_id", to: "workspace_id" },
+        { table: "opportunity", from: "opportunity_id", to: "id" },
+      ]);
+
+      const interactionReferralForeignKeys = client.sqlite
+        .prepare(
+          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('interaction') where \"table\" = 'referral_request' order by seq",
+        )
+        .all();
+      expect(interactionReferralForeignKeys).toEqual([
+        { table: "referral_request", from: "workspace_id", to: "workspace_id" },
+        { table: "referral_request", from: "referral_id", to: "id" },
       ]);
     } finally {
       client.close();

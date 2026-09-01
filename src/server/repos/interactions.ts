@@ -10,7 +10,7 @@ import {
 } from "../../domain/interaction";
 import { logEvent } from "../db/activity";
 import type { AppDatabase, AppTransaction } from "../db/client";
-import { company, contact, interaction, opportunity } from "../db/schema";
+import { company, contact, interaction, opportunity, referralRequest } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
 
 export type Interaction = typeof interaction.$inferSelect;
@@ -146,6 +146,29 @@ function requireOwnedOpportunity(
   }
 }
 
+function requireOwnedReferral(
+  transaction: AppTransaction,
+  tenant: TenantContext,
+  referralId: string | null,
+): void {
+  if (referralId === null) {
+    return;
+  }
+  const found = transaction
+    .select({ id: referralRequest.id })
+    .from(referralRequest)
+    .where(
+      and(
+        eq(referralRequest.workspaceId, tenant.workspaceId),
+        eq(referralRequest.id, referralId),
+      ),
+    )
+    .get();
+  if (!found) {
+    throw new InteractionInputError("Referral not found.");
+  }
+}
+
 function resolveOpenNeedReply(
   transaction: AppTransaction,
   tenant: TenantContext,
@@ -236,6 +259,7 @@ export function createInteraction(
     }
     requireOwnedCompany(transaction, tenant, companyId);
     requireOwnedOpportunity(transaction, tenant, opportunityId);
+    requireOwnedReferral(transaction, tenant, referralId);
 
     const row = transaction
       .insert(interaction)

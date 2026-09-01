@@ -157,7 +157,7 @@ describe("createBackup — captured snapshot", () => {
     expect(result.manifest.tables.workspace).toBe(2);
     expect(result.manifest.tables.settings).toBe(2);
     expect(result.manifest.schema.appliedMigrations).toBeGreaterThan(0);
-    expect(result.manifest.schema.latestTag).toBe("0006_application");
+    expect(result.manifest.schema.latestTag).toBe("0007_referral_request");
     expect(result.manifest.snapshot.bytes).toBeGreaterThan(0);
 
     const snapshot = new Database(join(result.directory, "job-pilot.sqlite"));
