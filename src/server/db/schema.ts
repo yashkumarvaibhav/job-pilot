@@ -182,3 +182,24 @@ export const activityEvent = sqliteTable(
     ),
   ],
 );
+
+export const company = sqliteTable(
+  "company",
+  {
+    ...workspaceOwnedEntityColumns(),
+    name: text("name").notNull(),
+    website: text("website"),
+    careersUrl: text("careers_url"),
+    industry: text("industry"),
+    type: text("type"),
+    locations: text("locations"),
+    target: integer("target", { mode: "boolean" }).notNull().default(false),
+    notes: text("notes"),
+    createdAt: utcInstant("created_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("company", table),
+    index("company_workspace_name_idx").on(table.workspaceId, table.name),
+    check("company_name_not_blank", sql`length(trim(${table.name})) > 0`),
+  ],
+);

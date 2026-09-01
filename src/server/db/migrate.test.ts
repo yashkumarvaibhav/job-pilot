@@ -36,6 +36,7 @@ describe("migrateDatabase", () => {
           "account_token",
           "activity_event",
           "auth_session",
+          "company",
           "settings",
           "user_account",
           "workspace",
@@ -45,9 +46,11 @@ describe("migrateDatabase", () => {
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 1 });
+      ).toEqual({ count: 2 });
 
       for (const indexName of [
+        "company_workspace_id_id_unique",
+        "company_workspace_name_idx",
         "settings_workspace_idx",
         "activity_event_workspace_id_id_unique",
         "activity_event_workspace_at_idx",
@@ -67,6 +70,46 @@ describe("migrateDatabase", () => {
         )
         .all();
       expect(activityForeignKeys).toContainEqual({
+        table: "workspace",
+        from: "workspace_id",
+        to: "id",
+      });
+
+      const companyColumns = client.sqlite
+        .prepare(
+          "select name, \"notnull\", dflt_value from pragma_table_info('company') order by cid",
+        )
+        .all() as {
+        name: string;
+        notnull: number;
+        dflt_value: string | null;
+      }[];
+      expect(companyColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "name",
+        "website",
+        "careers_url",
+        "industry",
+        "type",
+        "locations",
+        "target",
+        "notes",
+        "created_at",
+      ]);
+      expect(companyColumns.find((column) => column.name === "name")?.notnull).toBe(
+        1,
+      );
+      expect(
+        companyColumns.find((column) => column.name === "target")?.dflt_value,
+      ).toBe("false");
+
+      const companyForeignKeys = client.sqlite
+        .prepare(
+          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('company')",
+        )
+        .all();
+      expect(companyForeignKeys).toContainEqual({
         table: "workspace",
         from: "workspace_id",
         to: "id",
