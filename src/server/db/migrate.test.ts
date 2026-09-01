@@ -41,6 +41,7 @@ describe("migrateDatabase", () => {
           "contact_method",
           "interaction",
           "opportunity",
+          "opportunity_contact",
           "settings",
           "user_account",
           "workspace",
@@ -50,7 +51,7 @@ describe("migrateDatabase", () => {
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 5 });
+      ).toEqual({ count: 6 });
 
       for (const indexName of [
         "company_workspace_id_id_unique",
@@ -76,6 +77,10 @@ describe("migrateDatabase", () => {
         "opportunity_workspace_stage_idx",
         "opportunity_workspace_deadline_idx",
         "opportunity_workspace_company_job_id_unique",
+        "opportunity_contact_workspace_id_id_unique",
+        "opportunity_contact_workspace_pair_unique",
+        "opportunity_contact_workspace_opportunity_idx",
+        "opportunity_contact_workspace_contact_idx",
         "settings_workspace_idx",
         "activity_event_workspace_id_id_unique",
         "activity_event_workspace_at_idx",
@@ -340,6 +345,41 @@ describe("migrateDatabase", () => {
       expect(opportunityCompanyForeignKeys).toEqual([
         { table: "company", from: "workspace_id", to: "workspace_id" },
         { table: "company", from: "company_id", to: "id" },
+      ]);
+
+      const opportunityContactColumns = client.sqlite
+        .prepare(
+          "select name, \"notnull\" from pragma_table_info('opportunity_contact') order by cid",
+        )
+        .all() as { name: string; notnull: number }[];
+      expect(opportunityContactColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "opportunity_id",
+        "contact_id",
+        "created_at",
+      ]);
+      expect(
+        opportunityContactColumns.every((column) => column.notnull === 1),
+      ).toBe(true);
+
+      const opportunityContactOpportunityForeignKeys = client.sqlite
+        .prepare(
+          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('opportunity_contact') where \"table\" = 'opportunity' order by seq",
+        )
+        .all();
+      expect(opportunityContactOpportunityForeignKeys).toEqual([
+        { table: "opportunity", from: "workspace_id", to: "workspace_id" },
+        { table: "opportunity", from: "opportunity_id", to: "id" },
+      ]);
+      const opportunityContactContactForeignKeys = client.sqlite
+        .prepare(
+          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('opportunity_contact') where \"table\" = 'contact' order by seq",
+        )
+        .all();
+      expect(opportunityContactContactForeignKeys).toEqual([
+        { table: "contact", from: "workspace_id", to: "workspace_id" },
+        { table: "contact", from: "contact_id", to: "id" },
       ]);
     } finally {
       client.close();

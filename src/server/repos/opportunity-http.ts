@@ -1,5 +1,7 @@
 import type {
+  CreateOpportunityFromConversationInput,
   CreateOpportunityInput,
+  LinkedContact,
   OpportunityListItem,
   UpdateOpportunityInput,
 } from "./opportunities";
@@ -105,6 +107,80 @@ export function opportunityResponse(row: OpportunityListItem) {
   return {
     ...safe,
     tags: tagsJson,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+const FROM_CONVERSATION_FIELDS = new Set([
+  "contactId",
+  "role",
+  "jobId",
+  "companyId",
+]);
+
+function optionalString(
+  body: Record<string, unknown>,
+  key: string,
+): string | null | undefined {
+  if (!(key in body)) {
+    return undefined;
+  }
+  const value = body[key];
+  if (value === null) {
+    return null;
+  }
+  return typeof value === "string" ? value : undefined;
+}
+
+export async function readFromConversationInput(
+  request: Request,
+): Promise<CreateOpportunityFromConversationInput | null> {
+  const body = await readObject(request);
+  if (
+    !body ||
+    !Object.keys(body).every((key) => FROM_CONVERSATION_FIELDS.has(key)) ||
+    typeof body.contactId !== "string" ||
+    typeof body.role !== "string"
+  ) {
+    return null;
+  }
+  const jobId = optionalString(body, "jobId");
+  const companyId = optionalString(body, "companyId");
+  if (jobId === undefined && "jobId" in body) {
+    return null;
+  }
+  if (companyId === undefined && "companyId" in body) {
+    return null;
+  }
+  return {
+    contactId: body.contactId,
+    role: body.role,
+    ...(jobId !== undefined ? { jobId } : {}),
+    ...(companyId !== undefined ? { companyId } : {}),
+  };
+}
+
+export async function readLinkContactInput(
+  request: Request,
+): Promise<{ contactId: string } | null> {
+  const body = await readObject(request);
+  if (
+    !body ||
+    !Object.keys(body).every((key) => key === "contactId") ||
+    typeof body.contactId !== "string"
+  ) {
+    return null;
+  }
+  return { contactId: body.contactId };
+}
+
+export function linkedContactResponse(row: LinkedContact) {
+  return {
+    linkId: row.linkId,
+    opportunityId: row.opportunityId,
+    contactId: row.contactId,
+    contactName: row.contactName,
+    companyName: row.companyName,
     createdAt: row.createdAt.toISOString(),
   };
 }

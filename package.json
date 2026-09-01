@@ -18,6 +18,7 @@
     "test:contact": "vitest run src/domain/contact.test.ts src/server/db/migrate.test.ts src/server/repos/contacts.test.ts src/app/api/contacts/contact-routes.test.ts src/app/contact-ui.test.tsx",
     "test:interaction": "vitest run src/domain/interaction.test.ts src/server/db/migrate.test.ts src/server/repos/interactions.test.ts src/app/api/contacts/interaction-routes.test.ts src/app/contact-ui.test.tsx",
     "test:opportunity": "vitest run src/domain/opportunity.test.ts src/server/db/migrate.test.ts src/server/repos/opportunities.test.ts src/app/api/opportunities/opportunity-routes.test.ts src/app/opportunity-ui.test.tsx",
+    "test:opportunity-contact": "vitest run src/server/db/migrate.test.ts src/server/repos/opportunity-contacts.test.ts src/app/api/opportunities/opportunity-contact-routes.test.ts src/app/contact-ui.test.tsx src/app/opportunity-ui.test.tsx",
     "test:watch": "vitest"
   },
   "dependencies": {

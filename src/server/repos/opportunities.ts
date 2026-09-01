@@ -12,7 +12,13 @@ import {
 } from "../../domain/opportunity";
 import { logEvent } from "../db/activity";
 import type { AppDatabase, AppTransaction } from "../db/client";
-import { company, opportunity } from "../db/schema";
+import {
+  company,
+  contact,
+  interaction,
+  opportunity,
+  opportunityContact,
+} from "../db/schema";
 import type { TenantContext } from "../db/tenant";
 
 export type Opportunity = typeof opportunity.$inferSelect;
@@ -77,6 +83,26 @@ export type UpdateOpportunityInput = Partial<
     | "nextAction"
   >
 >;
+
+export type CreateOpportunityFromConversationInput = {
+  id?: string;
+  contactId: string;
+  role: string;
+  jobId?: string | null;
+  companyId?: string | null;
+  now?: Date;
+};
+
+export type LinkedContact = {
+  linkId: string;
+  opportunityId: string;
+  contactId: string;
+  contactName: string;
+  companyName: string | null;
+  createdAt: Date;
+};
+
+export type LinkedOpportunity = OpportunityListItem & { linkId: string };
 
 export class OpportunityInputError extends Error {
   constructor(message: string) {
@@ -207,6 +233,23 @@ function requireOwnedCompany(
   }
 }
 
+function requireOwnedContact(
+  transaction: AppTransaction,
+  tenant: TenantContext,
+  contactId: string,
+) {
+  return transaction
+    .select()
+    .from(contact)
+    .where(
+      and(
+        eq(contact.workspaceId, tenant.workspaceId),
+        eq(contact.id, contactId),
+      ),
+    )
+    .get();
+}
+
 function selectOpportunity(
   database: AppDatabase | AppTransaction,
   tenant: TenantContext,
@@ -235,8 +278,75 @@ function selectOpportunity(
     : undefined;
 }
 
-export function createOpportunity(
-  database: AppDatabase,
+function selectLinkedContact(
+  database: AppDatabase | AppTransaction,
+  tenant: TenantContext,
+  opportunityId: string,
+  contactId: string,
+): LinkedContact | undefined {
+  const found = database
+    .select({
+      link: opportunityContact,
+      contactName: contact.name,
+      companyName: company.name,
+    })
+    .from(opportunityContact)
+    .innerJoin(
+      contact,
+      and(
+        eq(contact.workspaceId, opportunityContact.workspaceId),
+        eq(contact.id, opportunityContact.contactId),
+      ),
+    )
+    .leftJoin(
+      company,
+      and(
+        eq(company.workspaceId, contact.workspaceId),
+        eq(company.id, contact.companyId),
+      ),
+    )
+    .where(
+      and(
+        eq(opportunityContact.workspaceId, tenant.workspaceId),
+        eq(opportunityContact.opportunityId, opportunityId),
+        eq(opportunityContact.contactId, contactId),
+      ),
+    )
+    .get();
+
+  return found
+    ? {
+        linkId: found.link.id,
+        opportunityId: found.link.opportunityId,
+        contactId: found.link.contactId,
+        contactName: found.contactName,
+        companyName: found.companyName,
+        createdAt: found.link.createdAt,
+      }
+    : undefined;
+}
+
+function contactHasLoggedOpening(
+  database: AppDatabase | AppTransaction,
+  tenant: TenantContext,
+  contactId: string,
+): boolean {
+  return (
+    database
+      .select({ id: interaction.id })
+      .from(interaction)
+      .where(
+        and(
+          eq(interaction.workspaceId, tenant.workspaceId),
+          eq(interaction.contactId, contactId),
+        ),
+      )
+      .all().length > 0
+  );
+}
+
+function writeOpportunity(
+  transaction: AppTransaction,
   tenant: TenantContext,
   input: CreateOpportunityInput,
 ): OpportunityListItem {
@@ -244,49 +354,96 @@ export function createOpportunity(
   const now = input.now ?? new Date();
   const companyId = requiredText(input.companyId, "Company");
 
-  return database.transaction((transaction) => {
-    requireOwnedCompany(transaction, tenant, companyId);
-    transaction
-      .insert(opportunity)
-      .values({
-        id,
-        workspaceId: tenant.workspaceId,
-        companyId,
-        role: requiredText(input.role, "Role"),
-        jobId: optionalText(input.jobId),
-        url: optionalHttpUrl(input.url),
-        location: optionalText(input.location),
-        workMode: optionalText(input.workMode),
-        employmentType: optionalText(input.employmentType),
-        experienceRequirement: optionalText(input.experienceRequirement),
-        source: optionalText(input.source),
-        discoveredOn: optionalDate(input.discoveredOn, "Date discovered"),
-        postedOn: optionalDate(input.postedOn, "Posting date"),
-        deadlineOn: optionalDate(input.deadlineOn, "Deadline"),
-        compensation: optionalText(input.compensation),
-        priority: optionalText(input.priority),
-        interestScore: optionalInteger(input.interestScore),
-        eligibility: optionalText(input.eligibility),
-        referralPreferred: input.referralPreferred ?? false,
-        resumeVersionId: optionalText(input.resumeVersionId),
-        jdSnapshot: optionalText(input.jdSnapshot),
-        notes: optionalText(input.notes),
-        tagsJson: normalizedTags(input.tags),
-        bucket: validBucket(input.bucket ?? DEFAULT_OPPORTUNITY_BUCKET),
-        stage: validSelectableStage(input.stage ?? DEFAULT_OPPORTUNITY_STAGE),
-        nextAction: optionalText(input.nextAction),
-        createdAt: now,
-      })
-      .run();
-    logEvent(transaction, tenant, {
-      at: now,
-      kind: "OPPORTUNITY_CREATED",
-      entityType: "opportunity",
-      entityId: id,
-    });
-
-    return selectOpportunity(transaction, tenant, id)!;
+  requireOwnedCompany(transaction, tenant, companyId);
+  transaction
+    .insert(opportunity)
+    .values({
+      id,
+      workspaceId: tenant.workspaceId,
+      companyId,
+      role: requiredText(input.role, "Role"),
+      jobId: optionalText(input.jobId),
+      url: optionalHttpUrl(input.url),
+      location: optionalText(input.location),
+      workMode: optionalText(input.workMode),
+      employmentType: optionalText(input.employmentType),
+      experienceRequirement: optionalText(input.experienceRequirement),
+      source: optionalText(input.source),
+      discoveredOn: optionalDate(input.discoveredOn, "Date discovered"),
+      postedOn: optionalDate(input.postedOn, "Posting date"),
+      deadlineOn: optionalDate(input.deadlineOn, "Deadline"),
+      compensation: optionalText(input.compensation),
+      priority: optionalText(input.priority),
+      interestScore: optionalInteger(input.interestScore),
+      eligibility: optionalText(input.eligibility),
+      referralPreferred: input.referralPreferred ?? false,
+      resumeVersionId: optionalText(input.resumeVersionId),
+      jdSnapshot: optionalText(input.jdSnapshot),
+      notes: optionalText(input.notes),
+      tagsJson: normalizedTags(input.tags),
+      bucket: validBucket(input.bucket ?? DEFAULT_OPPORTUNITY_BUCKET),
+      stage: validSelectableStage(input.stage ?? DEFAULT_OPPORTUNITY_STAGE),
+      nextAction: optionalText(input.nextAction),
+      createdAt: now,
+    })
+    .run();
+  logEvent(transaction, tenant, {
+    at: now,
+    kind: "OPPORTUNITY_CREATED",
+    entityType: "opportunity",
+    entityId: id,
   });
+
+  return selectOpportunity(transaction, tenant, id)!;
+}
+
+function writeOpportunityContactLink(
+  transaction: AppTransaction,
+  tenant: TenantContext,
+  opportunityId: string,
+  contactId: string,
+  at: Date,
+): LinkedContact {
+  const existing = selectLinkedContact(
+    transaction,
+    tenant,
+    opportunityId,
+    contactId,
+  );
+  if (existing) {
+    return existing;
+  }
+
+  const id = randomUUID();
+  transaction
+    .insert(opportunityContact)
+    .values({
+      id,
+      workspaceId: tenant.workspaceId,
+      opportunityId,
+      contactId,
+      createdAt: at,
+    })
+    .run();
+  logEvent(transaction, tenant, {
+    at,
+    kind: "OPPORTUNITY_CONTACT_LINKED",
+    entityType: "opportunity",
+    entityId: opportunityId,
+    payload: { contactId },
+  });
+
+  return selectLinkedContact(transaction, tenant, opportunityId, contactId)!;
+}
+
+export function createOpportunity(
+  database: AppDatabase,
+  tenant: TenantContext,
+  input: CreateOpportunityInput,
+): OpportunityListItem {
+  return database.transaction((transaction) =>
+    writeOpportunity(transaction, tenant, input),
+  );
 }
 
 export function listOpportunities(
@@ -414,5 +571,153 @@ export function updateOpportunity(
     });
 
     return selectOpportunity(transaction, tenant, id)!;
+  });
+}
+
+export function linkContactToOpportunity(
+  database: AppDatabase,
+  tenant: TenantContext,
+  opportunityId: string,
+  contactId: string,
+  at = new Date(),
+): LinkedContact | undefined {
+  return database.transaction((transaction) => {
+    if (!selectOpportunity(transaction, tenant, opportunityId)) {
+      return undefined;
+    }
+    if (!requireOwnedContact(transaction, tenant, contactId)) {
+      return undefined;
+    }
+    return writeOpportunityContactLink(
+      transaction,
+      tenant,
+      opportunityId,
+      contactId,
+      at,
+    );
+  });
+}
+
+export function listOpportunityContacts(
+  database: AppDatabase,
+  tenant: TenantContext,
+  opportunityId: string,
+): LinkedContact[] {
+  return database
+    .select({
+      link: opportunityContact,
+      contactName: contact.name,
+      companyName: company.name,
+    })
+    .from(opportunityContact)
+    .innerJoin(
+      contact,
+      and(
+        eq(contact.workspaceId, opportunityContact.workspaceId),
+        eq(contact.id, opportunityContact.contactId),
+      ),
+    )
+    .leftJoin(
+      company,
+      and(
+        eq(company.workspaceId, contact.workspaceId),
+        eq(company.id, contact.companyId),
+      ),
+    )
+    .where(
+      and(
+        eq(opportunityContact.workspaceId, tenant.workspaceId),
+        eq(opportunityContact.opportunityId, opportunityId),
+      ),
+    )
+    .orderBy(asc(contact.name), asc(contact.id))
+    .all()
+    .map(({ link, contactName, companyName }) => ({
+      linkId: link.id,
+      opportunityId: link.opportunityId,
+      contactId: link.contactId,
+      contactName,
+      companyName,
+      createdAt: link.createdAt,
+    }));
+}
+
+export function listContactOpportunities(
+  database: AppDatabase,
+  tenant: TenantContext,
+  contactId: string,
+): LinkedOpportunity[] {
+  return database
+    .select({
+      opportunity,
+      companyName: company.name,
+      linkId: opportunityContact.id,
+    })
+    .from(opportunityContact)
+    .innerJoin(
+      opportunity,
+      and(
+        eq(opportunity.workspaceId, opportunityContact.workspaceId),
+        eq(opportunity.id, opportunityContact.opportunityId),
+      ),
+    )
+    .innerJoin(
+      company,
+      and(
+        eq(company.workspaceId, opportunity.workspaceId),
+        eq(company.id, opportunity.companyId),
+      ),
+    )
+    .where(
+      and(
+        eq(opportunityContact.workspaceId, tenant.workspaceId),
+        eq(opportunityContact.contactId, contactId),
+      ),
+    )
+    .orderBy(asc(company.name), asc(opportunity.role), asc(opportunity.id))
+    .all()
+    .map(({ opportunity: row, companyName, linkId }) => ({
+      ...row,
+      companyName,
+      linkId,
+    }));
+}
+
+export function createOpportunityFromConversation(
+  database: AppDatabase,
+  tenant: TenantContext,
+  input: CreateOpportunityFromConversationInput,
+): OpportunityListItem | undefined {
+  return database.transaction((transaction) => {
+    const ownedContact = requireOwnedContact(
+      transaction,
+      tenant,
+      input.contactId,
+    );
+    if (!ownedContact) {
+      return undefined;
+    }
+    if (!contactHasLoggedOpening(transaction, tenant, ownedContact.id)) {
+      throw new OpportunityInputError("Log the opening first.");
+    }
+
+    const companyId =
+      optionalText(input.companyId) ?? ownedContact.companyId ?? "";
+    const created = writeOpportunity(transaction, tenant, {
+      id: input.id,
+      companyId,
+      role: input.role,
+      jobId: input.jobId,
+      source: "Conversation",
+      now: input.now,
+    });
+    writeOpportunityContactLink(
+      transaction,
+      tenant,
+      created.id,
+      ownedContact.id,
+      input.now ?? created.createdAt,
+    );
+    return created;
   });
 }

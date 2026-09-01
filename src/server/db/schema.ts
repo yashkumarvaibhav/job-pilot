@@ -486,3 +486,39 @@ export const interaction = sqliteTable(
     ),
   ],
 );
+
+export const opportunityContact = sqliteTable(
+  "opportunity_contact",
+  {
+    ...workspaceOwnedEntityColumns(),
+    opportunityId: text("opportunity_id").notNull(),
+    contactId: text("contact_id").notNull(),
+    createdAt: utcInstant("created_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("opportunity_contact", table),
+    uniqueIndex("opportunity_contact_workspace_pair_unique").on(
+      table.workspaceId,
+      table.opportunityId,
+      table.contactId,
+    ),
+    index("opportunity_contact_workspace_opportunity_idx").on(
+      table.workspaceId,
+      table.opportunityId,
+    ),
+    index("opportunity_contact_workspace_contact_idx").on(
+      table.workspaceId,
+      table.contactId,
+    ),
+    sameWorkspaceForeignKey(
+      "opportunity_contact_opportunity_fk",
+      { workspaceId: table.workspaceId, parentId: table.opportunityId },
+      opportunity,
+    ).onDelete("cascade"),
+    sameWorkspaceForeignKey(
+      "opportunity_contact_contact_fk",
+      { workspaceId: table.workspaceId, parentId: table.contactId },
+      contact,
+    ).onDelete("cascade"),
+  ],
+);
