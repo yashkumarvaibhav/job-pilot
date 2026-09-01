@@ -11,6 +11,18 @@ export const OPPORTUNITY_PURSUIT_STAGES = [
   { value: "ready_to_apply", label: "Ready to Apply" },
 ] as const;
 
+export const OPPORTUNITY_BUCKETS = [
+  { value: "saved", label: "Saved" },
+  { value: "active", label: "Active" },
+] as const;
+
+export type OpportunityBucket =
+  (typeof OPPORTUNITY_BUCKETS)[number]["value"];
+
+export const DEFAULT_OPPORTUNITY_BUCKET: OpportunityBucket = "saved";
+export const DEFAULT_OPPORTUNITY_STAGE: OpportunitySelectableStage =
+  "discovered";
+
 export const OPPORTUNITY_TERMINAL_STAGES = [
   { value: "ghosted", label: "Ghosted" },
   { value: "position_closed", label: "Position Closed" },
@@ -44,6 +56,9 @@ export type OpportunitySelectableStage =
 const opportunityStageValues = new Set<string>(
   OPPORTUNITY_STAGES.map(({ value }) => value),
 );
+const opportunityBucketValues = new Set<string>(
+  OPPORTUNITY_BUCKETS.map(({ value }) => value),
+);
 const selectableStageValues = new Set<string>(
   OPPORTUNITY_SELECTABLE_STAGES.map(({ value }) => value),
 );
@@ -56,4 +71,8 @@ export function isOpportunitySelectableStage(
   value: unknown,
 ): value is OpportunitySelectableStage {
   return typeof value === "string" && selectableStageValues.has(value);
+}
+
+export function isOpportunityBucket(value: unknown): value is OpportunityBucket {
+  return typeof value === "string" && opportunityBucketValues.has(value);
 }

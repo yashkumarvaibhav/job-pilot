@@ -20,6 +20,12 @@ import type {
   InteractionChannel,
   InteractionDirection,
 } from "../../domain/interaction";
+import {
+  DEFAULT_OPPORTUNITY_BUCKET,
+  DEFAULT_OPPORTUNITY_STAGE,
+  type OpportunityBucket,
+  type OpportunityStage,
+} from "../../domain/opportunity";
 import { DEFAULT_TIME_ZONE } from "./timezone";
 
 const utcInstant = (name: string) => integer(name, { mode: "timestamp_ms" });
@@ -320,6 +326,87 @@ export const contactMethod = sqliteTable(
   ],
 );
 
+export const opportunity = sqliteTable(
+  "opportunity",
+  {
+    ...workspaceOwnedEntityColumns(),
+    companyId: text("company_id").notNull(),
+    role: text("role").notNull(),
+    jobId: text("job_id"),
+    url: text("url"),
+    location: text("location"),
+    workMode: text("work_mode"),
+    employmentType: text("employment_type"),
+    experienceRequirement: text("experience_requirement"),
+    source: text("source"),
+    discoveredOn: text("discovered_on"),
+    postedOn: text("posted_on"),
+    deadlineOn: text("deadline_on"),
+    compensation: text("compensation"),
+    priority: text("priority"),
+    interestScore: integer("interest_score"),
+    eligibility: text("eligibility"),
+    referralPreferred: integer("referral_preferred", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    resumeVersionId: text("resume_version_id"),
+    jdSnapshot: text("jd_snapshot"),
+    notes: text("notes"),
+    tagsJson: text("tags_json", { mode: "json" })
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'`),
+    bucket: text("bucket")
+      .$type<OpportunityBucket>()
+      .notNull()
+      .default(DEFAULT_OPPORTUNITY_BUCKET),
+    stage: text("stage")
+      .$type<OpportunityStage>()
+      .notNull()
+      .default(DEFAULT_OPPORTUNITY_STAGE),
+    nextAction: text("next_action"),
+    createdAt: utcInstant("created_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("opportunity", table),
+    index("opportunity_workspace_company_idx").on(
+      table.workspaceId,
+      table.companyId,
+    ),
+    index("opportunity_workspace_bucket_idx").on(
+      table.workspaceId,
+      table.bucket,
+    ),
+    index("opportunity_workspace_stage_idx").on(
+      table.workspaceId,
+      table.stage,
+    ),
+    index("opportunity_workspace_deadline_idx").on(
+      table.workspaceId,
+      table.deadlineOn,
+    ),
+    uniqueIndex("opportunity_workspace_company_job_id_unique").on(
+      table.workspaceId,
+      table.companyId,
+      table.jobId,
+    ),
+    sameWorkspaceForeignKey(
+      "opportunity_company_fk",
+      { workspaceId: table.workspaceId, parentId: table.companyId },
+      company,
+    ),
+    check("opportunity_role_not_blank", sql`length(trim(${table.role})) > 0`),
+    check(
+      "opportunity_bucket_valid",
+      sql`${table.bucket} in ('saved', 'active')`,
+    ),
+    check(
+      "opportunity_stage_valid",
+      sql`${table.stage} in ('discovered', 'saved', 'interested', 'pursuing', 'finding_contacts', 'finding_referral', 'referral_requested', 'referral_promised', 'referral_received', 'ready_to_apply', 'applied', 'ghosted', 'position_closed', 'withdrawn', 'not_eligible', 'duplicate', 'no_longer_interested', 'expired')`,
+    ),
+  ],
+);
+
 export const interaction = sqliteTable(
   "interaction",
   {
@@ -375,6 +462,11 @@ export const interaction = sqliteTable(
       "interaction_company_fk",
       { workspaceId: table.workspaceId, parentId: table.companyId },
       company,
+    ),
+    sameWorkspaceForeignKey(
+      "interaction_opportunity_fk",
+      { workspaceId: table.workspaceId, parentId: table.opportunityId },
+      opportunity,
     ),
     check(
       "interaction_context_present",
