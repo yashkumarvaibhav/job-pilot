@@ -53,7 +53,7 @@ export default async function CompaniesPage() {
                     <td>{company.target ? <TargetChip /> : "—"}</td>
                     <td className="tnum">0</td>
                     <td className="tnum">0</td>
-                    <td>—</td>
+                    <td>{company.nextAction ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -69,7 +69,7 @@ export default async function CompaniesPage() {
                     {company.target ? <TargetChip /> : null}
                   </span>
                   <span>{company.industry ?? "Industry not set"}</span>
-                  <span className="tnum">0 contacts · 0 open roles</span>
+                  <span>{company.nextAction ?? "No next action"}</span>
                 </Link>
               </li>
             ))}

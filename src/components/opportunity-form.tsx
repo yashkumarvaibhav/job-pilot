@@ -39,6 +39,7 @@ type FormValues = Omit<
     | "bucket"
     | "stage"
     | "nextAction"
+    | "nextActionDue"
   >,
   "stage"
 > & { stage: OpportunityStage };
@@ -107,6 +108,7 @@ function OpportunityForm({
           ? undefined
           : String(form.get("stage") ?? "discovered"),
       nextAction: String(form.get("nextAction") ?? ""),
+      nextActionDue: String(form.get("nextActionDue") ?? ""),
     };
 
     try {
@@ -171,10 +173,25 @@ function OpportunityForm({
             />
           </div>
         ))}
-        {(["discoveredOn", "postedOn", "deadlineOn"] as const).map((name) => (
+        {(["discoveredOn", "postedOn", "deadlineOn", "nextActionDue"] as const).map((name) => (
           <div className="field" key={name}>
-            <label htmlFor={`${formId}-${name}`}>{name === "discoveredOn" ? "Date discovered" : name === "postedOn" ? "Posting date" : "Deadline"}</label>
-            <input defaultValue={initial?.[name] ?? ""} disabled={pending} id={`${formId}-${name}`} name={name} type="date" />
+            <label htmlFor={`${formId}-${name}`}>
+              {name === "discoveredOn"
+                ? "Date discovered"
+                : name === "postedOn"
+                  ? "Posting date"
+                  : name === "deadlineOn"
+                    ? "Deadline"
+                    : "Next action due"}
+            </label>
+            <input
+              className="tnum"
+              defaultValue={initial?.[name] ?? ""}
+              disabled={pending}
+              id={`${formId}-${name}`}
+              name={name}
+              type="date"
+            />
           </div>
         ))}
         <div className="field">

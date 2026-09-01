@@ -1096,7 +1096,8 @@ main:focus {
 .opportunity-detail,
 .application-page,
 .referral-page,
-.referral-detail {
+.referral-detail,
+.task-page {
   display: grid;
   align-content: start;
   gap: var(--space-8);
@@ -1171,25 +1172,50 @@ main:focus {
 .application-form,
 .application-form-grid,
 .referral-form,
-.referral-form-grid {
+.referral-form-grid,
+.task-form,
+.task-form-grid {
   display: grid;
   gap: var(--space-4);
 }
 
 .opportunity-form-grid,
 .application-form-grid,
-.referral-form-grid {
+.referral-form-grid,
+.task-form-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .opportunity-form > .btn,
 .application-form > .btn,
-.referral-form > .btn {
+.referral-form > .btn,
+.task-form > .btn {
   justify-self: start;
 }
 
 .opportunity-form-card--edit {
   max-width: 64rem;
+}
+
+.task-form-wide {
+  grid-column: 1 / -1;
+}
+
+.task-complete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.task-complete .btn {
+  min-height: var(--target-min);
+}
+
+.task-list-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .opportunity-stage-chip {
@@ -1236,7 +1262,8 @@ main:focus {
 
 .opportunity-card-list,
 .application-card-list,
-.referral-card-list {
+.referral-card-list,
+.task-card-list {
   display: none;
   margin: 0;
   padding: 0;
@@ -1540,6 +1567,7 @@ main:focus {
   .application-page,
   .referral-page,
   .referral-detail,
+  .task-page,
   .import-page {
     gap: var(--space-6);
   }
@@ -1647,7 +1675,8 @@ main:focus {
   .opportunity-form-grid,
   .opportunity-field-grid,
   .application-form-grid,
-  .referral-form-grid {
+  .referral-form-grid,
+  .task-form-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -1657,7 +1686,8 @@ main:focus {
 
   .opportunity-table-wrap,
   .application-table-wrap,
-  .referral-table-wrap {
+  .referral-table-wrap,
+  .task-table-wrap {
     display: none;
   }
 
@@ -1668,14 +1698,16 @@ main:focus {
 
   .opportunity-card-list,
   .application-card-list,
-  .referral-card-list {
+  .referral-card-list,
+  .task-card-list {
     display: grid;
     gap: var(--space-3);
   }
 
   .opportunity-list-card,
   .application-list-card,
-  .referral-list-card {
+  .referral-list-card,
+  .task-list-card {
     display: grid;
     min-height: var(--target-min);
     gap: var(--space-2);
@@ -1697,7 +1729,8 @@ main:focus {
 
   .opportunity-list-card__heading,
   .application-list-card__heading,
-  .referral-list-card__heading {
+  .referral-list-card__heading,
+  .task-list-card__heading {
     display: flex;
     min-width: 0;
     align-items: center;

@@ -69,6 +69,8 @@ export default async function CompanyDetailPage({
           <Field label="Company type" value={company.type} />
           <Field label="Locations" value={company.locations} />
           <Field label="Notes" value={company.notes} />
+          <Field label="Next action" value={company.nextAction} />
+          <Field label="Next action due" value={company.nextActionDue} />
         </dl>
       </section>
 

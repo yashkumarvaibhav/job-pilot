@@ -15,6 +15,8 @@ type CompanyFormValues = Pick<
   | "locations"
   | "target"
   | "notes"
+  | "nextAction"
+  | "nextActionDue"
 >;
 
 type CompanyFormProps = {
@@ -60,6 +62,8 @@ function CompanyForm({
       locations: String(form.get("locations") ?? ""),
       target: form.get("target") === "on",
       notes: String(form.get("notes") ?? ""),
+      nextAction: String(form.get("nextAction") ?? ""),
+      nextActionDue: String(form.get("nextActionDue") ?? ""),
     };
 
     try {
@@ -178,6 +182,29 @@ function CompanyForm({
           name="notes"
           rows={4}
         />
+      </div>
+
+      <div className="company-form-grid">
+        <div className="field">
+          <label htmlFor={`${formId}-next-action`}>Next action</label>
+          <input
+            defaultValue={initial?.nextAction ?? ""}
+            disabled={pending}
+            id={`${formId}-next-action`}
+            name="nextAction"
+          />
+        </div>
+        <div className="field">
+          <label htmlFor={`${formId}-next-action-due`}>Next action due</label>
+          <input
+            className="tnum"
+            defaultValue={initial?.nextActionDue ?? ""}
+            disabled={pending}
+            id={`${formId}-next-action-due`}
+            name="nextActionDue"
+            type="date"
+          />
+        </div>
       </div>
 
       {message ? (

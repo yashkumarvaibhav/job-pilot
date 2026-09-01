@@ -113,6 +113,7 @@ export default async function OpportunityDetailPage({ params }: Props) {
     ["Referral preferred", row.referralPreferred],
     ["Resume version ID", row.resumeVersionId],
     ["Next action", row.nextAction],
+    ["Next action due", row.nextActionDue],
     ["Tags", row.tagsJson.length ? row.tagsJson.join(", ") : null],
     ["Notes", row.notes],
   ] as const;

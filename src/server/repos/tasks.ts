@@ -84,6 +84,23 @@ export type ConvertDerivedInput = {
   now?: Date;
 };
 
+export function parseTaskListFilter(
+  searchParams: URLSearchParams,
+  asOfOn: string,
+): TaskListFilter {
+  const statusValue = searchParams.get("status");
+  const dueValue = searchParams.get("due");
+  const status = isTaskStatus(statusValue) ? statusValue : undefined;
+  const due =
+    dueValue === "overdue" || dueValue === "today" || dueValue === "later"
+      ? dueValue
+      : undefined;
+  return {
+    ...(status ? { status } : {}),
+    ...(due ? { due, asOfOn } : {}),
+  };
+}
+
 export class TaskInputError extends Error {
   constructor(message: string) {
     super(message);
