@@ -12,7 +12,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:company": "vitest run src/server/db/migrate.test.ts src/server/repos/companies.test.ts src/app/api/companies/company-routes.test.ts src/app/company-ui.test.tsx",
-    "test:contact": "vitest run src/domain/contact.test.ts src/server/db/migrate.test.ts",
+    "test:contact": "vitest run src/domain/contact.test.ts src/server/db/migrate.test.ts src/server/repos/contacts.test.ts src/app/api/contacts/contact-routes.test.ts",
     "test:watch": "vitest"
   },
   "dependencies": {
