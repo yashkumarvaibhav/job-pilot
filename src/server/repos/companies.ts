@@ -6,6 +6,10 @@ import { logEvent } from "../db/activity";
 import type { AppDatabase, AppTransaction } from "../db/client";
 import { company } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
+import {
+  clearEntityTagsInTransaction,
+  replaceEntityTagsInTransaction,
+} from "./tags";
 
 export type Company = typeof company.$inferSelect;
 
@@ -19,6 +23,7 @@ export type CreateCompanyInput = {
   locations?: string | null;
   target?: boolean;
   notes?: string | null;
+  tags?: string[];
   nextAction?: string | null;
   nextActionDue?: string | null;
   now?: Date;
@@ -35,6 +40,7 @@ export type UpdateCompanyInput = Partial<
     | "locations"
     | "target"
     | "notes"
+    | "tags"
     | "nextAction"
     | "nextActionDue"
   >
@@ -146,6 +152,17 @@ export function createCompanyInTransaction(
     .returning()
     .get();
 
+  if (input.tags !== undefined) {
+    replaceEntityTagsInTransaction(
+      transaction,
+      tenant,
+      "company",
+      created.id,
+      input.tags,
+      now,
+    );
+  }
+
   logEvent(transaction, tenant, {
     at: now,
     kind: "COMPANY_CREATED",
@@ -230,6 +247,17 @@ export function updateCompany(
       return undefined;
     }
 
+    if (input.tags !== undefined) {
+      replaceEntityTagsInTransaction(
+        transaction,
+        tenant,
+        "company",
+        id,
+        input.tags,
+        at,
+      );
+    }
+
     if (Object.keys(values).length === 0) {
       return current;
     }
@@ -272,6 +300,8 @@ export function deleteCompany(
     if (!current) {
       return false;
     }
+
+    clearEntityTagsInTransaction(transaction, tenant, "company", id);
 
     transaction
       .delete(company)

@@ -261,7 +261,7 @@ function ContactForm({
             disabled={pending}
             id={`${formId}-tags`}
             name="tags"
-            placeholder="backend, alumni"
+            placeholder="Dream Company, Alumni Available…"
           />
         </div>
       </div>

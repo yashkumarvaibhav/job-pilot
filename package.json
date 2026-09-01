@@ -22,6 +22,7 @@
     "test:application": "vitest run src/domain/application.test.ts src/server/db/migrate.test.ts src/server/repos/applications.test.ts src/app/api/applications/application-routes.test.ts src/app/application-ui.test.tsx src/app/opportunity-ui.test.tsx",
     "test:referral": "vitest run src/domain/referral.test.ts src/server/db/migrate.test.ts src/server/repos/referrals.test.ts src/app/api/referrals/referral-routes.test.ts src/app/referral-ui.test.tsx src/app/opportunity-ui.test.tsx src/app/contact-ui.test.tsx",
     "test:task": "vitest run src/domain/due-source.test.ts src/domain/task.test.ts src/server/db/migrate.test.ts src/server/repos/tasks.test.ts src/app/api/tasks/task-routes.test.ts src/app/task-ui.test.tsx",
+    "test:tags": "vitest run src/domain/tag.test.ts src/domain/activity.test.ts src/server/db/migrate.test.ts src/server/repos/tags.test.ts src/server/repos/activity.test.ts src/app/api/tags/tag-routes.test.ts src/app/api/activity/activity-routes.test.ts src/app/tag-ui.test.tsx src/app/activity-ui.test.tsx",
     "test:import": "vitest run src/domain/csv-import.test.ts src/server/imports/import-service.test.ts src/app/api/import/import-routes.test.ts src/app/import-ui.test.tsx",
     "test:watch": "vitest"
   },

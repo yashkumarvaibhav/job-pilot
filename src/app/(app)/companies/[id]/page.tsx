@@ -1,9 +1,16 @@
 import Link from "next/link";
 
+import { ActivityTimeline } from "@/components/activity-timeline";
 import { CompanyEditForm, TargetChip } from "@/components/company-form";
+import { TagPicker } from "@/components/tag-picker";
+import { calendarDateInZone } from "@/domain/referral";
 import { requireTenant } from "@/server/auth/current-session";
+import { getWorkspaceSettings } from "@/server/db/foundation";
 import { getDatabase } from "@/server/db/runtime";
+import { DEFAULT_TIME_ZONE } from "@/server/db/timezone";
+import { listActivity } from "@/server/repos/activity";
 import { getCompany } from "@/server/repos/companies";
+import { listEntityTags, listTags } from "@/server/repos/tags";
 
 type CompanyDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -30,8 +37,9 @@ export default async function CompanyDetailPage({
   params,
 }: CompanyDetailPageProps) {
   const tenant = await requireTenant();
+  const database = getDatabase();
   const { id } = await params;
-  const company = getCompany(getDatabase(), tenant, id);
+  const company = getCompany(database, tenant, id);
 
   if (!company) {
     return (
@@ -45,6 +53,18 @@ export default async function CompanyDetailPage({
       </section>
     );
   }
+
+  const timeZone =
+    getWorkspaceSettings(database, tenant, tenant.workspaceId)?.timezone ??
+    DEFAULT_TIME_ZONE;
+  const attached = listEntityTags(database, tenant, "company", company.id);
+  const workspaceTags = listTags(database, tenant).map((row) => row.label);
+  const activity = listActivity(database, tenant, {
+    timeZone,
+    entityType: "company",
+    entityId: company.id,
+  });
+  const todayOn = calendarDateInZone(timeZone);
 
   return (
     <article className="company-detail">
@@ -84,6 +104,26 @@ export default async function CompanyDetailPage({
             </div>
           ))}
         </div>
+      </section>
+
+      <section aria-labelledby="company-tags" className="detail-section">
+        <h2 id="company-tags">Tags</h2>
+        <TagPicker
+          attached={attached}
+          entityId={company.id}
+          entityType="company"
+          workspaceLabels={workspaceTags}
+        />
+      </section>
+
+      <section aria-labelledby="company-activity" className="detail-section">
+        <h2 id="company-activity">Activity</h2>
+        <ActivityTimeline
+          empty="No activity recorded yet."
+          items={activity}
+          timeZone={timeZone}
+          todayOn={todayOn}
+        />
       </section>
 
       <section aria-labelledby="edit-company" className="detail-section">

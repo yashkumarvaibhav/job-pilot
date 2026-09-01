@@ -8,10 +8,12 @@ import {
   RolledUpStageChip,
   stageMachineLabel,
 } from "@/components/application-status";
+import { ActivityTimeline } from "@/components/activity-timeline";
 import { LinkContactForm } from "@/components/opportunity-contact-forms";
 import { OpportunityEditForm } from "@/components/opportunity-form";
 import { ReferralCreateForm } from "@/components/referral-forms";
 import { ReferralCollection } from "@/components/referral-list";
+import { TagPicker } from "@/components/tag-picker";
 import { requireTenant } from "@/server/auth/current-session";
 import { getWorkspaceSettings } from "@/server/db/foundation";
 import { getDatabase } from "@/server/db/runtime";
@@ -23,6 +25,8 @@ import {
   listOpportunityContacts,
 } from "@/server/repos/opportunities";
 import { listReferrals } from "@/server/repos/referrals";
+import { listActivity } from "@/server/repos/activity";
+import { listEntityTags, listTags } from "@/server/repos/tags";
 import { calendarDateInZone } from "@/domain/referral";
 
 type Props = { params: Promise<{ id: string }> };
@@ -95,6 +99,13 @@ export default async function OpportunityDetailPage({ params }: Props) {
     asOfOn,
     opportunityId: row.id,
   });
+  const attachedTags = listEntityTags(database, tenant, "opportunity", row.id);
+  const workspaceTags = listTags(database, tenant).map((item) => item.label);
+  const activity = listActivity(database, tenant, {
+    timeZone,
+    entityType: "opportunity",
+    entityId: row.id,
+  });
   const fields = [
     ["Job ID", row.jobId],
     ["Job URL", row.url],
@@ -114,7 +125,6 @@ export default async function OpportunityDetailPage({ params }: Props) {
     ["Resume version ID", row.resumeVersionId],
     ["Next action", row.nextAction],
     ["Next action due", row.nextActionDue],
-    ["Tags", row.tagsJson.length ? row.tagsJson.join(", ") : null],
     ["Notes", row.notes],
   ] as const;
 
@@ -256,6 +266,24 @@ export default async function OpportunityDetailPage({ params }: Props) {
             opportunityId={row.id}
           />
         )}
+      </section>
+      <section aria-labelledby="opportunity-tags" className="detail-section">
+        <h2 id="opportunity-tags">Tags</h2>
+        <TagPicker
+          attached={attachedTags}
+          entityId={row.id}
+          entityType="opportunity"
+          workspaceLabels={workspaceTags}
+        />
+      </section>
+      <section aria-labelledby="opportunity-activity" className="detail-section">
+        <h2 id="opportunity-activity">Activity</h2>
+        <ActivityTimeline
+          empty="No activity recorded yet."
+          items={activity}
+          timeZone={timeZone}
+          todayOn={asOfOn}
+        />
       </section>
       <section aria-labelledby="edit-opportunity" className="detail-section">
         <h2 id="edit-opportunity">Edit opportunity</h2>

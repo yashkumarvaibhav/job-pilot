@@ -46,6 +46,8 @@ describe("migrateDatabase", () => {
           "application",
           "referral_request",
           "settings",
+          "tag",
+          "entity_tag",
           "task",
           "user_account",
           "workspace",
@@ -55,7 +57,7 @@ describe("migrateDatabase", () => {
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 10 });
+      ).toEqual({ count: 11 });
 
       for (const indexName of [
         "company_workspace_id_id_unique",
@@ -107,6 +109,13 @@ describe("migrateDatabase", () => {
         "activity_event_workspace_id_id_unique",
         "activity_event_workspace_at_idx",
         "activity_event_workspace_entity_idx",
+        "tag_workspace_id_id_unique",
+        "tag_workspace_label_unique",
+        "tag_workspace_label_idx",
+        "entity_tag_workspace_id_id_unique",
+        "entity_tag_workspace_link_unique",
+        "entity_tag_workspace_entity_idx",
+        "entity_tag_workspace_tag_idx",
       ]) {
         const columns = client.sqlite
           .prepare(
@@ -565,6 +574,43 @@ describe("migrateDatabase", () => {
         from: "workspace_id",
         to: "id",
       });
+
+      const tagColumns = client.sqlite
+        .prepare(
+          "select name, \"notnull\" from pragma_table_info('tag') order by cid",
+        )
+        .all() as { name: string; notnull: number }[];
+      expect(tagColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "label",
+        "label_normalized",
+        "created_at",
+      ]);
+      expect(tagColumns.every((column) => column.notnull === 1)).toBe(true);
+
+      const entityTagColumns = client.sqlite
+        .prepare(
+          "select name, \"notnull\" from pragma_table_info('entity_tag') order by cid",
+        )
+        .all() as { name: string; notnull: number }[];
+      expect(entityTagColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "tag_id",
+        "entity_type",
+        "entity_id",
+        "created_at",
+      ]);
+      const entityTagTagForeignKeys = client.sqlite
+        .prepare(
+          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('entity_tag') where \"table\" = 'tag' order by seq",
+        )
+        .all();
+      expect(entityTagTagForeignKeys).toEqual([
+        { table: "tag", from: "workspace_id", to: "workspace_id" },
+        { table: "tag", from: "tag_id", to: "id" },
+      ]);
     } finally {
       client.close();
     }

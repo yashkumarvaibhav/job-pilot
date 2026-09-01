@@ -3,11 +3,13 @@ import Link from "next/link";
 import { InteractionChannelMark } from "@/components/interaction-channel";
 import { ReferralEditForm } from "@/components/referral-forms";
 import { ReferralStageChip } from "@/components/referral-status";
+import { ActivityTimeline } from "@/components/activity-timeline";
 import {
   formatInteractionOccurredAt,
   interactionChannelLabel,
   interactionDirectionLabel,
 } from "@/domain/interaction";
+import { calendarDateInZone } from "@/domain/referral";
 import { requireTenant } from "@/server/auth/current-session";
 import { getWorkspaceSettings } from "@/server/db/foundation";
 import { getDatabase } from "@/server/db/runtime";
@@ -16,6 +18,7 @@ import { listContacts } from "@/server/repos/contacts";
 import { listInteractions } from "@/server/repos/interactions";
 import { listOpportunities } from "@/server/repos/opportunities";
 import { getReferral } from "@/server/repos/referrals";
+import { listActivity } from "@/server/repos/activity";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -53,6 +56,11 @@ export default async function ReferralDetailPage({ params }: Props) {
   );
   const interactions = listInteractions(database, tenant, {
     referralId: row.id,
+  });
+  const activity = listActivity(database, tenant, {
+    timeZone,
+    entityType: "referral_request",
+    entityId: row.id,
   });
 
   return (
@@ -114,6 +122,15 @@ export default async function ReferralDetailPage({ params }: Props) {
             ))}
           </ol>
         )}
+      </section>
+      <section aria-labelledby="referral-activity" className="detail-section">
+        <h2 id="referral-activity">Activity</h2>
+        <ActivityTimeline
+          empty="No activity recorded yet."
+          items={activity}
+          timeZone={timeZone}
+          todayOn={calendarDateInZone(timeZone)}
+        />
       </section>
       <section aria-labelledby="edit-referral" className="detail-section">
         <h2 id="edit-referral">Edit referral</h2>

@@ -24,6 +24,7 @@ import {
   application,
 } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
+import { replaceEntityTagsInTransaction } from "./tags";
 
 export type Opportunity = typeof opportunity.$inferSelect;
 export type OpportunityApplication = {
@@ -445,6 +446,14 @@ export function createOpportunityInTransaction(
       createdAt: now,
     })
     .run();
+  replaceEntityTagsInTransaction(
+    transaction,
+    tenant,
+    "opportunity",
+    id,
+    input.tags ?? [],
+    now,
+  );
   logEvent(transaction, tenant, {
     at: now,
     kind: "OPPORTUNITY_CREATED",
@@ -590,7 +599,6 @@ function updateValues(input: UpdateOpportunityInput) {
   if (input.jdSnapshot !== undefined)
     values.jdSnapshot = optionalText(input.jdSnapshot);
   if (input.notes !== undefined) values.notes = optionalText(input.notes);
-  if (input.tags !== undefined) values.tagsJson = normalizedTags(input.tags);
   if (input.bucket !== undefined) values.bucket = validBucket(input.bucket);
   if (input.stage !== undefined)
     values.stage = validSelectableStage(input.stage);
@@ -622,8 +630,18 @@ export function updateOpportunity(
     if (values.companyId !== undefined) {
       requireOwnedCompany(transaction, tenant, values.companyId);
     }
+    if (input.tags !== undefined) {
+      replaceEntityTagsInTransaction(
+        transaction,
+        tenant,
+        "opportunity",
+        id,
+        input.tags,
+        at,
+      );
+    }
     if (Object.keys(values).length === 0) {
-      return current;
+      return selectOpportunity(transaction, tenant, id);
     }
 
     transaction

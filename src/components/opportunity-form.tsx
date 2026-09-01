@@ -212,7 +212,7 @@ function OpportunityForm({
         </div>
         <div className="field">
           <label htmlFor={`${formId}-tags`}>Tags</label>
-          <input defaultValue={initial?.tagsJson.join(", ") ?? ""} disabled={pending} id={`${formId}-tags`} name="tags" placeholder="backend, new grad" />
+          <input defaultValue={initial?.tagsJson.join(", ") ?? ""} disabled={pending} id={`${formId}-tags`} name="tags" placeholder="Dream Company, Alumni Available…" />
         </div>
       </div>
 

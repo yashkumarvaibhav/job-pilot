@@ -17,6 +17,10 @@ import { logEvent } from "../db/activity";
 import type { AppDatabase, AppTransaction } from "../db/client";
 import { company, contact, contactMethod } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
+import {
+  clearEntityTagsInTransaction,
+  replaceEntityTagsInTransaction,
+} from "./tags";
 
 export type Contact = typeof contact.$inferSelect;
 export type ContactMethod = typeof contactMethod.$inferSelect;
@@ -346,6 +350,14 @@ export function createContactInTransaction(
     })
     .run();
   insertMethods(transaction, tenant, id, methods, now);
+  replaceEntityTagsInTransaction(
+    transaction,
+    tenant,
+    "contact",
+    id,
+    input.tags ?? [],
+    now,
+  );
   logEvent(transaction, tenant, {
     at: now,
     kind: "CONTACT_CREATED",
@@ -427,7 +439,6 @@ function updateValues(current: Contact, input: UpdateContactInput) {
   if (input.location !== undefined)
     values.location = optionalText(input.location);
   if (input.notes !== undefined) values.notes = optionalText(input.notes);
-  if (input.tags !== undefined) values.tagsJson = normalizedTags(input.tags);
   if (input.preferredContactChannel !== undefined)
     values.preferredContactChannel = preferredChannel(
       input.preferredContactChannel,
@@ -494,10 +505,23 @@ export function updateContact(
         .run();
       insertMethods(transaction, tenant, id, preparedMethods, at);
     }
+    if (input.tags !== undefined) {
+      replaceEntityTagsInTransaction(
+        transaction,
+        tenant,
+        "contact",
+        id,
+        input.tags,
+        at,
+      );
+    }
 
     const fields = Object.keys(values);
     if (preparedMethods !== undefined) {
       fields.push("methods");
+    }
+    if (input.tags !== undefined) {
+      fields.push("tags");
     }
     if (fields.length > 0) {
       logEvent(transaction, tenant, {
@@ -531,6 +555,8 @@ export function deleteContact(
     if (!current) {
       return false;
     }
+
+    clearEntityTagsInTransaction(transaction, tenant, "contact", id);
 
     transaction
       .delete(contact)

@@ -14,7 +14,7 @@ const TEXT_FIELDS = [
   "nextAction",
   "nextActionDue",
 ] as const;
-const ALLOWED_FIELDS = new Set<string>(["name", "target", ...TEXT_FIELDS]);
+const ALLOWED_FIELDS = new Set<string>(["name", "target", "tags", ...TEXT_FIELDS]);
 
 async function readObject(request: Request): Promise<Record<string, unknown> | null> {
   if (!request.headers.get("content-type")?.startsWith("application/json")) {
@@ -37,6 +37,13 @@ function hasOnlyCompanyFields(body: Record<string, unknown>): boolean {
 
 function hasValidOptionalFields(body: Record<string, unknown>): boolean {
   if ("target" in body && typeof body.target !== "boolean") {
+    return false;
+  }
+  if (
+    "tags" in body &&
+    (!Array.isArray(body.tags) ||
+      !body.tags.every((tag) => typeof tag === "string"))
+  ) {
     return false;
   }
 

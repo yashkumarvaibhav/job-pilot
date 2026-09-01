@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { Reply } from "lucide-react";
 
+import { ActivityTimeline } from "@/components/activity-timeline";
 import { ContactEditForm } from "@/components/contact-form";
 import {
   contactMethodKindLabel,
@@ -17,6 +18,7 @@ import {
 import { FromConversationPanel } from "@/components/opportunity-contact-forms";
 import { ReferralCreateForm } from "@/components/referral-forms";
 import { ReferralCollection } from "@/components/referral-list";
+import { TagPicker } from "@/components/tag-picker";
 import { RolledUpStageChip } from "@/components/application-status";
 import {
   formatInteractionOccurredAt,
@@ -31,6 +33,8 @@ import { getContact } from "@/server/repos/contacts";
 import { listInteractions } from "@/server/repos/interactions";
 import { listContactOpportunities, listOpportunities } from "@/server/repos/opportunities";
 import { listReferrals } from "@/server/repos/referrals";
+import { listEntityTags, listTags } from "@/server/repos/tags";
+import { listActivity } from "@/server/repos/activity";
 import { calendarDateInZone } from "@/domain/referral";
 
 type ContactDetailPageProps = { params: Promise<{ id: string }> };
@@ -89,6 +93,13 @@ export default async function ContactDetailPage({
       companyName: row.companyName,
     }),
   );
+  const attachedTags = listEntityTags(database, tenant, "contact", contact.id);
+  const workspaceTags = listTags(database, tenant).map((row) => row.label);
+  const activity = listActivity(database, tenant, {
+    timeZone,
+    entityType: "contact",
+    entityId: contact.id,
+  });
   return (
     <article className="contact-detail">
       <Link className="back-link" href="/contacts">
@@ -141,15 +152,16 @@ export default async function ContactDetailPage({
           />
           <Field label="Notes" value={contact.notes} />
         </dl>
-        {contact.tagsJson.length > 0 ? (
-          <ul aria-label="Tags" className="contact-tag-list">
-            {contact.tagsJson.map((tag) => (
-              <li className="chip contact-tag" key={tag}>
-                {tag}
-              </li>
-            ))}
-          </ul>
-        ) : null}
+      </section>
+
+      <section aria-labelledby="contact-tags" className="detail-section">
+        <h2 id="contact-tags">Tags</h2>
+        <TagPicker
+          attached={attachedTags}
+          entityId={contact.id}
+          entityType="contact"
+          workspaceLabels={workspaceTags}
+        />
       </section>
 
       <section aria-labelledby="contact-methods" className="detail-section">
@@ -234,6 +246,16 @@ export default async function ContactDetailPage({
             })}
           </ol>
         )}
+      </section>
+
+      <section aria-labelledby="contact-activity" className="detail-section">
+        <h2 id="contact-activity">Activity</h2>
+        <ActivityTimeline
+          empty="No activity recorded yet."
+          items={activity}
+          timeZone={timeZone}
+          todayOn={asOfOn}
+        />
       </section>
 
       <section

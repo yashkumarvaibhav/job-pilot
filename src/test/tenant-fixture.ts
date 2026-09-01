@@ -23,7 +23,9 @@ type FoundationTable =
   | "opportunity_contact"
   | "application"
   | "referral_request"
-  | "task";
+  | "task"
+  | "tag"
+  | "entity_tag";
 
 type BaseTenantTestFixture = {
   client: DatabaseClient;

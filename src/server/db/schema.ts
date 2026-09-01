@@ -759,3 +759,68 @@ export const task = sqliteTable(
   ],
 );
 
+export const tag = sqliteTable(
+  "tag",
+  {
+    ...workspaceOwnedEntityColumns(),
+    label: text("label").notNull(),
+    labelNormalized: text("label_normalized").notNull(),
+    createdAt: utcInstant("created_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("tag", table),
+    uniqueIndex("tag_workspace_label_unique").on(
+      table.workspaceId,
+      table.labelNormalized,
+    ),
+    index("tag_workspace_label_idx").on(
+      table.workspaceId,
+      table.labelNormalized,
+    ),
+    check("tag_label_not_blank", sql`length(trim(${table.label})) > 0`),
+    check(
+      "tag_label_normalized_not_blank",
+      sql`length(trim(${table.labelNormalized})) > 0`,
+    ),
+  ],
+);
+
+export const entityTag = sqliteTable(
+  "entity_tag",
+  {
+    ...workspaceOwnedEntityColumns(),
+    tagId: text("tag_id").notNull(),
+    entityType: text("entity_type").notNull(),
+    entityId: text("entity_id").notNull(),
+    createdAt: utcInstant("created_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("entity_tag", table),
+    uniqueIndex("entity_tag_workspace_link_unique").on(
+      table.workspaceId,
+      table.tagId,
+      table.entityType,
+      table.entityId,
+    ),
+    index("entity_tag_workspace_entity_idx").on(
+      table.workspaceId,
+      table.entityType,
+      table.entityId,
+    ),
+    index("entity_tag_workspace_tag_idx").on(table.workspaceId, table.tagId),
+    sameWorkspaceForeignKey(
+      "entity_tag_tag_fk",
+      { workspaceId: table.workspaceId, parentId: table.tagId },
+      tag,
+    ).onDelete("cascade"),
+    check(
+      "entity_tag_entity_type_valid",
+      sql`${table.entityType} in ('company', 'contact', 'opportunity')`,
+    ),
+    check(
+      "entity_tag_entity_id_not_blank",
+      sql`length(trim(${table.entityId})) > 0`,
+    ),
+  ],
+);
+
