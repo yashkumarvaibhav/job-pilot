@@ -63,7 +63,9 @@ export function QuickAddDialog({
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const focusFrame = window.requestAnimationFrame(() => {
-      const first = dialog.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+      const first =
+        dialog.querySelector<HTMLElement>("[data-dialog-initial-focus]") ??
+        dialog.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
       first?.focus();
     });
 

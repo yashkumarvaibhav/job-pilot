@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   mobileItems,
   mobileRouteIsActive,
@@ -11,6 +11,8 @@ import {
 } from "@/lib/navigation";
 import { SignOutButton } from "./sign-out-button";
 import { ThemeToggle } from "./theme-toggle";
+import { QuickAdd, type QuickAddReferenceData } from "./quick-add";
+import { QUICK_ADD_OPEN_EVENT } from "./quick-add-launch";
 
 function MobileIcon({ icon }: { icon: (typeof mobileItems)[number]["icon"] }) {
   if (icon === "today") {
@@ -55,8 +57,63 @@ function MobileIcon({ icon }: { icon: (typeof mobileItems)[number]["icon"] }) {
   );
 }
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({
+  children,
+  quickAddData,
+}: {
+  children: ReactNode;
+  quickAddData: QuickAddReferenceData;
+}) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [quickAddOpen, setQuickAddOpen] = useState(pathname === "/add");
+  const [quickAddTrigger, setQuickAddTrigger] = useState<HTMLElement | null>(null);
+
+  const closeQuickAdd = useCallback(() => {
+    setQuickAddOpen(false);
+    if (pathname === "/add") router.replace("/");
+  }, [pathname, router]);
+
+  function openQuickAdd(trigger: HTMLElement | null) {
+    setQuickAddTrigger(trigger);
+    setQuickAddOpen(true);
+  }
+
+  useEffect(() => {
+    function onOpenRequest() {
+      openQuickAdd(
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null,
+      );
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target;
+      const typing =
+        target instanceof HTMLElement &&
+        (target.matches("input, textarea, select") || target.isContentEditable);
+      if (
+        quickAddOpen ||
+        typing ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.key.toLowerCase() !== "c"
+      ) return;
+      event.preventDefault();
+      openQuickAdd(
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null,
+      );
+    }
+    document.addEventListener("keydown", onKeyDown);
+    window.addEventListener(QUICK_ADD_OPEN_EVENT, onOpenRequest);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener(QUICK_ADD_OPEN_EVENT, onOpenRequest);
+    };
+  }, [quickAddOpen]);
 
   return (
     <div className="app-shell">
@@ -69,6 +126,15 @@ export function AppShell({ children }: { children: ReactNode }) {
           </span>
         </Link>
         <div className="topbar-actions">
+          <button
+            aria-expanded={quickAddOpen}
+            aria-haspopup="dialog"
+            className="btn quick-add-trigger"
+            onClick={(event) => openQuickAdd(event.currentTarget)}
+            type="button"
+          >
+            Add
+          </button>
           <Link
             aria-label="Notifications, 0 unread"
             className="notification-link"
@@ -111,6 +177,22 @@ export function AppShell({ children }: { children: ReactNode }) {
         {mobileItems.map((item) => {
           const active = mobileRouteIsActive(pathname, item.href);
 
+          if (item.icon === "add") {
+            return (
+              <button
+                aria-expanded={quickAddOpen}
+                aria-haspopup="dialog"
+                className="mobile-link"
+                key={item.href}
+                onClick={(event) => openQuickAdd(event.currentTarget)}
+                type="button"
+              >
+                <MobileIcon icon={item.icon} />
+                <span>{item.label}</span>
+              </button>
+            );
+          }
+
           return (
             <Link
               aria-current={active ? "page" : undefined}
@@ -124,6 +206,14 @@ export function AppShell({ children }: { children: ReactNode }) {
           );
         })}
       </nav>
+
+      {quickAddOpen ? (
+        <QuickAdd
+          data={quickAddData}
+          onClose={closeQuickAdd}
+          returnFocusTo={quickAddTrigger}
+        />
+      ) : null}
     </div>
   );
 }

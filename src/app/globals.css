@@ -849,6 +849,106 @@ main:focus {
   padding: var(--space-4);
 }
 
+.quick-add-action-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.quick-add-action {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.quick-add-action-button {
+  display: flex;
+  min-height: var(--target-min);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--raised);
+  color: var(--ink);
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.quick-add-action-button:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  background: var(--hover);
+}
+
+.quick-add-action-button:disabled {
+  color: var(--faint);
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.quick-add-action-button kbd {
+  flex: none;
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+}
+
+.quick-add-action p,
+.quick-add-empty {
+  margin: 0;
+  color: var(--faint);
+  font-size: 0.76rem;
+}
+
+.quick-add-panel,
+.quick-add-form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.quick-add-back {
+  justify-self: start;
+  min-height: var(--target-min);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.quick-add-back:hover {
+  background: var(--hover);
+}
+
+.quick-add-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.quick-add-fields > .quick-add-wide,
+.quick-add-fields > .quick-add-empty {
+  grid-column: 1 / -1;
+}
+
+.quick-add-form textarea {
+  min-height: calc(2 * var(--target-min));
+}
+
+.quick-add-save {
+  justify-self: start;
+}
+
 /* Quick-add mobile sheet */
 @media (max-width: 767px) {
   .quick-add-backdrop {
@@ -875,6 +975,37 @@ main:focus {
   .quick-add-header,
   .quick-add-content {
     padding: var(--space-3) var(--space-4);
+  }
+
+  .quick-add-action-list,
+  .quick-add-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .quick-add-action-list {
+    gap: var(--space-2);
+  }
+
+  .quick-add-action-button {
+    padding-block: var(--space-2);
+  }
+
+  .quick-add-fields > .quick-add-wide,
+  .quick-add-fields > .quick-add-empty {
+    grid-column: auto;
+  }
+
+  .quick-add-form--interaction .quick-add-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quick-add-form--interaction .quick-add-wide,
+  .quick-add-form--interaction .quick-add-empty {
+    grid-column: 1 / -1;
+  }
+
+  .quick-add-trigger {
+    display: none;
   }
 }
 
@@ -1639,7 +1770,7 @@ main:focus {
     backdrop-filter: blur(var(--chrome-blur));
   }
 
-  .mobile-link {
+.mobile-link {
     display: grid;
     min-width: 0;
     min-height: var(--target-min);
@@ -1653,6 +1784,8 @@ main:focus {
     font-weight: 700;
     line-height: 1;
     text-decoration: none;
+    background: transparent;
+    cursor: pointer;
   }
 
   .mobile-link svg {
