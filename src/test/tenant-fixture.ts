@@ -13,7 +13,8 @@ type FoundationTable =
   | "settings"
   | "auth_session"
   | "account_token"
-  | "activity_event";
+  | "activity_event"
+  | "company";
 
 type BaseTenantTestFixture = {
   client: DatabaseClient;

@@ -11,6 +11,7 @@
     "backup:selftest": "node scripts/backup-selftest.mjs",
     "lint": "eslint",
     "test": "vitest run",
+    "test:company": "vitest run src/server/db/migrate.test.ts src/server/repos/companies.test.ts src/app/api/companies/company-routes.test.ts src/app/company-ui.test.tsx",
     "test:watch": "vitest"
   },
   "dependencies": {

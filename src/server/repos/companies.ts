@@ -62,6 +62,28 @@ function optionalText(value: string | null | undefined): string | null {
   return normalized.length > 0 ? normalized : null;
 }
 
+function optionalHttpUrl(
+  value: string | null | undefined,
+  label: string,
+): string | null {
+  const normalized = optionalText(value);
+
+  if (normalized === null) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return normalized;
+    }
+  } catch {
+    // The shared validation error below keeps route responses deterministic.
+  }
+
+  throw new CompanyInputError(`${label} must use http or https.`);
+}
+
 export function createCompany(
   database: AppDatabase,
   tenant: TenantContext,
@@ -77,8 +99,8 @@ export function createCompany(
         id,
         workspaceId: tenant.workspaceId,
         name: requiredName(input.name),
-        website: optionalText(input.website),
-        careersUrl: optionalText(input.careersUrl),
+        website: optionalHttpUrl(input.website, "Website"),
+        careersUrl: optionalHttpUrl(input.careersUrl, "Careers URL"),
         industry: optionalText(input.industry),
         type: optionalText(input.type),
         locations: optionalText(input.locations),
@@ -130,9 +152,10 @@ function updateValues(input: UpdateCompanyInput) {
   const values: Partial<typeof company.$inferInsert> = {};
 
   if (input.name !== undefined) values.name = requiredName(input.name);
-  if (input.website !== undefined) values.website = optionalText(input.website);
+  if (input.website !== undefined)
+    values.website = optionalHttpUrl(input.website, "Website");
   if (input.careersUrl !== undefined)
-    values.careersUrl = optionalText(input.careersUrl);
+    values.careersUrl = optionalHttpUrl(input.careersUrl, "Careers URL");
   if (input.industry !== undefined)
     values.industry = optionalText(input.industry);
   if (input.type !== undefined) values.type = optionalText(input.type);
