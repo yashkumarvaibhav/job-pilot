@@ -1,5 +1,11 @@
-import { PlaceholderPage } from "@/components/placeholder-page";
+import {
+  ImportDisabledNotice,
+  ImportWorkspace,
+} from "@/components/import-workspace";
+import { requireTenant } from "@/server/auth/current-session";
+import { isDemoMode } from "@/server/demo-mode";
 
-export default function SettingsPage() {
-  return <PlaceholderPage title="Settings" />;
+export default async function SettingsPage() {
+  await requireTenant();
+  return isDemoMode() ? <ImportDisabledNotice /> : <ImportWorkspace />;
 }

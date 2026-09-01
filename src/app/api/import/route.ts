@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { currentTenant } from "@/server/auth/current-session";
 import { getDatabase } from "@/server/db/runtime";
 import {
+  DEMO_IMPORT_DISABLED_MESSAGE,
+  isDemoMode,
+} from "@/server/demo-mode";
+import {
   ImportInputError,
   importFields,
   executeImport,
@@ -17,7 +21,15 @@ import {
 
 export const runtime = "nodejs";
 
+function demoGuard() {
+  return isDemoMode()
+    ? NextResponse.json({ error: DEMO_IMPORT_DISABLED_MESSAGE }, { status: 403 })
+    : null;
+}
+
 export async function GET(request: Request) {
+  const forbidden = demoGuard();
+  if (forbidden) return forbidden;
   const tenant = await currentTenant();
   if (!tenant) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
@@ -38,6 +50,8 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
+  const forbidden = demoGuard();
+  if (forbidden) return forbidden;
   const tenant = await currentTenant();
   if (!tenant) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
@@ -66,6 +80,8 @@ export async function PUT(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const forbidden = demoGuard();
+  if (forbidden) return forbidden;
   const tenant = await currentTenant();
   if (!tenant) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });

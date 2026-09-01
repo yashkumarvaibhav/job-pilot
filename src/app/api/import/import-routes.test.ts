@@ -33,8 +33,28 @@ describe("import route", () => {
   });
 
   beforeEach(() => {
+    delete process.env.JOB_PILOT_DEPLOYMENT_MODE;
     mocks.database = undefined;
     mocks.tenant = undefined;
+  });
+
+  it("refuses private import in demo mode even for a crafted request", async () => {
+    newFixture();
+    process.env.JOB_PILOT_DEPLOYMENT_MODE = "demo";
+
+    const response = await POST(
+      request({
+        entitySet: "companies",
+        dryRun: true,
+        csv: "Name\nInjected",
+        mapping: { name: "Name" },
+      }),
+    );
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({
+      error: "Private CSV import is disabled in the public demo.",
+    });
   });
 
   function newFixture() {

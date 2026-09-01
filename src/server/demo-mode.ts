@@ -2,6 +2,8 @@ import { isAbsolute, relative, resolve } from "node:path";
 
 export const DEMO_SIGNUP_CLOSED_MESSAGE =
   "Public account creation is closed for this demo.";
+export const DEMO_IMPORT_DISABLED_MESSAGE =
+  "Private CSV import is disabled in the public demo.";
 
 type Environment = Record<string, string | undefined>;
 
