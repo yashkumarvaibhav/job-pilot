@@ -1,12 +1,19 @@
 import Link from "next/link";
 
-import { LinkContactForm } from "@/components/opportunity-contact-forms";
 import {
-  OpportunityEditForm,
-  OpportunityStageChip,
-} from "@/components/opportunity-form";
+  ApplicationEditForm,
+  MarkAppliedForm,
+} from "@/components/application-forms";
+import {
+  RolledUpStageChip,
+  stageMachineLabel,
+} from "@/components/application-status";
+import { LinkContactForm } from "@/components/opportunity-contact-forms";
+import { OpportunityEditForm } from "@/components/opportunity-form";
 import { requireTenant } from "@/server/auth/current-session";
+import { getWorkspaceSettings } from "@/server/db/foundation";
 import { getDatabase } from "@/server/db/runtime";
+import { DEFAULT_TIME_ZONE } from "@/server/db/timezone";
 import { listCompanies } from "@/server/repos/companies";
 import { listContacts } from "@/server/repos/contacts";
 import {
@@ -60,6 +67,15 @@ export default async function OpportunityDetailPage({ params }: Props) {
   const companies = listCompanies(database, tenant).map(
     ({ id: companyId, name }) => ({ id: companyId, name }),
   );
+  const timeZone =
+    getWorkspaceSettings(database, tenant, tenant.workspaceId)?.timezone ??
+    DEFAULT_TIME_ZONE;
+  const defaultAppliedOn = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
   const linkedContacts = listOpportunityContacts(database, tenant, row.id);
   const linkedIds = new Set(linkedContacts.map((item) => item.contactId));
   const linkableContacts = listContacts(database, tenant)
@@ -108,7 +124,15 @@ export default async function OpportunityDetailPage({ params }: Props) {
             {row.bucket === "saved" ? "Saved" : "Active"}
           </p>
         </div>
-        <OpportunityStageChip stage={row.stage} />
+        <div className="rolled-up-stage">
+          <RolledUpStageChip
+            applicationStage={row.application?.stage}
+            opportunityStage={row.stage}
+          />
+          <p className="stage-machine">
+            {stageMachineLabel(row.application?.stage)}
+          </p>
+        </div>
       </header>
       <section aria-labelledby="opportunity-fields" className="detail-section">
         <h2 id="opportunity-fields">Opportunity details</h2>
@@ -173,6 +197,21 @@ export default async function OpportunityDetailPage({ params }: Props) {
           </>
         )}
         <LinkContactForm contacts={linkableContacts} opportunityId={row.id} />
+      </section>
+      <section
+        aria-labelledby="application-heading"
+        className="detail-section application-block"
+        id="application"
+      >
+        <h2 id="application-heading">Application</h2>
+        {row.application ? (
+          <ApplicationEditForm application={row.application} />
+        ) : (
+          <MarkAppliedForm
+            defaultAppliedOn={defaultAppliedOn}
+            opportunityId={row.id}
+          />
+        )}
       </section>
       <section aria-labelledby="edit-opportunity" className="detail-section">
         <h2 id="edit-opportunity">Edit opportunity</h2>

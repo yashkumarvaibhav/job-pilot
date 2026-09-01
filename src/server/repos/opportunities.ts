@@ -2,6 +2,9 @@ import { randomUUID } from "node:crypto";
 
 import { and, asc, eq } from "drizzle-orm";
 
+import type {
+  ApplicationStage,
+} from "../../domain/application";
 import {
   DEFAULT_OPPORTUNITY_BUCKET,
   DEFAULT_OPPORTUNITY_STAGE,
@@ -18,11 +21,25 @@ import {
   interaction,
   opportunity,
   opportunityContact,
+  application,
 } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
 
 export type Opportunity = typeof opportunity.$inferSelect;
-export type OpportunityListItem = Opportunity & { companyName: string };
+export type OpportunityApplication = {
+  id: string;
+  stage: ApplicationStage;
+  portal: string;
+  appliedOn: string;
+  applicationExternalId: string | null;
+  referrer: string | null;
+  resumeVersionId: string | null;
+  notes: string | null;
+};
+export type OpportunityListItem = Opportunity & {
+  companyName: string;
+  application: OpportunityApplication | null;
+};
 export type OpportunityListFilter = OpportunityBucket | "all";
 
 export type CreateOpportunityInput = {
@@ -250,19 +267,59 @@ function requireOwnedContact(
     .get();
 }
 
+function opportunityApplication(
+  row: typeof application.$inferSelect | null,
+): OpportunityApplication | null {
+  return row
+    ? {
+        id: row.id,
+        stage: row.stage,
+        portal: row.portal,
+        appliedOn: row.appliedOn,
+        applicationExternalId: row.applicationExternalId,
+        referrer: row.referrer,
+        resumeVersionId: row.resumeVersionId,
+        notes: row.notes,
+      }
+    : null;
+}
+
+function toOpportunityListItem(found: {
+  opportunity: Opportunity;
+  companyName: string;
+  application: typeof application.$inferSelect | null;
+}): OpportunityListItem {
+  return {
+    ...found.opportunity,
+    companyName: found.companyName,
+    application: opportunityApplication(found.application),
+  };
+}
+
 function selectOpportunity(
   database: AppDatabase | AppTransaction,
   tenant: TenantContext,
   id: string,
 ): OpportunityListItem | undefined {
   const found = database
-    .select({ opportunity, companyName: company.name })
+    .select({
+      opportunity,
+      companyName: company.name,
+      application,
+    })
     .from(opportunity)
     .innerJoin(
       company,
       and(
         eq(company.workspaceId, opportunity.workspaceId),
         eq(company.id, opportunity.companyId),
+      ),
+    )
+    .leftJoin(
+      application,
+      and(
+        eq(application.workspaceId, opportunity.workspaceId),
+        eq(application.opportunityId, opportunity.id),
       ),
     )
     .where(
@@ -273,9 +330,7 @@ function selectOpportunity(
     )
     .get();
 
-  return found
-    ? { ...found.opportunity, companyName: found.companyName }
-    : undefined;
+  return found ? toOpportunityListItem(found) : undefined;
 }
 
 function selectLinkedContact(
@@ -460,7 +515,11 @@ export function listOpportunities(
         );
 
   return database
-    .select({ opportunity, companyName: company.name })
+    .select({
+      opportunity,
+      companyName: company.name,
+      application,
+    })
     .from(opportunity)
     .innerJoin(
       company,
@@ -469,10 +528,17 @@ export function listOpportunities(
         eq(company.id, opportunity.companyId),
       ),
     )
+    .leftJoin(
+      application,
+      and(
+        eq(application.workspaceId, opportunity.workspaceId),
+        eq(application.opportunityId, opportunity.id),
+      ),
+    )
     .where(filterCondition)
     .orderBy(asc(company.name), asc(opportunity.role), asc(opportunity.id))
     .all()
-    .map(({ opportunity: row, companyName }) => ({ ...row, companyName }));
+    .map(toOpportunityListItem);
 }
 
 export function getOpportunity(
@@ -651,6 +717,7 @@ export function listContactOpportunities(
     .select({
       opportunity,
       companyName: company.name,
+      application,
       linkId: opportunityContact.id,
     })
     .from(opportunityContact)
@@ -668,6 +735,13 @@ export function listContactOpportunities(
         eq(company.id, opportunity.companyId),
       ),
     )
+    .leftJoin(
+      application,
+      and(
+        eq(application.workspaceId, opportunity.workspaceId),
+        eq(application.opportunityId, opportunity.id),
+      ),
+    )
     .where(
       and(
         eq(opportunityContact.workspaceId, tenant.workspaceId),
@@ -676,10 +750,9 @@ export function listContactOpportunities(
     )
     .orderBy(asc(company.name), asc(opportunity.role), asc(opportunity.id))
     .all()
-    .map(({ opportunity: row, companyName, linkId }) => ({
-      ...row,
-      companyName,
-      linkId,
+    .map((row) => ({
+      ...toOpportunityListItem(row),
+      linkId: row.linkId,
     }));
 }
 

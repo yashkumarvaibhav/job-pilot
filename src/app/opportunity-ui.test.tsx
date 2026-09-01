@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { applyToOpportunity, updateApplication } from "../server/repos/applications";
 import { createCompany } from "../server/repos/companies";
 import { createContact } from "../server/repos/contacts";
 import { createOpportunity, linkContactToOpportunity } from "../server/repos/opportunities";
@@ -125,6 +126,9 @@ describe("opportunity screens", () => {
     expect(html).toContain("Linked contacts");
     expect(html).toContain("No contacts linked to this opening yet.");
     expect(html).toContain("Every contact is already linked, or none exist yet.");
+    expect(html).toContain("Mark applied");
+    expect(html).toContain("Pursuit stage");
+    expect(html).toContain('id="application"');
   });
 
   it("lists a linked contact and the remaining picker on opportunity detail", async () => {
@@ -189,5 +193,38 @@ describe("opportunity screens", () => {
       expect(html).toContain("Opportunity not found");
       expect(html).not.toContain("Private Role");
     }
+  });
+
+  it("rolls the header chip up to the application stage after apply", async () => {
+    const fixture = newFixture();
+    const company = createCompany(fixture.client.db, fixture.tenantA, {
+      id: "google",
+      name: "Google",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "google-swe",
+      companyId: company.id,
+      role: "Software Engineer",
+    });
+    const created = applyToOpportunity(fixture.client.db, fixture.tenantA, {
+      opportunityId: "google-swe",
+      portal: "Greenhouse",
+      appliedOn: "2026-09-01",
+    });
+    updateApplication(fixture.client.db, fixture.tenantA, created!.id, {
+      stage: "under_review",
+    });
+
+    const html = renderToStaticMarkup(
+      await OpportunityDetailPage({
+        params: Promise.resolve({ id: "google-swe" }),
+      }),
+    );
+
+    expect(html).toContain("Under Review");
+    expect(html).toContain("Application stage");
+    expect(html).toContain("Greenhouse");
+    expect(html).toContain("Save application");
+    expect(html).not.toContain("Mark applied");
   });
 });

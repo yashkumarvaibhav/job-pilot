@@ -21,6 +21,10 @@ import type {
   InteractionDirection,
 } from "../../domain/interaction";
 import {
+  DEFAULT_APPLICATION_STAGE,
+  type ApplicationStage,
+} from "../../domain/application";
+import {
   DEFAULT_OPPORTUNITY_BUCKET,
   DEFAULT_OPPORTUNITY_STAGE,
   type OpportunityBucket,
@@ -520,5 +524,49 @@ export const opportunityContact = sqliteTable(
       { workspaceId: table.workspaceId, parentId: table.contactId },
       contact,
     ).onDelete("cascade"),
+  ],
+);
+
+export const application = sqliteTable(
+  "application",
+  {
+    ...workspaceOwnedEntityColumns(),
+    opportunityId: text("opportunity_id").notNull(),
+    portal: text("portal").notNull(),
+    appliedOn: text("applied_on").notNull(),
+    applicationExternalId: text("application_external_id"),
+    referrer: text("referrer"),
+    resumeVersionId: text("resume_version_id"),
+    stage: text("stage")
+      .$type<ApplicationStage>()
+      .notNull()
+      .default(DEFAULT_APPLICATION_STAGE),
+    notes: text("notes"),
+    createdAt: utcInstant("created_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("application", table),
+    uniqueIndex("application_workspace_opportunity_unique").on(
+      table.workspaceId,
+      table.opportunityId,
+    ),
+    index("application_workspace_stage_idx").on(
+      table.workspaceId,
+      table.stage,
+    ),
+    index("application_workspace_applied_on_idx").on(
+      table.workspaceId,
+      table.appliedOn,
+    ),
+    sameWorkspaceForeignKey(
+      "application_opportunity_fk",
+      { workspaceId: table.workspaceId, parentId: table.opportunityId },
+      opportunity,
+    ).onDelete("cascade"),
+    check("application_portal_not_blank", sql`length(trim(${table.portal})) > 0`),
+    check(
+      "application_stage_valid",
+      sql`${table.stage} in ('applied', 'application_confirmed', 'under_review', 'oa_received', 'oa_completed', 'interview_scheduled', 'interview_round_1', 'interview_round_2', 'hiring_manager', 'hr', 'offer', 'rejected', 'withdrawn', 'ghosted')`,
+    ),
   ],
 );

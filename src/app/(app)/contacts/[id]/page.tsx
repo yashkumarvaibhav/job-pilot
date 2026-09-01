@@ -15,7 +15,7 @@ import {
   MarkRepliedButton,
 } from "@/components/interaction-form";
 import { FromConversationPanel } from "@/components/opportunity-contact-forms";
-import { OpportunityStageChip } from "@/components/opportunity-form";
+import { RolledUpStageChip } from "@/components/application-status";
 import {
   formatInteractionOccurredAt,
   interactionDirectionLabel,
@@ -256,7 +256,10 @@ export default async function ContactDetailPage({
                       </td>
                       <td className="tnum mono-value">{row.jobId ?? "—"}</td>
                       <td>
-                        <OpportunityStageChip stage={row.stage} />
+                        <RolledUpStageChip
+                          applicationStage={row.application?.stage}
+                          opportunityStage={row.stage}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -280,7 +283,10 @@ export default async function ContactDetailPage({
                       {row.companyName}
                       {row.jobId ? ` · ${row.jobId}` : ""}
                     </span>
-                    <OpportunityStageChip stage={row.stage} />
+                    <RolledUpStageChip
+                      applicationStage={row.application?.stage}
+                      opportunityStage={row.stage}
+                    />
                   </Link>
                 </li>
               ))}

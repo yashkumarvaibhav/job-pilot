@@ -107,6 +107,7 @@ export function opportunityResponse(row: OpportunityListItem) {
   return {
     ...safe,
     tags: tagsJson,
+    application: row.application,
     createdAt: row.createdAt.toISOString(),
   };
 }

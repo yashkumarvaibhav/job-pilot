@@ -1093,7 +1093,8 @@ main:focus {
 /* Opportunity CRM — compact list, stacked narrow cards, and full field capture. */
 
 .opportunity-page,
-.opportunity-detail {
+.opportunity-detail,
+.application-page {
   display: grid;
   align-content: start;
   gap: var(--space-8);
@@ -1164,16 +1165,20 @@ main:focus {
 }
 
 .opportunity-form,
-.opportunity-form-grid {
+.opportunity-form-grid,
+.application-form,
+.application-form-grid {
   display: grid;
   gap: var(--space-4);
 }
 
-.opportunity-form-grid {
+.opportunity-form-grid,
+.application-form-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.opportunity-form > .btn {
+.opportunity-form > .btn,
+.application-form > .btn {
   justify-self: start;
 }
 
@@ -1192,7 +1197,24 @@ main:focus {
   height: var(--space-3);
 }
 
-.opportunity-card-list {
+.rolled-up-stage {
+  display: grid;
+  justify-items: end;
+  gap: var(--space-1);
+}
+
+.stage-machine {
+  margin: 0;
+  color: var(--faint);
+  font-size: 0.78rem;
+}
+
+.application-block {
+  scroll-margin-top: calc(var(--target-min) + var(--space-8));
+}
+
+.opportunity-card-list,
+.application-card-list {
   display: none;
   margin: 0;
   padding: 0;
@@ -1373,8 +1395,13 @@ main:focus {
   .company-page,
   .company-detail,
   .opportunity-page,
-  .opportunity-detail {
+  .opportunity-detail,
+  .application-page {
     gap: var(--space-6);
+  }
+
+  .rolled-up-stage {
+    justify-items: start;
   }
 
   .page-header,
@@ -1402,7 +1429,8 @@ main:focus {
   .company-form-grid,
   .company-field-grid,
   .opportunity-form-grid,
-  .opportunity-field-grid {
+  .opportunity-field-grid,
+  .application-form-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -1410,7 +1438,8 @@ main:focus {
     display: none;
   }
 
-  .opportunity-table-wrap {
+  .opportunity-table-wrap,
+  .application-table-wrap {
     display: none;
   }
 
@@ -1419,12 +1448,14 @@ main:focus {
     gap: var(--space-3);
   }
 
-  .opportunity-card-list {
+  .opportunity-card-list,
+  .application-card-list {
     display: grid;
     gap: var(--space-3);
   }
 
-  .opportunity-list-card {
+  .opportunity-list-card,
+  .application-list-card {
     display: grid;
     min-height: var(--target-min);
     gap: var(--space-2);
@@ -1437,12 +1468,14 @@ main:focus {
     text-decoration: none;
   }
 
-  .opportunity-list-card:hover {
+  .opportunity-list-card:hover,
+  .application-list-card:hover {
     border-color: var(--line-strong);
     background: var(--hover);
   }
 
-  .opportunity-list-card__heading {
+  .opportunity-list-card__heading,
+  .application-list-card__heading {
     display: flex;
     min-width: 0;
     align-items: center;
