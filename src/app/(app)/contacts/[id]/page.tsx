@@ -14,6 +14,8 @@ import {
   InteractionLogForm,
   MarkRepliedButton,
 } from "@/components/interaction-form";
+import { FromConversationPanel } from "@/components/opportunity-contact-forms";
+import { OpportunityStageChip } from "@/components/opportunity-form";
 import {
   formatInteractionOccurredAt,
   interactionDirectionLabel,
@@ -25,6 +27,7 @@ import { DEFAULT_TIME_ZONE } from "@/server/db/timezone";
 import { listCompanies } from "@/server/repos/companies";
 import { getContact } from "@/server/repos/contacts";
 import { listInteractions } from "@/server/repos/interactions";
+import { listContactOpportunities } from "@/server/repos/opportunities";
 
 type ContactDetailPageProps = { params: Promise<{ id: string }> };
 
@@ -62,6 +65,11 @@ export default async function ContactDetailPage({
   const interactions = listInteractions(database, tenant, {
     contactId: contact.id,
   });
+  const linkedOpportunities = listContactOpportunities(
+    database,
+    tenant,
+    contact.id,
+  );
   const timeZone =
     getWorkspaceSettings(database, tenant, tenant.workspaceId)?.timezone ??
     DEFAULT_TIME_ZONE;
@@ -145,6 +153,23 @@ export default async function ContactDetailPage({
         )}
       </section>
 
+      <section
+        aria-labelledby="from-conversation"
+        className="detail-section from-conversation-section"
+      >
+        <h2 id="from-conversation">Create from conversation</h2>
+        <FromConversationPanel
+          companies={companies.map(({ id: companyOptionId, name }) => ({
+            id: companyOptionId,
+            name,
+          }))}
+          companyId={contact.companyId}
+          companyName={contact.companyName}
+          contactId={contact.id}
+          hasRecordedOpening={interactions.length > 0}
+        />
+      </section>
+
       <section aria-labelledby="log-interaction" className="detail-section">
         <h2 id="log-interaction">Log interaction</h2>
         <p className="field-hint">
@@ -192,6 +217,75 @@ export default async function ContactDetailPage({
               );
             })}
           </ol>
+        )}
+      </section>
+
+      <section
+        aria-labelledby="linked-opportunities"
+        className="detail-section"
+      >
+        <h2 id="linked-opportunities">Linked opportunities</h2>
+        {linkedOpportunities.length === 0 ? (
+          <p className="section-empty">
+            No opportunities linked yet. Create one from this conversation when
+            an opening is logged.
+          </p>
+        ) : (
+          <>
+            <div className="table-scroll opportunity-table-wrap">
+              <table className="tbl opportunity-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Company</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Job ID</th>
+                    <th scope="col">Stage</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {linkedOpportunities.map((row) => (
+                    <tr key={row.id}>
+                      <td>{row.companyName}</td>
+                      <td>
+                        <Link
+                          className="table-link"
+                          href={`/opportunities/${row.id}`}
+                        >
+                          {row.role}
+                        </Link>
+                      </td>
+                      <td className="tnum mono-value">{row.jobId ?? "—"}</td>
+                      <td>
+                        <OpportunityStageChip stage={row.stage} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <ul
+              aria-label="Linked opportunities"
+              className="opportunity-card-list"
+            >
+              {linkedOpportunities.map((row) => (
+                <li key={row.id}>
+                  <Link
+                    className="opportunity-list-card"
+                    href={`/opportunities/${row.id}`}
+                  >
+                    <span className="opportunity-list-card__heading">
+                      <strong>{row.role}</strong>
+                    </span>
+                    <span>
+                      {row.companyName}
+                      {row.jobId ? ` · ${row.jobId}` : ""}
+                    </span>
+                    <OpportunityStageChip stage={row.stage} />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </section>
 

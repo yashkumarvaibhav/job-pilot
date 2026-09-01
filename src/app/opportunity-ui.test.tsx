@@ -2,7 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCompany } from "../server/repos/companies";
-import { createOpportunity } from "../server/repos/opportunities";
+import { createContact } from "../server/repos/contacts";
+import { createOpportunity, linkContactToOpportunity } from "../server/repos/opportunities";
 import { createTenantTestFixture } from "../test/tenant-fixture";
 
 const mocks = vi.hoisted(() => ({
@@ -121,6 +122,52 @@ describe("opportunity screens", () => {
     expect(html).not.toContain("OA Received");
     expect(html).not.toContain("Interview Scheduled");
     expect(html).not.toContain("Offer</option>");
+    expect(html).toContain("Linked contacts");
+    expect(html).toContain("No contacts linked to this opening yet.");
+    expect(html).toContain("Every contact is already linked, or none exist yet.");
+  });
+
+  it("lists a linked contact and the remaining picker on opportunity detail", async () => {
+    const fixture = newFixture();
+    const company = createCompany(fixture.client.db, fixture.tenantA, {
+      id: "google",
+      name: "Google",
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "rahul",
+      companyId: company.id,
+      name: "Rahul Sharma",
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "priya",
+      name: "Priya Nair",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "google-swe",
+      companyId: company.id,
+      role: "Software Engineer",
+    });
+    linkContactToOpportunity(
+      fixture.client.db,
+      fixture.tenantA,
+      "google-swe",
+      "rahul",
+    );
+
+    const html = renderToStaticMarkup(
+      await OpportunityDetailPage({
+        params: Promise.resolve({ id: "google-swe" }),
+      }),
+    );
+
+    expect(html).toContain("Linked contacts");
+    expect(html).toContain("Rahul Sharma");
+    expect(html).toContain('href="/contacts/rahul"');
+    expect(html).toContain("contact-table");
+    expect(html).toContain("contact-card-list");
+    expect(html).toContain("Link contact");
+    expect(html).toContain("Priya Nair");
+    expect(html).not.toContain("No contacts linked to this opening yet.");
   });
 
   it("uses the same not-found state for missing and foreign ids", async () => {

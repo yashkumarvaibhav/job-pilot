@@ -5,6 +5,9 @@ import { createTenantTestFixture } from "../test/tenant-fixture";
 import { createCompany } from "../server/repos/companies";
 import { createContact } from "../server/repos/contacts";
 import { createInteraction } from "../server/repos/interactions";
+import {
+  createOpportunityFromConversation,
+} from "../server/repos/opportunities";
 
 const mocks = vi.hoisted(() => ({
   database: undefined as unknown,
@@ -132,6 +135,9 @@ describe("contact screens", () => {
       "Ask about platform roles.",
       "No interactions yet. Log a WhatsApp, a LinkedIn note, or an email.",
       "Edit contact",
+      "Create opportunity from conversation",
+      "Log the opening first",
+      "No opportunities linked yet.",
     ]) {
       expect(html).toContain(expected);
     }
@@ -156,6 +162,10 @@ describe("contact screens", () => {
 
   it("lists every §11 channel on the log form and renders logged rows", async () => {
     const fixture = newFixture();
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "microsoft",
+      name: "Microsoft",
+    });
     createContact(fixture.client.db, fixture.tenantA, {
       id: "rahul",
       name: "Rahul Sharma",
@@ -193,6 +203,9 @@ describe("contact screens", () => {
     expect(html).not.toContain(
       "No interactions yet. Log a WhatsApp, a LinkedIn note, or an email.",
     );
+    expect(html).toContain("Create opportunity from conversation");
+    expect(html).not.toContain("Log the opening first");
+    expect(html).toContain('aria-expanded="false"');
     for (const channel of [
       "Email",
       "LinkedIn DM",
@@ -209,6 +222,43 @@ describe("contact screens", () => {
     ]) {
       expect(html).toContain(channel);
     }
+  });
+
+  it("lists the linked opportunity after creating from conversation", async () => {
+    const fixture = newFixture();
+    const microsoft = createCompany(fixture.client.db, fixture.tenantA, {
+      id: "microsoft",
+      name: "Microsoft",
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "rahul",
+      companyId: microsoft.id,
+      name: "Rahul Sharma",
+    });
+    createInteraction(fixture.client.db, fixture.tenantA, {
+      contactId: "rahul",
+      channel: "whatsapp",
+      direction: "inbound",
+      body: "There's an SDE opening. Job ID 182763.",
+    });
+    createOpportunityFromConversation(fixture.client.db, fixture.tenantA, {
+      id: "microsoft-sde",
+      contactId: "rahul",
+      role: "SDE",
+      jobId: "182763",
+    });
+
+    const html = renderToStaticMarkup(
+      await ContactDetailPage({ params: Promise.resolve({ id: "rahul" }) }),
+    );
+
+    expect(html).toContain("Linked opportunities");
+    expect(html).toContain("SDE");
+    expect(html).toContain("182763");
+    expect(html).toContain('href="/opportunities/microsoft-sde"');
+    expect(html).toContain("opportunity-table");
+    expect(html).toContain("opportunity-card-list");
+    expect(html).toContain("SDE opening. Job ID 182763");
   });
 
   it("uses one Contact not found state for missing and foreign ids", async () => {

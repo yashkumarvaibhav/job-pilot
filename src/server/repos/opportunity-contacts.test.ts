@@ -250,7 +250,7 @@ describe("opportunity-contact links", () => {
       source: "Conversation",
     });
     expect(fixture.rowCount("contact")).toBe(contactsBefore);
-    expect(listOpportunityContacts(fixture.client.db, fixture.tenantA, created.id)).toEqual(
+    expect(listOpportunityContacts(fixture.client.db, fixture.tenantA, "microsoft-sde")).toEqual(
       [expect.objectContaining({ contactId: "rahul", contactName: "Rahul Sharma" })],
     );
     expect(
@@ -269,7 +269,7 @@ describe("opportunity-contact links", () => {
         .prepare(
           "select kind from activity_event where workspace_id = ? and entity_id = ? order by kind",
         )
-        .all(fixture.tenantA.workspaceId, created.id),
+        .all(fixture.tenantA.workspaceId, "microsoft-sde"),
     ).toEqual([
       { kind: "OPPORTUNITY_CONTACT_LINKED" },
       { kind: "OPPORTUNITY_CREATED" },

@@ -1245,6 +1245,35 @@ main:focus {
   white-space: pre-wrap;
 }
 
+.from-conversation,
+.link-contact-form {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  min-width: 0;
+  max-width: 32rem;
+}
+
+.from-conversation__form,
+.link-contact-form {
+  width: 100%;
+}
+
+.from-conversation__form {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--raised);
+}
+
+.btn--ghost:disabled:hover {
+  border-color: var(--line);
+  background: var(--raised);
+}
+
 .skeleton {
   overflow: hidden;
   border-radius: var(--radius-md);
