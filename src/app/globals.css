@@ -777,6 +777,107 @@ main:focus {
   display: none;
 }
 
+/* Global quick add — the dialog is the one surface where the kit permits elevation. */
+
+.quick-add-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--ink) 36%, transparent);
+}
+
+.quick-add-dialog {
+  display: grid;
+  width: min(100%, 42rem);
+  max-height: calc(100dvh - 2 * var(--space-4));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--raised);
+  box-shadow: var(--shadow-lg);
+}
+
+.quick-add-grabber {
+  display: none;
+}
+
+.quick-add-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.quick-add-header .eyebrow {
+  margin: 0 0 var(--space-1);
+}
+
+.quick-add-close {
+  display: grid;
+  width: var(--target-min);
+  height: var(--target-min);
+  flex: none;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--raised);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.quick-add-close:hover {
+  border-color: var(--line-strong);
+  background: var(--hover);
+}
+
+.quick-add-close svg {
+  width: var(--space-5);
+  height: var(--space-5);
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+
+.quick-add-content {
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-4);
+}
+
+/* Quick-add mobile sheet */
+@media (max-width: 767px) {
+  .quick-add-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .quick-add-dialog {
+    width: 100%;
+    max-height: calc(100dvh - var(--space-2));
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+
+  .quick-add-grabber {
+    display: block;
+    width: var(--space-8);
+    height: var(--space-1);
+    margin: var(--space-2) auto 0;
+    border-radius: 999px;
+    background: var(--line-strong);
+  }
+
+  .quick-add-header,
+  .quick-add-content {
+    padding: var(--space-3) var(--space-4);
+  }
+}
+
 /* Company CRM — compact data surfaces, using the shared kit patterns. */
 
 .card {
