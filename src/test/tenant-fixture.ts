@@ -18,6 +18,7 @@ type FoundationTable =
   | "contact"
   | "contact_method"
   | "interaction"
+  | "import_mapping"
   | "opportunity"
   | "opportunity_contact"
   | "application"

@@ -40,6 +40,7 @@ describe("migrateDatabase", () => {
           "contact",
           "contact_method",
           "interaction",
+          "import_mapping",
           "opportunity",
           "opportunity_contact",
           "application",
@@ -53,7 +54,7 @@ describe("migrateDatabase", () => {
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 8 });
+      ).toEqual({ count: 9 });
 
       for (const indexName of [
         "company_workspace_id_id_unique",
@@ -73,6 +74,7 @@ describe("migrateDatabase", () => {
         "interaction_workspace_referral_idx",
         "interaction_workspace_occurred_idx",
         "interaction_workspace_need_reply_idx",
+        "import_mapping_workspace_idx",
         "opportunity_workspace_id_id_unique",
         "opportunity_workspace_company_idx",
         "opportunity_workspace_bucket_idx",

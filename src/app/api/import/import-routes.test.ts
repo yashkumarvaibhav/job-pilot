@@ -15,7 +15,7 @@ vi.mock("@/server/db/runtime", () => ({
   getDatabase: () => mocks.database,
 }));
 
-import { POST } from "./route";
+import { GET, POST, PUT } from "./route";
 
 function request(body: unknown) {
   return new Request("http://localhost/api/import", {
@@ -59,6 +59,46 @@ describe("import route", () => {
     );
 
     expect(response.status).toBe(401);
+    expect(
+      (await GET(
+        new Request("http://localhost/api/import?entitySet=companies"),
+      )).status,
+    ).toBe(401);
+  });
+
+  it("saves and reloads an explicit mapping without exposing another workspace", async () => {
+    const fixture = newFixture();
+    const saved = await PUT(
+      request({
+        entitySet: "companies",
+        mapping: { name: "Company", website: "Website" },
+      }),
+    );
+    expect(saved.status).toBe(200);
+    expect(await saved.json()).toEqual({
+      entitySet: "companies",
+      mapping: { name: "Company", website: "Website" },
+    });
+
+    mocks.tenant = fixture.tenantB;
+    const privateResponse = await GET(
+      new Request("http://localhost/api/import?entitySet=companies"),
+    );
+    expect(await privateResponse.json()).toEqual({
+      entitySet: "companies",
+      fields: expect.any(Array),
+      mapping: {},
+    });
+
+    mocks.tenant = fixture.tenantA;
+    const ownedResponse = await GET(
+      new Request("http://localhost/api/import?entitySet=companies"),
+    );
+    expect(await ownedResponse.json()).toEqual({
+      entitySet: "companies",
+      fields: expect.arrayContaining(["name", "website"]),
+      mapping: { name: "Company", website: "Website" },
+    });
   });
 
   it("plans every company row without writing and reports exact duplicate coverage", async () => {

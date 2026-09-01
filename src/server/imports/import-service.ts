@@ -120,6 +120,59 @@ function isEntitySet(value: unknown): value is ImportEntitySet {
   return typeof value === "string" && IMPORT_ENTITY_SETS.includes(value as ImportEntitySet);
 }
 
+export function readEntitySet(value: unknown): ImportEntitySet {
+  if (!isEntitySet(value)) {
+    throw new ImportInputError("Choose companies, contacts or opportunities.");
+  }
+  return value;
+}
+
+function readMapping(
+  entitySet: ImportEntitySet,
+  value: unknown,
+): Record<string, string> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new ImportInputError("Choose valid CSV column mappings.");
+  }
+  const mapping = value as Record<string, unknown>;
+  const allowedFields = new Set<string>(FIELDS[entitySet]);
+  if (
+    !Object.keys(mapping).every((field) => allowedFields.has(field)) ||
+    !Object.values(mapping).every(
+      (header) => typeof header === "string" && header.trim().length > 0,
+    )
+  ) {
+    throw new ImportInputError("Choose valid CSV column mappings.");
+  }
+  const normalized = Object.fromEntries(
+    Object.entries(mapping).map(([field, header]) => [field, (header as string).trim()]),
+  );
+  if (new Set(Object.values(normalized)).size !== Object.keys(normalized).length) {
+    throw new ImportInputError("Map each CSV column only once.");
+  }
+  for (const field of REQUIRED_FIELDS[entitySet]) {
+    if (!(field in normalized)) {
+      throw new ImportInputError(`Map the required ${field} field.`);
+    }
+  }
+  return normalized;
+}
+
+export function readMappingBody(body: unknown): {
+  entitySet: ImportEntitySet;
+  mapping: Record<string, string>;
+} {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    throw new ImportInputError("Enter valid mapping details.");
+  }
+  const value = body as Record<string, unknown>;
+  if (!Object.keys(value).every((key) => ["entitySet", "mapping"].includes(key))) {
+    throw new ImportInputError("Enter valid mapping details.");
+  }
+  const entitySet = readEntitySet(value.entitySet);
+  return { entitySet, mapping: readMapping(entitySet, value.mapping) };
+}
+
 export function readImportBody(body: unknown): ImportRequest {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
     throw new ImportInputError("Enter valid import details.");
@@ -148,27 +201,7 @@ export function readImportBody(body: unknown): ImportRequest {
     throw new ImportInputError("Enter valid import details.");
   }
 
-  const mapping = value.mapping as Record<string, unknown>;
-  const allowedFields = new Set<string>(FIELDS[value.entitySet]);
-  if (
-    !Object.keys(mapping).every((field) => allowedFields.has(field)) ||
-    !Object.values(mapping).every(
-      (header) => typeof header === "string" && header.trim().length > 0,
-    )
-  ) {
-    throw new ImportInputError("Choose valid CSV column mappings.");
-  }
-  const normalizedMapping = Object.fromEntries(
-    Object.entries(mapping).map(([field, header]) => [field, (header as string).trim()]),
-  );
-  if (new Set(Object.values(normalizedMapping)).size !== Object.keys(normalizedMapping).length) {
-    throw new ImportInputError("Map each CSV column only once.");
-  }
-  for (const field of REQUIRED_FIELDS[value.entitySet]) {
-    if (!(field in normalizedMapping)) {
-      throw new ImportInputError(`Map the required ${field} field.`);
-    }
-  }
+  const normalizedMapping = readMapping(value.entitySet, value.mapping);
 
   return {
     entitySet: value.entitySet,

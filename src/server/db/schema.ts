@@ -5,6 +5,7 @@ import {
   foreignKey,
   index,
   integer,
+  primaryKey,
   sqliteTable,
   text,
   uniqueIndex,
@@ -132,6 +133,30 @@ export const settings = sqliteTable(
     check(
       "settings_digest_hour_range",
       sql`${table.digestHour} is null or ${table.digestHour} between 0 and 23`,
+    ),
+  ],
+);
+
+export const importMapping = sqliteTable(
+  "import_mapping",
+  {
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    entitySet: text("entity_set", {
+      enum: ["companies", "contacts", "opportunities"],
+    }).notNull(),
+    mappingJson: text("mapping_json", { mode: "json" })
+      .$type<Record<string, string>>()
+      .notNull(),
+    updatedAt: utcInstant("updated_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.workspaceId, table.entitySet] }),
+    index("import_mapping_workspace_idx").on(table.workspaceId),
+    check(
+      "import_mapping_entity_set_valid",
+      sql`${table.entitySet} in ('companies', 'contacts', 'opportunities')`,
     ),
   ],
 );
