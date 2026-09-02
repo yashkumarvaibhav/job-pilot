@@ -30,6 +30,7 @@
     "test:security": "vitest run src/domain/rate-limit.test.ts src/domain/file-signature.test.ts src/domain/mail-body.test.tsx src/lib/request-origin.test.ts src/proxy.test.ts src/server/auth/session.test.ts src/server/auth/tenancy.test.ts src/server/auth/accounts.test.ts src/server/auth/account-lifecycle.test.ts src/server/repos/perimeter.test.ts src/app/api/auth/account-routes.test.ts src/app/api/auth/account-lifecycle-routes.test.ts src/app/api/ready/route.test.ts src/app/api/documents/document-routes.test.ts src/app/account-lifecycle-ui.test.tsx",
     "test:settings": "vitest run src/domain/settings.test.ts src/server/db/migrate.test.ts src/server/repos/settings.test.ts src/app/api/settings/settings-routes.test.ts src/app/settings-ui.test.tsx src/app/import-ui.test.tsx src/app/activity-ui.test.tsx",
     "test:quickadd": "vitest run src/components/quick-add-dialog.test.tsx src/components/quick-add.test.tsx src/app/api/quick-add-routes.test.ts",
+    "test:palette": "vitest run src/domain/saved-search.test.ts src/server/db/migrate.test.ts src/server/repos/palette.test.ts src/app/api/palette-routes.test.ts src/components/command-palette.test.tsx src/components/quick-add.test.tsx src/app/contact-ui.test.tsx src/app/opportunity-ui.test.tsx src/app/referral-ui.test.tsx",
     "test:tags": "vitest run src/domain/tag.test.ts src/domain/activity.test.ts src/server/db/migrate.test.ts src/server/repos/tags.test.ts src/server/repos/activity.test.ts src/app/api/tags/tag-routes.test.ts src/app/api/activity/activity-routes.test.ts src/app/tag-ui.test.tsx src/app/activity-ui.test.tsx",
     "test:document": "vitest run src/domain/document.test.ts src/server/db/migrate.test.ts src/server/storage/uploads.test.ts src/server/repos/documents.test.ts src/server/repos/applications.test.ts src/app/api/documents/document-routes.test.ts src/app/document-ui.test.tsx src/app/application-ui.test.tsx src/app/opportunity-ui.test.tsx",
     "test:duplicate": "vitest run src/domain/duplicate.test.ts src/server/db/migrate.test.ts src/server/repos/duplicates.test.ts src/app/api/companies/company-routes.test.ts src/app/api/opportunities/opportunity-routes.test.ts src/server/imports/import-service.test.ts src/app/api/import/import-routes.test.ts src/app/duplicate-ui.test.tsx src/app/import-ui.test.tsx",
@@ -43,6 +44,7 @@
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
+    "cmdk": "^1.1.1",
     "drizzle-orm": "^0.45.2",
     "lucide-react": "^1.38.0",
     "next": "16.3.3",

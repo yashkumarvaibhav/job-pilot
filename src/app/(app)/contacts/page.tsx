@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ContactCreatePanel } from "@/components/contact-form";
+import { SavedSearchPanel } from "@/components/saved-search-panel";
 import {
   ContactStatusChip,
   relationshipLabel,
@@ -20,6 +21,8 @@ import {
   listContacts,
   parseContactListFilter,
 } from "@/server/repos/contacts";
+import { savedSearchResponse } from "@/server/repos/saved-search-http";
+import { listSavedSearches } from "@/server/repos/saved-searches";
 
 type Props = { searchParams?: Promise<PageSearchParams> };
 
@@ -30,6 +33,9 @@ export default async function ContactsPage({ searchParams }: Props = {}) {
   const filter = parseContactListFilter(query);
   const contacts = listContacts(database, tenant, filter);
   const companies = listCompanies(database, tenant);
+  const searches = listSavedSearches(database, tenant, "contacts").map(
+    savedSearchResponse,
+  );
   const hasFilters = Object.keys(filter).length > 0;
 
   return (
@@ -119,6 +125,12 @@ export default async function ContactsPage({ searchParams }: Props = {}) {
           ) : null}
         </div>
       </form>
+
+      <SavedSearchPanel
+        entityType="contacts"
+        query={query.toString()}
+        searches={searches}
+      />
 
       {contacts.length === 0 ? (
         <div className="data-state data-state--empty">

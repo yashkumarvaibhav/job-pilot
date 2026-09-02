@@ -9,9 +9,10 @@ import {
   railItems,
   routeIsActive,
 } from "@/lib/navigation";
+import { CommandPaletteHost } from "./command-palette-host";
 import { SignOutButton } from "./sign-out-button";
 import { ThemeToggle } from "./theme-toggle";
-import { QuickAdd, type QuickAddReferenceData } from "./quick-add";
+import { QuickAdd, type QuickAddAction, type QuickAddReferenceData } from "./quick-add";
 import { QUICK_ADD_OPEN_EVENT } from "./quick-add-launch";
 
 function MobileIcon({ icon }: { icon: (typeof mobileItems)[number]["icon"] }) {
@@ -70,14 +71,20 @@ export function AppShell({
   const router = useRouter();
   const [quickAddOpen, setQuickAddOpen] = useState(pathname === "/add");
   const [quickAddTrigger, setQuickAddTrigger] = useState<HTMLElement | null>(null);
+  const [quickAddAction, setQuickAddAction] = useState<QuickAddAction | null>(null);
 
   const closeQuickAdd = useCallback(() => {
     setQuickAddOpen(false);
+    setQuickAddAction(null);
     if (pathname === "/add") router.replace("/");
   }, [pathname, router]);
 
-  function openQuickAdd(trigger: HTMLElement | null) {
+  function openQuickAdd(
+    trigger: HTMLElement | null,
+    action: QuickAddAction | null = null,
+  ) {
     setQuickAddTrigger(trigger);
+    setQuickAddAction(action);
     setQuickAddOpen(true);
   }
 
@@ -128,6 +135,9 @@ export function AppShell({
           </span>
         </Link>
         <div className="topbar-actions">
+          <CommandPaletteHost
+            onQuickAdd={(action, trigger) => openQuickAdd(trigger, action)}
+          />
           <button
             aria-expanded={quickAddOpen}
             aria-haspopup="dialog"
@@ -212,6 +222,7 @@ export function AppShell({
       {quickAddOpen ? (
         <QuickAdd
           data={quickAddData}
+          initialAction={quickAddAction}
           onClose={closeQuickAdd}
           returnFocusTo={quickAddTrigger}
         />

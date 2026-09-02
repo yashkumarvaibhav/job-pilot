@@ -482,6 +482,30 @@ main:focus {
   background: var(--hover);
 }
 
+.palette-trigger {
+  display: grid;
+  width: var(--target-min);
+  height: var(--target-min);
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--raised);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.palette-trigger:hover {
+  background: var(--hover);
+}
+
+.palette-trigger svg {
+  width: var(--space-5);
+  height: var(--space-5);
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+
 .notification-link svg {
   width: var(--space-5);
   height: var(--space-5);
@@ -884,6 +908,166 @@ main:focus {
   min-height: 0;
   overflow-y: auto;
   padding: var(--space-4);
+}
+
+.command-palette-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: start center;
+  padding: var(--space-4);
+  padding-top: calc(var(--shell-topbar-height) + var(--space-4));
+  background: color-mix(in srgb, var(--ink) 36%, transparent);
+}
+
+.command-palette {
+  display: grid;
+  width: min(100%, 36rem);
+  max-height: calc(100dvh - var(--shell-topbar-height) - 2 * var(--space-4));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--raised);
+  box-shadow: var(--shadow-lg);
+}
+
+.command-palette__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.command-palette__header .eyebrow {
+  margin: 0 0 var(--space-1);
+}
+
+.command-palette__close {
+  display: grid;
+  width: var(--target-min);
+  height: var(--target-min);
+  place-items: center;
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--raised);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.command-palette__close svg {
+  width: var(--space-5);
+  height: var(--space-5);
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+
+.command-palette [cmdk-root] {
+  display: grid;
+  min-height: 0;
+}
+
+.command-palette [cmdk-input] {
+  width: 100%;
+  min-height: var(--target-min);
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--raised);
+  color: var(--ink);
+  font: inherit;
+}
+
+.command-palette [cmdk-list] {
+  max-height: min(24rem, 50dvh);
+  overflow-y: auto;
+  padding: var(--space-2);
+}
+
+.command-palette [cmdk-group-heading] {
+  padding: var(--space-2) var(--space-3);
+  color: var(--faint);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.command-palette [cmdk-item] {
+  display: flex;
+  min-height: var(--target-min);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.command-palette [cmdk-item][data-selected="true"] {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.command-palette [cmdk-empty] {
+  padding: var(--space-4);
+  color: var(--muted);
+}
+
+.command-palette__meta {
+  color: var(--muted);
+}
+
+.saved-search-panel {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--raised);
+}
+
+.saved-search-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.saved-search-link {
+  display: inline-flex;
+  min-height: var(--target-min);
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.saved-search-link:hover {
+  background: var(--hover);
+}
+
+.saved-search-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.saved-search-form .field {
+  flex: 1 1 12rem;
+}
+
+.saved-search-form .btn {
+  min-height: var(--target-min);
 }
 
 .quick-add-action-list {

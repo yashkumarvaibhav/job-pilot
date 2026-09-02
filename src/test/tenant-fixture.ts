@@ -31,7 +31,8 @@ type FoundationTable =
   | "assessment"
   | "document"
   | "document_version"
-  | "document_usage";
+  | "document_usage"
+  | "saved_search";
 
 type BaseTenantTestFixture = {
   client: DatabaseClient;

@@ -35,6 +35,8 @@ const KIND_VERBS: Record<string, string> = {
   TAG_ATTACHED: "Tag added",
   TAG_DETACHED: "Tag removed",
   TAG_DELETED: "Tag deleted",
+  SAVED_SEARCH_SAVED: "Saved search updated",
+  SAVED_SEARCH_DELETED: "Saved search deleted",
 };
 
 const channelByValue = new Map<string, string>(

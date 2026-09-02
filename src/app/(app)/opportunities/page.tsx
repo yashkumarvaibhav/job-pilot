@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { RolledUpStageChip } from "@/components/application-status";
 import { OpportunityCreatePanel } from "@/components/opportunity-form";
+import { SavedSearchPanel } from "@/components/saved-search-panel";
 import {
   pageSearchParams,
   type PageSearchParams,
@@ -16,6 +17,8 @@ import {
   listOpportunities,
   parseOpportunityListFilter,
 } from "@/server/repos/opportunities";
+import { savedSearchResponse } from "@/server/repos/saved-search-http";
+import { listSavedSearches } from "@/server/repos/saved-searches";
 
 type Props = { searchParams: Promise<PageSearchParams> };
 
@@ -47,6 +50,9 @@ export default async function OpportunitiesPage({ searchParams }: Props) {
     id,
     name,
   }));
+  const searches = listSavedSearches(database, tenant, "opportunities").map(
+    savedSearchResponse,
+  );
   const priorities = [
     ...new Set(
       allOpportunities
@@ -132,6 +138,11 @@ export default async function OpportunitiesPage({ searchParams }: Props) {
           {hasFilters ? <Link className="btn btn--ghost" href="/opportunities">Clear filters</Link> : null}
         </div>
       </form>
+      <SavedSearchPanel
+        entityType="opportunities"
+        query={query.toString()}
+        searches={searches}
+      />
       {opportunities.length === 0 ? (
         <div className="data-state data-state--empty">
           <p>{hasFilters ? "No opportunities match these filters." : "No opportunities. Paste a job URL or add one from a conversation."}</p>

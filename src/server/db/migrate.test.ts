@@ -57,13 +57,14 @@ describe("migrateDatabase", () => {
           "document",
           "document_version",
           "document_usage",
+          "saved_search",
         ]),
       );
       expect(
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 17 });
+      ).toEqual({ count: 18 });
 
       for (const indexName of [
         "company_workspace_id_id_unique",
@@ -147,6 +148,9 @@ describe("migrateDatabase", () => {
         "assessment_workspace_opportunity_idx",
         "assessment_workspace_application_idx",
         "assessment_workspace_due_idx",
+        "saved_search_workspace_id_id_unique",
+        "saved_search_workspace_name_unique",
+        "saved_search_workspace_entity_idx",
       ]) {
         const columns = client.sqlite
           .prepare(

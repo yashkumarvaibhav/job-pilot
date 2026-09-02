@@ -115,6 +115,13 @@ import {
   updateTask,
 } from "./tasks";
 import { getTodaySnapshot } from "./today";
+import { loadPaletteCatalog, searchPaletteEntities } from "./palette";
+import {
+  deleteSavedSearch,
+  getSavedSearch,
+  listSavedSearches,
+  saveSavedSearch,
+} from "./saved-searches";
 
 const TENANT_ROUTE_FILES = [
   "activity/route.ts",
@@ -146,8 +153,11 @@ const TENANT_ROUTE_FILES = [
   "opportunities/[id]/route.ts",
   "opportunities/from-conversation/route.ts",
   "opportunities/route.ts",
+  "palette/route.ts",
   "referrals/[id]/route.ts",
   "referrals/route.ts",
+  "saved-searches/[id]/route.ts",
+  "saved-searches/route.ts",
   "settings/route.ts",
   "tags/[id]/route.ts",
   "tags/detach/route.ts",
@@ -293,6 +303,12 @@ describe("registered tenant perimeter", () => {
     saveImportMapping(database, tenant, "companies", {
       name: "Private Company Column",
     });
+    const savedSearch = saveSavedSearch(database, tenant, {
+      id: "private-search",
+      name: "Secret Filter",
+      entityType: "contacts",
+      query: "status=waiting_for_reply",
+    });
     const notifications = materializeNotifications(database, tenant, {
       now: new Date("2026-09-02T02:00:00.000Z"),
     });
@@ -310,6 +326,7 @@ describe("registered tenant perimeter", () => {
       tagId: tagged.tagId,
       document,
       version,
+      savedSearch,
       notificationIds: notifications.ids,
     };
   }
@@ -364,6 +381,9 @@ describe("registered tenant perimeter", () => {
     expect(getDocumentVersion(database, a, privateRows.version.id)).toEqual(
       getDocumentVersion(database, a, "missing-version"),
     );
+    expect(getSavedSearch(database, a, privateRows.savedSearch.id)).toEqual(
+      getSavedSearch(database, a, "missing-search"),
+    );
     expect(
       readDocumentVersionFile(
         database,
@@ -395,6 +415,7 @@ describe("registered tenant perimeter", () => {
     expect(updateAssessment(database, a, privateRows.assessment.id, { notes: "x" })).toBeUndefined();
     expect(deleteAssessment(database, a, privateRows.assessment.id)).toBe(false);
     expect(deleteTag(database, a, privateRows.tagId)).toBe(false);
+    expect(deleteSavedSearch(database, a, privateRows.savedSearch.id)).toBe(false);
 
     expect(() =>
       createContact(database, a, {
@@ -548,6 +569,9 @@ describe("registered tenant perimeter", () => {
       today: getTodaySnapshot(database, a, { now }),
       importMapping: getImportMapping(database, a, "companies"),
       storedBytes: workspaceStoredBytes(database, a),
+      savedSearches: listSavedSearches(database, a),
+      palette: loadPaletteCatalog(database, a, "Private"),
+      paletteRahul: searchPaletteEntities(database, a, "Rahul"),
       exportJson: buildWorkspaceExport(
         database,
         a,

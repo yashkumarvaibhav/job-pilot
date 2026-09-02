@@ -53,6 +53,7 @@ import {
   type TaskSource,
   type TaskStatus,
 } from "../../domain/task";
+import type { SavedSearchEntityType } from "../../domain/saved-search";
 import { DEFAULT_TIME_ZONE } from "./timezone";
 
 const utcInstant = (name: string) => integer(name, { mode: "timestamp_ms" });
@@ -1115,6 +1116,34 @@ export const documentUsage = sqliteTable(
     check(
       "document_usage_entity_type_valid",
       sql`${table.entityType} in ('application')`,
+    ),
+  ],
+);
+
+export const savedSearch = sqliteTable(
+  "saved_search",
+  {
+    ...workspaceOwnedEntityColumns(),
+    name: text("name").notNull(),
+    entityType: text("entity_type").$type<SavedSearchEntityType>().notNull(),
+    query: text("query").notNull().default(""),
+    createdAt: utcInstant("created_at").notNull(),
+    updatedAt: utcInstant("updated_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("saved_search", table),
+    uniqueIndex("saved_search_workspace_name_unique").on(
+      table.workspaceId,
+      table.name,
+    ),
+    index("saved_search_workspace_entity_idx").on(
+      table.workspaceId,
+      table.entityType,
+    ),
+    check("saved_search_name_not_blank", sql`length(trim(${table.name})) > 0`),
+    check(
+      "saved_search_entity_type_valid",
+      sql`${table.entityType} in ('contacts', 'opportunities', 'referrals')`,
     ),
   ],
 );

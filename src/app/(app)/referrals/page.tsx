@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ReferralCreateForm } from "@/components/referral-forms";
 import { ReferralCollection } from "@/components/referral-list";
+import { SavedSearchPanel } from "@/components/saved-search-panel";
 import {
   REFERRAL_LIST_PRESETS,
   REFERRAL_STAGES,
@@ -22,6 +23,8 @@ import {
   listReferrals,
   parseReferralListFilter,
 } from "@/server/repos/referrals";
+import { savedSearchResponse } from "@/server/repos/saved-search-http";
+import { listSavedSearches } from "@/server/repos/saved-searches";
 
 type Props = {
   searchParams: Promise<PageSearchParams>;
@@ -37,6 +40,9 @@ export default async function ReferralsPage({ searchParams }: Props) {
   const asOfOn = calendarDateInZone(timeZone);
   const filter = parseReferralListFilter(query, asOfOn);
   const referrals = listReferrals(database, tenant, filter);
+  const searches = listSavedSearches(database, tenant, "referrals").map(
+    savedSearchResponse,
+  );
   const companies = listCompanies(database, tenant);
   const contacts = listContacts(database, tenant).map(({ id, name }) => ({
     id,
@@ -148,6 +154,11 @@ export default async function ReferralsPage({ searchParams }: Props) {
           ) : null}
         </div>
       </form>
+      <SavedSearchPanel
+        entityType="referrals"
+        query={query.toString()}
+        searches={searches}
+      />
       {referrals.length === 0 ? (
         <div className="data-state data-state--empty">
           <p>

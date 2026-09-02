@@ -9,6 +9,12 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/contacts",
   useRouter: () => router,
 }));
+vi.mock("next/dynamic", () => ({
+  default: () =>
+    function PaletteStub() {
+      return null;
+    },
+}));
 
 import { AppShell } from "./app-shell";
 import {
@@ -33,7 +39,9 @@ describe("global quick add", () => {
     );
 
     expect(html).toContain('class="btn quick-add-trigger"');
-    expect(html.match(/aria-haspopup="dialog"/g)).toHaveLength(2);
+    expect(html).toContain('aria-label="Open command palette"');
+    expect(html).toContain('class="palette-trigger"');
+    expect(html.match(/aria-haspopup="dialog"/g)).toHaveLength(3);
     expect(html).toContain('class="mobile-link"');
     expect(html).toContain("Notifications, 0 unread");
   });
