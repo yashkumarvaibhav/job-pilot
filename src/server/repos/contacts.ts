@@ -18,6 +18,10 @@ import type { AppDatabase, AppTransaction } from "../db/client";
 import { company, contact, contactMethod } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
 import {
+  createCompanyInTransaction,
+  findCompanyByName,
+} from "./companies";
+import {
   clearEntityTagsInTransaction,
   replaceEntityTagsInTransaction,
 } from "./tags";
@@ -37,6 +41,7 @@ export type ContactMethodInput = {
 export type CreateContactInput = {
   id?: string;
   companyId?: string | null;
+  companyName?: string | null;
   name: string;
   designation?: string | null;
   relationship?: ContactRelationship;
@@ -57,6 +62,7 @@ export type UpdateContactInput = Partial<
   Pick<
     CreateContactInput,
     | "companyId"
+    | "companyName"
     | "name"
     | "designation"
     | "relationship"
@@ -264,6 +270,36 @@ function requireOwnedCompany(
   }
 }
 
+function resolveCompanyLink(
+  transaction: AppTransaction,
+  tenant: TenantContext,
+  input: { companyId?: string | null; companyName?: string | null },
+  now: Date,
+): string | null {
+  const companyId = optionalText(input.companyId);
+  const companyName = optionalText(input.companyName);
+  if (companyId !== null && companyName !== null) {
+    throw new ContactInputError(
+      "Send a company id or a company name, not both.",
+    );
+  }
+  if (companyId !== null) {
+    requireOwnedCompany(transaction, tenant, companyId);
+    return companyId;
+  }
+  if (companyName === null) {
+    return null;
+  }
+  const existing = findCompanyByName(transaction, tenant, companyName);
+  if (existing) {
+    return existing.id;
+  }
+  return createCompanyInTransaction(transaction, tenant, {
+    name: companyName,
+    now,
+  }).id;
+}
+
 function insertMethods(
   transaction: AppTransaction,
   tenant: TenantContext,
@@ -323,8 +359,7 @@ export function createContactInTransaction(
   const id = input.id ?? randomUUID();
   const now = input.now ?? new Date();
   const methods = prepareMethods(input.methods);
-  const companyId = optionalText(input.companyId);
-  requireOwnedCompany(transaction, tenant, companyId);
+  const companyId = resolveCompanyLink(transaction, tenant, input, now);
   transaction
     .insert(contact)
     .values({
@@ -480,8 +515,20 @@ export function updateContact(
       return false;
     }
 
+    if (input.companyId !== undefined && input.companyName !== undefined) {
+      throw new ContactInputError(
+        "Send a company id or a company name, not both.",
+      );
+    }
     const values = updateValues(current, input);
-    if (input.companyId !== undefined) {
+    if (input.companyName !== undefined) {
+      values.companyId = resolveCompanyLink(
+        transaction,
+        tenant,
+        { companyName: input.companyName },
+        at,
+      );
+    } else if (input.companyId !== undefined) {
       requireOwnedCompany(transaction, tenant, values.companyId ?? null);
     }
     if (Object.keys(values).length > 0) {

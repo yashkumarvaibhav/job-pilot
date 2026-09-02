@@ -138,6 +138,7 @@ describe("contact route handlers", () => {
       { name: "Valid", tags: "backend" },
       { name: "Valid", methods: [{ kind: "email", value: "not-an-email" }] },
       { name: "Valid", workspaceId: fixture.tenantB.workspaceId },
+      { name: "Valid", companyId: "microsoft", companyName: "Microsoft" },
     ]) {
       const response = await POST(
         jsonRequest("http://localhost/api/contacts", "POST", body),
@@ -186,5 +187,26 @@ describe("contact route handlers", () => {
 
     expect(listResponse.status).toBe(401);
     expect(createResponse.status).toBe(401);
+  });
+
+  it("creates a workspace company from a typed name without exposing tenant ids", async () => {
+    const fixture = newFixture();
+    const createdResponse = await POST(
+      jsonRequest("http://localhost/api/contacts", "POST", {
+        name: "Neha Gupta",
+        companyName: "Microsoft",
+        relationship: "friend",
+      }),
+    );
+    const created = (await createdResponse.json()) as Record<string, unknown>;
+
+    expect(createdResponse.status).toBe(201);
+    expect(created).toMatchObject({
+      name: "Neha Gupta",
+      companyName: "Microsoft",
+      relationship: "friend",
+    });
+    expect(JSON.stringify(created)).not.toContain("workspace");
+    expect(fixture.rowCount("company")).toBe(1);
   });
 });

@@ -24,6 +24,7 @@ vi.mock("@/server/db/runtime", () => ({
   getDatabase: () => mocks.database,
 }));
 
+import { ContactEditForm } from "../components/contact-form";
 import ContactsPage from "./(app)/contacts/page";
 import ContactDetailPage from "./(app)/contacts/[id]/page";
 
@@ -261,6 +262,36 @@ describe("contact screens", () => {
     expect(html).toContain("SDE opening. Job ID 182763");
     expect(html).toContain("Referral requests");
     expect(html).toContain("No referral requests for this person yet.");
+  });
+
+  it("lets a contact type a company name that does not exist yet", () => {
+    newFixture();
+    const html = renderToStaticMarkup(
+      <ContactEditForm
+        companies={[]}
+        contact={{
+          id: "neha",
+          companyId: null,
+          name: "Neha Gupta",
+          designation: null,
+          relationship: "friend",
+          source: null,
+          location: null,
+          notes: null,
+          tags: [],
+          preferredContactChannel: null,
+          networkingStatus: "not_contacted",
+          nextAction: null,
+          followUpOn: null,
+          methods: [],
+        }}
+      />,
+    );
+
+    expect(html).toContain('name="companyName"');
+    expect(html).toContain(
+      "Type a name. A new company is created if this workspace does not",
+    );
   });
 
   it("uses one Contact not found state for missing and foreign ids", async () => {

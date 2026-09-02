@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createTenantTestFixture } from "../../test/tenant-fixture";
 import {
   createCompany,
+  findCompanyByName,
   deleteCompany,
   getCompany,
   listCompanies,
@@ -128,5 +129,24 @@ describe("company repository", () => {
         )
         .get(fixture.tenantA.workspaceId, created.id),
     ).toEqual({ kind: "COMPANY_DELETED" });
+  });
+
+  it("finds a company by name only inside the current workspace", () => {
+    const fixture = newFixture();
+    const owned = createCompany(fixture.client.db, fixture.tenantA, {
+      id: "company-a",
+      name: "Microsoft",
+    });
+    createCompany(fixture.client.db, fixture.tenantB, {
+      id: "company-b",
+      name: "Microsoft",
+    });
+
+    expect(
+      findCompanyByName(fixture.client.db, fixture.tenantA, " microsoft "),
+    ).toEqual(owned);
+    expect(
+      findCompanyByName(fixture.client.db, fixture.tenantA, "Atlas"),
+    ).toBeUndefined();
   });
 });

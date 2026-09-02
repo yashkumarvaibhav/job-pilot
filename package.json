@@ -10,6 +10,7 @@
     "db:migrate:dev": "node scripts/migrate-dev.mjs",
     "demo:preflight": "node scripts/demo/preflight.mjs",
     "demo:provision": "node scripts/demo/provision.mjs",
+    "walkthrough:reset": "node scripts/walkthrough/reset.mjs",
     "backup:selftest": "node scripts/backup-selftest.mjs",
     "lint": "eslint",
     "test": "vitest run",
@@ -26,6 +27,7 @@
     "test:quickadd": "vitest run src/components/quick-add-dialog.test.tsx src/components/quick-add.test.tsx src/app/api/quick-add-routes.test.ts",
     "test:tags": "vitest run src/domain/tag.test.ts src/domain/activity.test.ts src/server/db/migrate.test.ts src/server/repos/tags.test.ts src/server/repos/activity.test.ts src/app/api/tags/tag-routes.test.ts src/app/api/activity/activity-routes.test.ts src/app/tag-ui.test.tsx src/app/activity-ui.test.tsx",
     "test:import": "vitest run src/domain/csv-import.test.ts src/server/imports/import-service.test.ts src/app/api/import/import-routes.test.ts src/app/import-ui.test.tsx",
+    "test:walkthrough": "vitest run src/server/repos/p01-walkthrough.test.ts scripts/walkthrough/reset.test.mts",
     "test:watch": "vitest"
   },
   "dependencies": {

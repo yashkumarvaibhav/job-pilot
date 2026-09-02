@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createTenantTestFixture } from "../../test/tenant-fixture";
-import { createCompany } from "./companies";
+import { createCompany, listCompanies } from "./companies";
 import {
   ContactInputError,
   createContact,
@@ -237,5 +237,48 @@ describe("contact repository", () => {
     );
     expect(fixture.rowCount("contact_method")).toBe(0);
     expect(getContact(fixture.client.db, fixture.tenantA, "contact-a")).toBeUndefined();
+  });
+
+  it("creates a company from a typed name and reuses the workspace match", () => {
+    const fixture = newFixture();
+    createCompany(fixture.client.db, fixture.tenantB, {
+      id: "foreign-microsoft",
+      name: "Microsoft",
+    });
+
+    const created = createContact(fixture.client.db, fixture.tenantA, {
+      id: "neha",
+      companyName: " Microsoft ",
+      name: "Neha Gupta",
+      relationship: "friend",
+    });
+    const reused = createContact(fixture.client.db, fixture.tenantA, {
+      id: "second",
+      companyName: "microsoft",
+      name: "Second Contact",
+    });
+
+    expect(created.companyName).toBe("Microsoft");
+    expect(reused.companyId).toBe(created.companyId);
+    expect(listCompanies(fixture.client.db, fixture.tenantA)).toHaveLength(1);
+    expect(created.companyId).not.toBe("foreign-microsoft");
+    expect(
+      getContact(fixture.client.db, fixture.tenantB, "neha"),
+    ).toBeUndefined();
+  });
+
+  it("rejects sending both a company id and a company name", () => {
+    const fixture = newFixture();
+    const microsoft = createCompany(fixture.client.db, fixture.tenantA, {
+      name: "Microsoft",
+    });
+
+    expect(() =>
+      createContact(fixture.client.db, fixture.tenantA, {
+        name: "Neha Gupta",
+        companyId: microsoft.id,
+        companyName: "Microsoft",
+      }),
+    ).toThrow(ContactInputError);
   });
 });

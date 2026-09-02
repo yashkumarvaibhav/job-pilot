@@ -105,13 +105,16 @@ export function MarkAppliedForm({
           />
         </div>
         <div className="field">
-          <label htmlFor={`${formId}-resume`}>Resume version ID</label>
+          <label htmlFor={`${formId}-resume`}>Resume used</label>
           <input
             disabled={pending}
             id={`${formId}-resume`}
             name="resumeVersionId"
             type="text"
           />
+          <p className="field-hint">
+            Type a resume name. Document uploads are not required.
+          </p>
         </div>
       </div>
       {message ? (

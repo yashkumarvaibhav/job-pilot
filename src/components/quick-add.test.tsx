@@ -92,6 +92,20 @@ describe("global quick add", () => {
     expect(html).not.toContain('name="workspaceId"');
   });
 
+  it("lets Add contact type a company name instead of picking an id", () => {
+    const html = renderToStaticMarkup(
+      <QuickAdd
+        data={data}
+        initialAction="contact"
+        onClose={() => undefined}
+        returnFocusTo={null}
+      />,
+    );
+
+    expect(html).toContain('name="companyName"');
+    expect(html).not.toContain('name="companyId"');
+  });
+
   it("derives a company label from a pasted job host without fetching", () => {
     expect(companyNameFromJobUrl("https://jobs.amazon.com/en/jobs/999")).toBe(
       "Amazon",

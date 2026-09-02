@@ -199,6 +199,25 @@ export function getCompany(
     .get();
 }
 
+export function findCompanyByName(
+  database: AppDatabase | AppTransaction,
+  tenant: TenantContext,
+  name: string,
+): Company | undefined {
+  const needle = name.trim().toLocaleLowerCase();
+  if (needle.length === 0) {
+    return undefined;
+  }
+
+  return database
+    .select()
+    .from(company)
+    .where(eq(company.workspaceId, tenant.workspaceId))
+    .orderBy(asc(company.name), asc(company.id))
+    .all()
+    .find((row) => row.name.toLocaleLowerCase() === needle);
+}
+
 function updateValues(input: UpdateCompanyInput) {
   const values: Partial<typeof company.$inferInsert> = {};
 

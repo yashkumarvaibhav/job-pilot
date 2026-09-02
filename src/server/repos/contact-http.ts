@@ -13,6 +13,7 @@ import type {
 
 const TEXT_FIELDS = [
   "companyId",
+  "companyName",
   "designation",
   "source",
   "location",

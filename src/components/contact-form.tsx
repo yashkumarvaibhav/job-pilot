@@ -85,7 +85,7 @@ function ContactForm({
       isPrimary: preferred === kind,
     })).filter(({ value }) => value.trim().length > 0);
     const payload = {
-      companyId: String(form.get("companyId") ?? "") || null,
+      companyName: String(form.get("companyName") ?? ""),
       name: String(form.get("name") ?? ""),
       designation: String(form.get("designation") ?? ""),
       relationship: String(form.get("relationship") ?? "unknown_cold_contact"),
@@ -147,19 +147,27 @@ function ContactForm({
         </div>
         <div className="field">
           <label htmlFor={`${formId}-company`}>Company</label>
-          <select
-            defaultValue={initial?.companyId ?? ""}
+          <input
+            defaultValue={
+              initial?.companyId
+                ? (companies.find((company) => company.id === initial.companyId)
+                    ?.name ?? "")
+                : ""
+            }
             disabled={pending}
             id={`${formId}-company`}
-            name="companyId"
-          >
-            <option value="">No company</option>
+            list={`${formId}-company-options`}
+            name="companyName"
+          />
+          <datalist id={`${formId}-company-options`}>
             {companies.map((company) => (
-              <option key={company.id} value={company.id}>
-                {company.name}
-              </option>
+              <option key={company.id} value={company.name} />
             ))}
-          </select>
+          </datalist>
+          <p className="field-hint">
+            Type a name. A new company is created if this workspace does not
+            already have it.
+          </p>
         </div>
         <div className="field">
           <label htmlFor={`${formId}-designation`}>Designation</label>

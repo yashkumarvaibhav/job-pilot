@@ -171,7 +171,7 @@ export function QuickAddForm({
           "/api/contacts",
           {
             name: String(form.get("name") ?? ""),
-            companyId: String(form.get("companyId") ?? "") || null,
+            companyName: String(form.get("companyName") ?? ""),
             relationship: String(form.get("relationship") ?? "unknown_cold_contact"),
             preferredContactChannel: email ? "email" : null,
             methods: email ? [{ kind: "email", value: email, isPrimary: true }] : [],
@@ -283,12 +283,16 @@ export function QuickAddForm({
             </div>
             <div className="field">
               <label htmlFor={`${formId}-contact-company`}>Company</label>
-              <select id={`${formId}-contact-company`} name="companyId">
-                <option value="">No company</option>
+              <input
+                id={`${formId}-contact-company`}
+                list={`${formId}-contact-company-options`}
+                name="companyName"
+              />
+              <datalist id={`${formId}-contact-company-options`}>
                 {data.companies.map((company) => (
-                  <option key={company.id} value={company.id}>{company.name}</option>
+                  <option key={company.id} value={company.name} />
                 ))}
-              </select>
+              </datalist>
             </div>
             <div className="field">
               <label htmlFor={`${formId}-contact-relationship`}>Relationship</label>
