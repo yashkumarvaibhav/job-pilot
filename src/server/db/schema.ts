@@ -12,6 +12,10 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import {
+  DEFAULT_DOCUMENT_KIND,
+  type DocumentKind,
+} from "../../domain/document";
+import {
   DEFAULT_NETWORKING_STATUS,
   type ContactMethodKind,
   type ContactRelationship,
@@ -928,3 +932,121 @@ export const notification = sqliteTable(
 );
 
 
+
+export const document = sqliteTable(
+  "document",
+  {
+    ...workspaceOwnedEntityColumns(),
+    name: text("name").notNull(),
+    kind: text("kind")
+      .$type<DocumentKind>()
+      .notNull()
+      .default(DEFAULT_DOCUMENT_KIND),
+    notes: text("notes"),
+    createdAt: utcInstant("created_at").notNull(),
+    updatedAt: utcInstant("updated_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("document", table),
+    uniqueIndex("document_workspace_name_unique").on(
+      table.workspaceId,
+      table.name,
+    ),
+    index("document_workspace_kind_idx").on(table.workspaceId, table.kind),
+    check("document_name_not_blank", sql`length(trim(${table.name})) > 0`),
+    check(
+      "document_kind_valid",
+      sql`${table.kind} in ('resume', 'cover_letter', 'transcript', 'degree_certificate', 'portfolio', 'research_cv', 'writing_sample', 'generic')`,
+    ),
+  ],
+);
+
+/**
+ * `storage_key` and `sha256` are the backup contract in scripts/backup/documents.mjs:
+ * the key is relative to the uploads root and the digest is lowercase hex of the
+ * stored bytes, so a restore can prove every file survived (D-026).
+ */
+export const documentVersion = sqliteTable(
+  "document_version",
+  {
+    ...workspaceOwnedEntityColumns(),
+    documentId: text("document_id").notNull(),
+    label: text("label").notNull(),
+    storageKey: text("storage_key").notNull(),
+    sha256: text("sha256").notNull(),
+    byteSize: integer("byte_size").notNull(),
+    contentType: text("content_type").notNull(),
+    originalFilename: text("original_filename"),
+    createdAt: utcInstant("created_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("document_version", table),
+    uniqueIndex("document_version_workspace_label_unique").on(
+      table.workspaceId,
+      table.documentId,
+      table.label,
+    ),
+    uniqueIndex("document_version_storage_key_unique").on(table.storageKey),
+    index("document_version_workspace_document_idx").on(
+      table.workspaceId,
+      table.documentId,
+    ),
+    sameWorkspaceForeignKey(
+      "document_version_document_fk",
+      { workspaceId: table.workspaceId, parentId: table.documentId },
+      document,
+    ).onDelete("cascade"),
+    check(
+      "document_version_label_not_blank",
+      sql`length(trim(${table.label})) > 0`,
+    ),
+    check(
+      "document_version_storage_key_not_blank",
+      sql`length(trim(${table.storageKey})) > 0`,
+    ),
+    check(
+      "document_version_sha256_hex",
+      sql`length(${table.sha256}) = 64 and ${table.sha256} glob '[0-9a-f]*'`,
+    ),
+    check("document_version_byte_size_positive", sql`${table.byteSize} > 0`),
+  ],
+);
+
+/** Which record a version is attached to. One row per (version, entity). */
+export const documentUsage = sqliteTable(
+  "document_usage",
+  {
+    ...workspaceOwnedEntityColumns(),
+    versionId: text("version_id").notNull(),
+    entityType: text("entity_type", { enum: ["application"] }).notNull(),
+    entityId: text("entity_id").notNull(),
+    createdAt: utcInstant("created_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("document_usage", table),
+    uniqueIndex("document_usage_workspace_link_unique").on(
+      table.workspaceId,
+      table.versionId,
+      table.entityType,
+      table.entityId,
+    ),
+    index("document_usage_workspace_version_idx").on(
+      table.workspaceId,
+      table.versionId,
+    ),
+    index("document_usage_workspace_entity_idx").on(
+      table.workspaceId,
+      table.entityType,
+      table.entityId,
+    ),
+    sameWorkspaceForeignKey(
+      "document_usage_version_fk",
+      { workspaceId: table.workspaceId, parentId: table.versionId },
+      documentVersion,
+    ).onDelete("cascade"),
+    check(
+      "document_usage_entity_type_valid",
+      sql`${table.entityType} in ('application')`,
+    ),
+  ],
+);

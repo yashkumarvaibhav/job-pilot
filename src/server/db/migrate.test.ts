@@ -53,13 +53,16 @@ describe("migrateDatabase", () => {
           "workspace",
           "notification",
           "interview",
+          "document",
+          "document_version",
+          "document_usage",
         ]),
       );
       expect(
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 13 });
+      ).toEqual({ count: 14 });
 
       for (const indexName of [
         "company_workspace_id_id_unique",
@@ -108,6 +111,16 @@ describe("migrateDatabase", () => {
         "task_workspace_derived_from_key_idx",
         "task_workspace_entity_idx",
         "settings_workspace_idx",
+        "document_workspace_id_id_unique",
+        "document_workspace_name_unique",
+        "document_workspace_kind_idx",
+        "document_version_workspace_id_id_unique",
+        "document_version_workspace_label_unique",
+        "document_version_workspace_document_idx",
+        "document_usage_workspace_id_id_unique",
+        "document_usage_workspace_link_unique",
+        "document_usage_workspace_version_idx",
+        "document_usage_workspace_entity_idx",
         "activity_event_workspace_id_id_unique",
         "activity_event_workspace_at_idx",
         "activity_event_workspace_entity_idx",
@@ -136,6 +149,23 @@ describe("migrateDatabase", () => {
           .all(indexName) as { name: string }[];
         expect(columns[0]?.name, indexName).toBe("workspace_id");
       }
+
+      // Deliberately NOT workspace-first: one stored file may back exactly one
+      // version row anywhere in the database, so a key collision across two
+      // workspaces is impossible rather than merely unlikely.
+      const storageKeyIndex = client.sqlite
+        .prepare("select name from pragma_index_info('document_version_storage_key_unique')")
+        .all() as { name: string }[];
+      expect(storageKeyIndex.map((column) => column.name)).toEqual([
+        "storage_key",
+      ]);
+      expect(
+        client.sqlite
+          .prepare(
+            "select \"unique\" from pragma_index_list('document_version') where name = 'document_version_storage_key_unique'",
+          )
+          .get(),
+      ).toEqual({ unique: 1 });
 
       const activityForeignKeys = client.sqlite
         .prepare(
@@ -721,4 +751,26 @@ describe("migrateDatabase", () => {
       client.close();
     }
   });
+
+  it("satisfies the backup document contract the moment the table lands", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "job-pilot-migrate-"));
+    temporaryDirectories.push(directory);
+    const databasePath = join(directory, "test.sqlite");
+    migrateDatabase(databasePath);
+
+    // D-026: backup verification turns itself on when document_version appears.
+    // If this throws, the migration broke the (id, storage_key, sha256) contract.
+    const { readDocumentEntries } = await import(
+      "../../../scripts/backup/documents.mjs"
+    );
+    const client = openDatabase(databasePath);
+    try {
+      const result = readDocumentEntries(client.sqlite);
+      expect(result.present).toBe(true);
+      expect(result.entries).toEqual([]);
+    } finally {
+      client.close();
+    }
+  });
+
 });
