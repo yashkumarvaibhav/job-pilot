@@ -8,12 +8,14 @@ import {
 type Props = {
   conflict: DuplicateConflict;
   pending?: boolean;
+  onCancel: () => void;
   onCreateAnyway: () => void;
 };
 
 export function DuplicateWarning({
   conflict,
   pending = false,
+  onCancel,
   onCreateAnyway,
 }: Props) {
   return (
@@ -44,14 +46,24 @@ export function DuplicateWarning({
           </li>
         ))}
       </ul>
-      <button
-        className="btn"
-        disabled={pending}
-        onClick={onCreateAnyway}
-        type="button"
-      >
-        {pending ? "Saving…" : "Create anyway"}
-      </button>
+      <div className="duplicate-warning__actions">
+        <button
+          className="btn btn--ghost"
+          disabled={pending}
+          onClick={onCancel}
+          type="button"
+        >
+          Cancel
+        </button>
+        <button
+          className="btn"
+          disabled={pending}
+          onClick={onCreateAnyway}
+          type="button"
+        >
+          {pending ? "Saving…" : "Create anyway"}
+        </button>
+      </div>
     </aside>
   );
 }

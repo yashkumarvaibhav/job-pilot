@@ -530,6 +530,9 @@ export function QuickAddForm({
         <DuplicateWarning
           conflict={conflict}
           pending={pending}
+          onCancel={() => {
+            setConflict(null);
+          }}
           onCreateAnyway={() => {
             if (!retry) return;
             setPending(true);

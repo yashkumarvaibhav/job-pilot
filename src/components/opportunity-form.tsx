@@ -146,7 +146,6 @@ function OpportunityForm({
       interestScore: interest === "" ? null : Number(interest),
       eligibility: String(form.get("eligibility") ?? ""),
       referralPreferred: form.get("referralPreferred") === "on",
-      resumeVersionId: String(form.get("resumeVersionId") ?? ""),
       jdSnapshot: String(form.get("jdSnapshot") ?? ""),
       notes: String(form.get("notes") ?? ""),
       tags: String(form.get("tags") ?? "").split(","),
@@ -173,7 +172,6 @@ function OpportunityForm({
     ["compensation", "Salary / compensation"],
     ["priority", "Priority"],
     ["eligibility", "Eligibility"],
-    ["resumeVersionId", "Resume version ID"],
     ["nextAction", "Next action"],
   ] as const;
 
@@ -259,6 +257,10 @@ function OpportunityForm({
         <DuplicateWarning
           conflict={conflict}
           pending={pending}
+          onCancel={() => {
+            setConflict(null);
+            setPendingPayload(null);
+          }}
           onCreateAnyway={() => {
             if (pendingPayload) void save(pendingPayload, true);
           }}

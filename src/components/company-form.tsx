@@ -237,6 +237,10 @@ function CompanyForm({
         <DuplicateWarning
           conflict={conflict}
           pending={pending}
+          onCancel={() => {
+            setConflict(null);
+            setPendingPayload(null);
+          }}
           onCreateAnyway={() => {
             if (pendingPayload) void save(pendingPayload, true);
           }}

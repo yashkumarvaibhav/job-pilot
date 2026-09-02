@@ -5,7 +5,7 @@ import { DuplicateWarning } from "@/components/duplicate-warning";
 import { DUPLICATE_JOB_WARNING } from "@/domain/duplicate";
 
 describe("duplicate warning", () => {
-  it("pairs a warning chip with the published sentence, the original, and Create anyway", () => {
+  it("pairs a warning chip with the published sentence, the original, Cancel, and Create anyway", () => {
     const html = renderToStaticMarkup(
       <DuplicateWarning
         conflict={{
@@ -20,6 +20,7 @@ describe("duplicate warning", () => {
             },
           ],
         }}
+        onCancel={() => undefined}
         onCreateAnyway={() => undefined}
       />,
     );
@@ -30,6 +31,7 @@ describe("duplicate warning", () => {
     expect(html).toContain("Microsoft · SDE");
     expect(html).toContain("/opportunities/ms-sde");
     expect(html).toContain("same company and job ID");
+    expect(html).toContain("Cancel");
     expect(html).toContain("Create anyway");
     expect(html).toContain("aria-hidden=\"true\"");
   });
