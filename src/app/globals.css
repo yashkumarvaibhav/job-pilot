@@ -2311,6 +2311,7 @@ main:focus {
 }
 
 .settings-chip {
+  justify-self: start;
   border-color: color-mix(in srgb, var(--muted) 40%, transparent);
   background: transparent;
   color: var(--muted);
