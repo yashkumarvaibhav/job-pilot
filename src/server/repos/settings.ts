@@ -1,0 +1,162 @@
+import { eq } from "drizzle-orm";
+
+import {
+  normalizeProfileText,
+  parseQuietHours,
+  QuietHoursError,
+  SETTINGS_PROFILE_MAX,
+} from "../../domain/settings";
+import { logEvent } from "../db/activity";
+import type { AppDatabase } from "../db/client";
+import { settings } from "../db/schema";
+import type { TenantContext } from "../db/tenant";
+import { DEFAULT_TIME_ZONE, isValidIanaTimeZone } from "../db/timezone";
+
+export type WorkspaceSettingsView = {
+  displayName: string;
+  university: string | null;
+  timezone: string;
+  quietStart: number | null;
+  quietEnd: number | null;
+  digestHour: number | null;
+  scoringWeights: Record<string, number>;
+  mutedNotificationKinds: string[];
+};
+
+export type UpdateWorkspaceSettingsInput = {
+  displayName: string;
+  university?: string | null;
+  timezone?: string;
+  quietStart?: string | null;
+  quietEnd?: string | null;
+  now?: Date;
+};
+
+export class SettingsInputError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SettingsInputError";
+  }
+}
+
+/**
+ * The session tenant is the only workspace key. A body that carries its own id is
+ * refused outright rather than ignored, so a mistaken client hears about it (D-035).
+ */
+const ALLOWED_INPUT_KEYS = new Set<string>([
+  "displayName",
+  "university",
+  "timezone",
+  "quietStart",
+  "quietEnd",
+  "now",
+]);
+
+function toView(row: typeof settings.$inferSelect): WorkspaceSettingsView {
+  return {
+    displayName: row.displayName,
+    university: row.university ?? null,
+    timezone: row.timezone,
+    quietStart: row.quietStart ?? null,
+    quietEnd: row.quietEnd ?? null,
+    digestHour: row.digestHour ?? null,
+    scoringWeights: row.scoringWeightsJson ?? {},
+    mutedNotificationKinds: row.mutedNotificationKindsJson ?? [],
+  };
+}
+
+export function readWorkspaceSettings(
+  database: AppDatabase,
+  tenant: TenantContext,
+): WorkspaceSettingsView {
+  const row = database
+    .select()
+    .from(settings)
+    .where(eq(settings.workspaceId, tenant.workspaceId))
+    .get();
+  if (!row) {
+    throw new SettingsInputError("This workspace has no settings row.");
+  }
+  return toView(row);
+}
+
+function boundedProfileText(value: string, label: string): string {
+  const normalized = normalizeProfileText(value);
+  if (normalized.length > SETTINGS_PROFILE_MAX) {
+    throw new SettingsInputError(
+      `${label} must be ${SETTINGS_PROFILE_MAX} characters or fewer.`,
+    );
+  }
+  return normalized;
+}
+
+export function updateWorkspaceSettings(
+  database: AppDatabase,
+  tenant: TenantContext,
+  input: UpdateWorkspaceSettingsInput,
+): WorkspaceSettingsView {
+  for (const key of Object.keys(input)) {
+    if (!ALLOWED_INPUT_KEYS.has(key)) {
+      throw new SettingsInputError(`Settings do not accept ${key}.`);
+    }
+  }
+
+  const displayName = boundedProfileText(input.displayName, "Display name");
+  if (displayName.length === 0) {
+    throw new SettingsInputError("Display name is required.");
+  }
+  const university = boundedProfileText(input.university ?? "", "University");
+
+  const timezone = (input.timezone ?? DEFAULT_TIME_ZONE).trim();
+  if (!isValidIanaTimeZone(timezone)) {
+    throw new SettingsInputError(`${timezone} is not an IANA timezone name.`);
+  }
+
+  let quiet: { quietStart: number | null; quietEnd: number | null };
+  try {
+    quiet = parseQuietHours({ start: input.quietStart, end: input.quietEnd });
+  } catch (error) {
+    if (error instanceof QuietHoursError) {
+      throw new SettingsInputError(error.message);
+    }
+    throw error;
+  }
+
+  const now = input.now ?? new Date();
+
+  return database.transaction((transaction) => {
+    const before = transaction
+      .select()
+      .from(settings)
+      .where(eq(settings.workspaceId, tenant.workspaceId))
+      .get();
+    if (!before) {
+      throw new SettingsInputError("This workspace has no settings row.");
+    }
+
+    const row = transaction
+      .update(settings)
+      .set({
+        displayName,
+        university: university.length > 0 ? university : null,
+        timezone,
+        quietStart: quiet.quietStart,
+        quietEnd: quiet.quietEnd,
+      })
+      .where(eq(settings.workspaceId, tenant.workspaceId))
+      .returning()
+      .get();
+
+    if (before.timezone !== timezone) {
+      logEvent(transaction, tenant, {
+        at: now,
+        kind: "SETTINGS_TIMEZONE_CHANGED",
+        entityType: "workspace",
+        entityId: tenant.workspaceId,
+        payload: { from: before.timezone, to: timezone },
+      });
+    }
+
+    return toView(row);
+  });
+}
