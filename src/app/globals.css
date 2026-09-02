@@ -2372,3 +2372,120 @@ main:focus {
   border-color: color-mix(in srgb, var(--info) 40%, transparent);
   color: var(--info);
 }
+
+.document-manager {
+  display: grid;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+/* Named for assistive technology only; the visible heading above already says it. */
+.table-caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.document-kind {
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.document-new-form,
+.document-upload-form {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  align-items: end;
+  min-width: 0;
+}
+
+.document-new-form .btn,
+.document-upload-form .btn,
+.document-table .btn {
+  min-height: var(--target-min);
+  justify-self: start;
+}
+
+.document-new-form .form-alert,
+.document-upload-form .form-alert {
+  grid-column: 1 / -1;
+}
+
+.document-download {
+  display: inline-flex;
+  min-height: var(--target-min);
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.document-download svg {
+  flex: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.document-card-list {
+  display: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.document-card {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  padding: var(--pad-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--raised);
+}
+
+.document-card__name {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.document-card__meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 767px) {
+  .document-table-wrap {
+    display: none;
+  }
+
+  .document-card-list {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .document-new-form,
+  .document-upload-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .document-new-form .btn,
+  .document-upload-form .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

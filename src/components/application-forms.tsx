@@ -7,6 +7,52 @@ import {
   APPLICATION_STAGES,
   type ApplicationStage,
 } from "@/domain/application";
+import { DOCUMENT_NO_VERSION_LABEL } from "@/domain/document";
+
+export type VersionChoice = { id: string; displayName: string };
+
+/**
+ * §39: an application records exactly which stored version it used, so this is a
+ * picker over real versions, never a typed label. With nothing uploaded yet the
+ * control says so instead of pretending to be a text field.
+ */
+function VersionPicker({
+  disabled,
+  id,
+  selectedId,
+  versions,
+}: {
+  disabled: boolean;
+  id: string;
+  selectedId?: string | null;
+  versions: readonly VersionChoice[];
+}) {
+  if (versions.length === 0) {
+    return (
+      <p className="field-hint" id={`${id}-empty`}>
+        No document versions yet. Upload one in{" "}
+        <a href="/settings/documents">Settings → Documents</a> to record which
+        resume you used.
+      </p>
+    );
+  }
+
+  return (
+    <select
+      defaultValue={selectedId ?? ""}
+      disabled={disabled}
+      id={id}
+      name="resumeVersionId"
+    >
+      <option value="">{DOCUMENT_NO_VERSION_LABEL}</option>
+      {versions.map((version) => (
+        <option key={version.id} value={version.id}>
+          {version.displayName}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 function responseError(value: unknown, fallback: string): string {
   return typeof value === "object" &&
@@ -20,9 +66,11 @@ function responseError(value: unknown, fallback: string): string {
 export function MarkAppliedForm({
   defaultAppliedOn,
   opportunityId,
+  versions = [],
 }: {
   defaultAppliedOn: string;
   opportunityId: string;
+  versions?: readonly VersionChoice[];
 }) {
   const formId = useId();
   const router = useRouter();
@@ -105,16 +153,12 @@ export function MarkAppliedForm({
           />
         </div>
         <div className="field">
-          <label htmlFor={`${formId}-resume`}>Resume used</label>
-          <input
+          <label htmlFor={`${formId}-resume`}>Resume version used</label>
+          <VersionPicker
             disabled={pending}
             id={`${formId}-resume`}
-            name="resumeVersionId"
-            type="text"
+            versions={versions}
           />
-          <p className="field-hint">
-            Type a resume name. Document uploads are not required.
-          </p>
         </div>
       </div>
       {message ? (
@@ -132,7 +176,9 @@ export function MarkAppliedForm({
 
 export function ApplicationEditForm({
   application,
+  versions = [],
 }: {
+  versions?: readonly VersionChoice[];
   application: {
     id: string;
     portal: string;
@@ -234,13 +280,12 @@ export function ApplicationEditForm({
           />
         </div>
         <div className="field">
-          <label htmlFor={`${formId}-resume`}>Resume version ID</label>
-          <input
-            defaultValue={application.resumeVersionId ?? ""}
+          <label htmlFor={`${formId}-resume`}>Resume version used</label>
+          <VersionPicker
             disabled={pending}
             id={`${formId}-resume`}
-            name="resumeVersionId"
-            type="text"
+            selectedId={application.resumeVersionId}
+            versions={versions}
           />
         </div>
         <div className="field">

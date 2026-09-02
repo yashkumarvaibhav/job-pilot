@@ -8,6 +8,7 @@ import {
   UPLOAD_MAX_BYTES,
   UPLOAD_TOO_LARGE,
   UPLOAD_TYPE_REFUSED,
+  documentVersionLabel,
   isDocumentKind,
   storageKeyFor,
   uploadExtensionFor,
@@ -164,6 +165,36 @@ export function listDocuments(
         usageCount: usageByVersion.get(version.id) ?? 0,
       })),
   }));
+}
+
+/** Every stored version, newest first, labelled the way §39 names them. */
+export function listVersionChoices(
+  database: AppDatabase,
+  tenant: TenantContext,
+): { id: string; displayName: string }[] {
+  return listDocuments(database, tenant).flatMap((row) =>
+    row.versions.map((version) => ({
+      id: version.id,
+      displayName: documentVersionLabel(row.name, version.label),
+    })),
+  );
+}
+
+/**
+ * Names for the ids applications store. A value that resolves to nothing is
+ * shown as it was recorded rather than dropped: rows written before §39's
+ * version manager existed held a typed label, and hiding it would lose it.
+ */
+export function versionDisplayNames(
+  database: AppDatabase,
+  tenant: TenantContext,
+): Map<string, string> {
+  return new Map(
+    listVersionChoices(database, tenant).map((choice) => [
+      choice.id,
+      choice.displayName,
+    ]),
+  );
 }
 
 export function getDocument(

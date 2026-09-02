@@ -5,10 +5,15 @@ import { applicationResultLabel } from "@/domain/application";
 import { requireTenant } from "@/server/auth/current-session";
 import { getDatabase } from "@/server/db/runtime";
 import { listApplications } from "@/server/repos/applications";
+import { versionDisplayNames } from "@/server/repos/documents";
 
 export default async function ApplicationsPage() {
   const tenant = await requireTenant();
-  const applications = listApplications(getDatabase(), tenant);
+  const database = getDatabase();
+  const applications = listApplications(database, tenant);
+  const versionNames = versionDisplayNames(database, tenant);
+  const versionLabel = (id: string | null) =>
+    id === null ? "—" : (versionNames.get(id) ?? id);
 
   return (
     <section className="application-page">
@@ -55,7 +60,7 @@ export default async function ApplicationsPage() {
                     </td>
                     <td className="tnum">{row.appliedOn}</td>
                     <td>{row.portal}</td>
-                    <td>{row.resumeVersionId ?? "—"}</td>
+                    <td>{versionLabel(row.resumeVersionId)}</td>
                     <td>
                       <ApplicationStageChip stage={row.stage} />
                     </td>

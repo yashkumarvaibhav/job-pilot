@@ -23,6 +23,10 @@ import { getWorkspaceSettings } from "@/server/db/foundation";
 import { getDatabase } from "@/server/db/runtime";
 import { DEFAULT_TIME_ZONE } from "@/server/db/timezone";
 import { listCompanies } from "@/server/repos/companies";
+import {
+  listVersionChoices,
+  versionDisplayNames,
+} from "@/server/repos/documents";
 import { listContacts } from "@/server/repos/contacts";
 import {
   getOpportunity,
@@ -84,6 +88,8 @@ export default async function OpportunityDetailPage({ params }: Props) {
   const timeZone =
     getWorkspaceSettings(database, tenant, tenant.workspaceId)?.timezone ??
     DEFAULT_TIME_ZONE;
+  const versionChoices = listVersionChoices(database, tenant);
+  const versionNames = versionDisplayNames(database, tenant);
   const defaultAppliedOn = new Intl.DateTimeFormat("en-CA", {
     timeZone,
     year: "numeric",
@@ -129,7 +135,12 @@ export default async function OpportunityDetailPage({ params }: Props) {
     ["Interest score", row.interestScore],
     ["Eligibility", row.eligibility],
     ["Referral preferred", row.referralPreferred],
-    ["Resume version ID", row.resumeVersionId],
+    [
+      "Resume version used",
+      row.resumeVersionId === null
+        ? null
+        : (versionNames.get(row.resumeVersionId) ?? row.resumeVersionId),
+    ],
     ["Next action", row.nextAction],
     ["Next action due", row.nextActionDue],
     ["Notes", row.notes],
@@ -266,11 +277,15 @@ export default async function OpportunityDetailPage({ params }: Props) {
       >
         <h2 id="application-heading">Application</h2>
         {row.application ? (
-          <ApplicationEditForm application={row.application} />
+          <ApplicationEditForm
+            application={row.application}
+            versions={versionChoices}
+          />
         ) : (
           <MarkAppliedForm
             defaultAppliedOn={defaultAppliedOn}
             opportunityId={row.id}
+            versions={versionChoices}
           />
         )}
       </section>
