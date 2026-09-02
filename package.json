@@ -32,7 +32,7 @@
     "test:quickadd": "vitest run src/components/quick-add-dialog.test.tsx src/components/quick-add.test.tsx src/app/api/quick-add-routes.test.ts",
     "test:tags": "vitest run src/domain/tag.test.ts src/domain/activity.test.ts src/server/db/migrate.test.ts src/server/repos/tags.test.ts src/server/repos/activity.test.ts src/app/api/tags/tag-routes.test.ts src/app/api/activity/activity-routes.test.ts src/app/tag-ui.test.tsx src/app/activity-ui.test.tsx",
     "test:document": "vitest run src/domain/document.test.ts src/server/db/migrate.test.ts src/server/storage/uploads.test.ts src/server/repos/documents.test.ts src/server/repos/applications.test.ts src/app/api/documents/document-routes.test.ts src/app/document-ui.test.tsx src/app/application-ui.test.tsx src/app/opportunity-ui.test.tsx",
-    "test:filters": "vitest run src/server/repos/filters.test.ts",
+    "test:filters": "vitest run src/server/repos/filters.test.ts src/app/contact-ui.test.tsx src/app/opportunity-ui.test.tsx src/app/referral-ui.test.tsx",
     "test:import": "vitest run src/domain/csv-import.test.ts src/server/imports/import-service.test.ts src/app/api/import/import-routes.test.ts src/app/import-ui.test.tsx",
     "test:walkthrough": "vitest run src/server/repos/p01-walkthrough.test.ts scripts/walkthrough/reset.test.mts",
     "test:watch": "vitest"

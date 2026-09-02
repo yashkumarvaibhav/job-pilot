@@ -101,10 +101,10 @@ export default async function ContactsPage({ searchParams }: Props = {}) {
               name="noResponseDays"
             >
               <option value="">Any response age</option>
-              <option value="3">More than 3 days</option>
-              <option value="7">More than 7 days</option>
-              <option value="14">More than 14 days</option>
-              <option value="30">More than 30 days</option>
+              <option value="3">At least 3 days</option>
+              <option value="7">At least 7 days</option>
+              <option value="14">At least 14 days</option>
+              <option value="30">At least 30 days</option>
             </select>
           </div>
         </div>
