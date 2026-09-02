@@ -173,13 +173,24 @@ describe("import route", () => {
     expect(await response.json()).toEqual({
       entitySet: "companies",
       dryRun: true,
-      duplicateCheck: "Exact company name within your workspace.",
-      summary: { wouldCreate: 1, wouldWarn: 0, wouldSkip: 2 },
+      duplicateCheck:
+        "Same name or same website/careers URL within your workspace. Apply skips a match unless you override that row.",
+      summary: { wouldCreate: 1, wouldWarn: 1, wouldSkip: 1 },
       rows: [
         {
           line: 2,
-          status: "would-skip",
-          reason: 'Exact company name already exists: "Existing Co".',
+          status: "would-warn",
+          reason:
+            'This company may already be tracked. Existing Co (same name).',
+          candidates: [
+            {
+              id: expect.any(String),
+              entityType: "company",
+              label: "Existing Co",
+              href: expect.stringMatching(/^\/companies\//),
+              signals: ["same_name"],
+            },
+          ],
         },
         { line: 3, status: "would-create", reason: "Ready to import." },
         {

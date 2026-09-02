@@ -1248,6 +1248,61 @@ main:focus {
   stroke-width: 2;
 }
 
+.chip--status[data-status="degraded"] {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--warning) 40%, transparent);
+  color: var(--warning);
+}
+
+.chip--status svg {
+  width: var(--space-3);
+  height: var(--space-3);
+}
+
+.duplicate-warning {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--warning) 8%, transparent);
+}
+
+.duplicate-warning p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.88rem;
+}
+
+.duplicate-warning ul {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.duplicate-warning li {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.duplicate-warning a {
+  min-height: var(--target-min);
+  display: inline-flex;
+  align-items: center;
+  color: var(--accent);
+}
+
+.duplicate-warning li span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.duplicate-warning .btn {
+  justify-self: start;
+}
+
 .company-card-list {
   display: none;
   margin: 0;

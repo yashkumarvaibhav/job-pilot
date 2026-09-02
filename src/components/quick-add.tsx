@@ -4,8 +4,13 @@ import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 
 import { CONTACT_RELATIONSHIPS } from "@/domain/contact";
+import {
+  parseDuplicateConflict,
+  type DuplicateConflict,
+} from "@/domain/duplicate";
 import { INTERVIEW_KIND_SUGGESTIONS } from "@/domain/interview";
 import { INTERACTION_CHANNELS } from "@/domain/interaction";
+import { DuplicateWarning } from "./duplicate-warning";
 import { QuickAddDialog } from "./quick-add-dialog";
 
 export type QuickAddReferenceData = {
@@ -49,6 +54,16 @@ function responseError(value: unknown, fallback: string): string {
     : fallback;
 }
 
+class DuplicatePostError extends Error {
+  readonly conflict: DuplicateConflict;
+
+  constructor(conflict: DuplicateConflict) {
+    super(conflict.error);
+    this.name = "DuplicatePostError";
+    this.conflict = conflict;
+  }
+}
+
 async function postJson(
   endpoint: string,
   payload: Record<string, unknown>,
@@ -60,6 +75,8 @@ async function postJson(
     body: JSON.stringify(payload),
   });
   const body: unknown = await response.json().catch(() => null);
+  const conflict = parseDuplicateConflict(response.status, body);
+  if (conflict) throw new DuplicatePostError(conflict);
   if (!response.ok) throw new Error(responseError(body, fallback));
   if (typeof body !== "object" || body === null || !("id" in body)) {
     throw new Error("The item saved, but its response was incomplete. Reload the page.");
@@ -141,6 +158,8 @@ export function QuickAddForm({
   const formId = useId();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<DuplicateConflict | null>(null);
+  const [retry, setRetry] = useState<(() => Promise<void>) | null>(null);
   const [jobCompany, setJobCompany] = useState("");
   const [jobCompanyTouched, setJobCompanyTouched] = useState(false);
 
@@ -148,16 +167,33 @@ export function QuickAddForm({
     event.preventDefault();
     setPending(true);
     setMessage(null);
+    setConflict(null);
+    setRetry(null);
     const form = new FormData(event.currentTarget);
 
     try {
       if (action === "company") {
-        const saved = await postJson(
-          "/api/companies",
-          { name: String(form.get("name") ?? "") },
-          "Could not save the company.",
-        );
-        onSaved(`/companies/${saved.id}`);
+        const payload = { name: String(form.get("name") ?? "") };
+        const run = async (acknowledgeDuplicates = false) => {
+          const saved = await postJson(
+            "/api/companies",
+            acknowledgeDuplicates
+              ? { ...payload, acknowledgeDuplicates: true }
+              : payload,
+            "Could not save the company.",
+          );
+          onSaved(`/companies/${saved.id}`);
+        };
+        try {
+          await run();
+        } catch (error) {
+          if (error instanceof DuplicatePostError) {
+            setConflict(error.conflict);
+            setRetry(() => () => run(true));
+            return;
+          }
+          throw error;
+        }
         return;
       }
 
@@ -180,31 +216,57 @@ export function QuickAddForm({
 
       if (action === "job") {
         const companyName = jobCompany.trim();
-        let companyId = data.companies.find(
-          (company) => company.name.toLocaleLowerCase() === companyName.toLocaleLowerCase(),
-        )?.id;
-        if (!companyId) {
-          const company = await postJson(
-            "/api/companies",
-            { name: companyName },
-            "Could not save the company for this job.",
+        const jobPayload = {
+          role: String(form.get("role") ?? ""),
+          jobId: String(form.get("jobId") ?? ""),
+          url: String(form.get("url") ?? ""),
+          bucket: "saved",
+          stage: "discovered",
+          tags: [],
+        };
+        const run = async (
+          acknowledgeCompany = false,
+          acknowledgeJob = false,
+        ) => {
+          let companyId = data.companies.find(
+            (company) =>
+              company.name.toLocaleLowerCase() === companyName.toLocaleLowerCase(),
+          )?.id;
+          if (!companyId) {
+            const company = await postJson(
+              "/api/companies",
+              acknowledgeCompany
+                ? { name: companyName, acknowledgeDuplicates: true }
+                : { name: companyName },
+              "Could not save the company for this job.",
+            );
+            companyId = company.id;
+          }
+          await postJson(
+            "/api/opportunities",
+            acknowledgeJob
+              ? { ...jobPayload, companyId, acknowledgeDuplicates: true }
+              : { ...jobPayload, companyId },
+            "Could not save the job.",
           );
-          companyId = company.id;
+          onSaved("/opportunities");
+        };
+        try {
+          await run();
+        } catch (error) {
+          if (error instanceof DuplicatePostError) {
+            setConflict(error.conflict);
+            setRetry(
+              () => () =>
+                run(
+                  error.conflict.candidates[0]?.entityType === "company",
+                  error.conflict.candidates[0]?.entityType === "opportunity",
+                ),
+            );
+            return;
+          }
+          throw error;
         }
-        await postJson(
-          "/api/opportunities",
-          {
-            companyId,
-            role: String(form.get("role") ?? ""),
-            jobId: String(form.get("jobId") ?? ""),
-            url: String(form.get("url") ?? ""),
-            bucket: "saved",
-            stage: "discovered",
-            tags: [],
-          },
-          "Could not save the job.",
-        );
-        onSaved("/opportunities");
         return;
       }
 
@@ -464,6 +526,30 @@ export function QuickAddForm({
         ) : null}
       </fieldset>
 
+      {conflict ? (
+        <DuplicateWarning
+          conflict={conflict}
+          pending={pending}
+          onCreateAnyway={() => {
+            if (!retry) return;
+            setPending(true);
+            setMessage(null);
+            void retry()
+              .catch((error: unknown) => {
+                if (error instanceof DuplicatePostError) {
+                  setConflict(error.conflict);
+                  return;
+                }
+                setMessage(
+                  error instanceof Error
+                    ? error.message
+                    : "Could not reach Job Pilot. Check the connection and retry.",
+                );
+              })
+              .finally(() => setPending(false));
+          }}
+        />
+      ) : null}
       {message ? <p className="form-alert" role="alert"><span aria-hidden="true">!</span>{message}</p> : null}
       <button className="btn quick-add-save" disabled={pending || noContacts || noOpportunities} type="submit">
         {pending ? "Saving…" : action === "interaction" ? "Save interaction" : action === "reminder" ? "Create reminder" : "Save"}

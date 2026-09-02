@@ -3,6 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 
+import { DuplicateWarning } from "@/components/duplicate-warning";
+import {
+  parseDuplicateConflict,
+  type DuplicateConflict,
+} from "@/domain/duplicate";
 import {
   OPPORTUNITY_BUCKETS,
   OPPORTUNITY_SELECTABLE_STAGES,
@@ -73,11 +78,54 @@ function OpportunityForm({
   const formId = useId();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<DuplicateConflict | null>(null);
+  const [pendingPayload, setPendingPayload] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
+
+  async function save(
+    payload: Record<string, unknown>,
+    acknowledgeDuplicates = false,
+  ) {
+    setPending(true);
+    setMessage(null);
+    try {
+      const response = await fetch(endpoint, {
+        method,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(
+          acknowledgeDuplicates
+            ? { ...payload, acknowledgeDuplicates: true }
+            : payload,
+        ),
+      });
+      const body: unknown = await response.json();
+      const duplicate = parseDuplicateConflict(response.status, body);
+      if (duplicate) {
+        setConflict(duplicate);
+        setPendingPayload(payload);
+        return;
+      }
+      if (!response.ok) {
+        setMessage(responseError(body));
+        return;
+      }
+      if (typeof body !== "object" || body === null || !("id" in body)) {
+        setMessage("The opportunity saved, but its response was incomplete. Reload the page.");
+        return;
+      }
+      onSaved(body as { id: string });
+    } catch {
+      setMessage("Could not reach Job Pilot. Check the connection and retry.");
+    } finally {
+      setPending(false);
+    }
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setPending(true);
-    setMessage(null);
+    setConflict(null);
     const form = new FormData(event.currentTarget);
     const interest = String(form.get("interestScore") ?? "").trim();
     const payload = {
@@ -110,28 +158,7 @@ function OpportunityForm({
       nextAction: String(form.get("nextAction") ?? ""),
       nextActionDue: String(form.get("nextActionDue") ?? ""),
     };
-
-    try {
-      const response = await fetch(endpoint, {
-        method,
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const body: unknown = await response.json();
-      if (!response.ok) {
-        setMessage(responseError(body));
-        return;
-      }
-      if (typeof body !== "object" || body === null || !("id" in body)) {
-        setMessage("The opportunity saved, but its response was incomplete. Reload the page.");
-        return;
-      }
-      onSaved(body as { id: string });
-    } catch {
-      setMessage("Could not reach Job Pilot. Check the connection and retry.");
-    } finally {
-      setPending(false);
-    }
+    await save(payload);
   }
 
   const textFields = [
@@ -228,6 +255,15 @@ function OpportunityForm({
         <label htmlFor={`${formId}-notes`}>Notes</label>
         <textarea defaultValue={initial?.notes ?? ""} disabled={pending} id={`${formId}-notes`} name="notes" rows={4} />
       </div>
+      {conflict ? (
+        <DuplicateWarning
+          conflict={conflict}
+          pending={pending}
+          onCreateAnyway={() => {
+            if (pendingPayload) void save(pendingPayload, true);
+          }}
+        />
+      ) : null}
       {message ? <p className="form-alert" role="alert"><span aria-hidden="true">!</span>{message}</p> : null}
       <button className="btn" disabled={pending} type="submit">{pending ? "Saving…" : submitLabel}</button>
     </form>

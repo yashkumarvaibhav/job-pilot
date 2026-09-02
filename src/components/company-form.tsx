@@ -3,6 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 
+import { DuplicateWarning } from "@/components/duplicate-warning";
+import {
+  parseDuplicateConflict,
+  type DuplicateConflict,
+} from "@/domain/duplicate";
 import type { Company } from "@/server/repos/companies";
 
 type CompanyFormValues = Pick<
@@ -46,33 +51,35 @@ function CompanyForm({
   const formId = useId();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<DuplicateConflict | null>(null);
+  const [pendingPayload, setPendingPayload] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
 
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function save(
+    payload: Record<string, unknown>,
+    acknowledgeDuplicates = false,
+  ) {
     setPending(true);
     setMessage(null);
-
-    const form = new FormData(event.currentTarget);
-    const payload = {
-      name: String(form.get("name") ?? ""),
-      website: String(form.get("website") ?? ""),
-      careersUrl: String(form.get("careersUrl") ?? ""),
-      industry: String(form.get("industry") ?? ""),
-      type: String(form.get("type") ?? ""),
-      locations: String(form.get("locations") ?? ""),
-      target: form.get("target") === "on",
-      notes: String(form.get("notes") ?? ""),
-      nextAction: String(form.get("nextAction") ?? ""),
-      nextActionDue: String(form.get("nextActionDue") ?? ""),
-    };
-
     try {
       const response = await fetch(endpoint, {
         method,
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(
+          acknowledgeDuplicates
+            ? { ...payload, acknowledgeDuplicates: true }
+            : payload,
+        ),
       });
       const body: unknown = await response.json();
+      const duplicate = parseDuplicateConflict(response.status, body);
+      if (duplicate) {
+        setConflict(duplicate);
+        setPendingPayload(payload);
+        return;
+      }
 
       if (!response.ok) {
         setMessage(responseError(body));
@@ -92,6 +99,25 @@ function CompanyForm({
     } finally {
       setPending(false);
     }
+  }
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setConflict(null);
+    const form = new FormData(event.currentTarget);
+    const payload = {
+      name: String(form.get("name") ?? ""),
+      website: String(form.get("website") ?? ""),
+      careersUrl: String(form.get("careersUrl") ?? ""),
+      industry: String(form.get("industry") ?? ""),
+      type: String(form.get("type") ?? ""),
+      locations: String(form.get("locations") ?? ""),
+      target: form.get("target") === "on",
+      notes: String(form.get("notes") ?? ""),
+      nextAction: String(form.get("nextAction") ?? ""),
+      nextActionDue: String(form.get("nextActionDue") ?? ""),
+    };
+    await save(payload);
   }
 
   return (
@@ -206,6 +232,16 @@ function CompanyForm({
           />
         </div>
       </div>
+
+      {conflict ? (
+        <DuplicateWarning
+          conflict={conflict}
+          pending={pending}
+          onCreateAnyway={() => {
+            if (pendingPayload) void save(pendingPayload, true);
+          }}
+        />
+      ) : null}
 
       {message ? (
         <p className="form-alert" role="alert">

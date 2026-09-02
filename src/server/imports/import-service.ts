@@ -6,7 +6,13 @@ import {
   type CsvDocument,
   type CsvRow,
 } from "../../domain/csv-import";
-import { DuplicateConflictError } from "../../domain/duplicate";
+import {
+  DUPLICATE_COMPANY_WARNING,
+  DUPLICATE_JOB_WARNING,
+  DuplicateConflictError,
+  formatDuplicateCandidateReason,
+  type DuplicateCandidate,
+} from "../../domain/duplicate";
 import { isContactRelationship, isNetworkingStatus } from "../../domain/contact";
 import {
   isOpportunityBucket,
@@ -14,7 +20,7 @@ import {
 } from "../../domain/opportunity";
 import { normalizeEmail } from "../auth/email";
 import type { AppDatabase, AppTransaction } from "../db/client";
-import { company, contactMethod, opportunity } from "../db/schema";
+import { company, contactMethod } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
 import {
   CompanyInputError,
@@ -31,6 +37,10 @@ import {
   OpportunityInputError,
   type CreateOpportunityInput,
 } from "../repos/opportunities";
+import {
+  findCompanyDuplicateCandidates,
+  findOpportunityDuplicateCandidates,
+} from "../repos/duplicates";
 
 export const IMPORT_ENTITY_SETS = [
   "companies",
@@ -101,12 +111,14 @@ export type ImportRequest = {
   csv: string;
   mapping: Record<string, string>;
   createMissingCompanies: boolean;
+  overrideLines?: number[];
 };
 
 export type ImportReportRow = {
   line: number;
   status: "would-create" | "would-warn" | "would-skip";
   reason: string;
+  candidates?: DuplicateCandidate[];
 };
 
 export type ImportPlan = {
@@ -212,6 +224,7 @@ export function readImportBody(body: unknown): ImportRequest {
     "csv",
     "mapping",
     "createMissingCompanies",
+    "overrideLines",
   ]);
   if (!Object.keys(value).every((key) => allowed.has(key))) {
     throw new ImportInputError("Enter valid import details.");
@@ -224,7 +237,12 @@ export function readImportBody(body: unknown): ImportRequest {
     value.mapping === null ||
     Array.isArray(value.mapping) ||
     ("createMissingCompanies" in value &&
-      typeof value.createMissingCompanies !== "boolean")
+      typeof value.createMissingCompanies !== "boolean") ||
+    ("overrideLines" in value &&
+      (!Array.isArray(value.overrideLines) ||
+        !value.overrideLines.every(
+          (line) => typeof line === "number" && Number.isInteger(line) && line > 0,
+        )))
   ) {
     throw new ImportInputError("Enter valid import details.");
   }
@@ -237,6 +255,10 @@ export function readImportBody(body: unknown): ImportRequest {
     csv: value.csv,
     mapping: normalizedMapping,
     createMissingCompanies: value.createMissingCompanies === true,
+    overrideLines:
+      Array.isArray(value.overrideLines) && value.overrideLines.length > 0
+        ? [...new Set(value.overrideLines)]
+        : undefined,
   };
 }
 
@@ -274,8 +296,15 @@ function booleanValue(value: string): boolean | null {
   return null;
 }
 
-function report(line: number, status: ImportReportRow["status"], reason: string) {
-  return { line, status, reason };
+function report(
+  line: number,
+  status: ImportReportRow["status"],
+  reason: string,
+  candidates?: DuplicateCandidate[],
+): ImportReportRow {
+  return candidates && candidates.length > 0
+    ? { line, status, reason, candidates }
+    : { line, status, reason };
 }
 
 function invalidWidth(document: CsvDocument, row: CsvRow): ImportReportRow | null {
@@ -318,14 +347,20 @@ function planCompany(
   if (mapping.target && booleanValue(mapped(document, row, mapping, "target")) === null) {
     return report(row.line, "would-skip", "Target must be yes or no.");
   }
-  const duplicate = database
-    .select({ id: company.id })
-    .from(company)
-    .where(and(eq(company.workspaceId, tenant.workspaceId), eq(company.name, name)))
-    .get();
-  return duplicate
-    ? report(row.line, "would-skip", `Exact company name already exists: "${name}".`)
-    : report(row.line, "would-create", "Ready to import.");
+  const duplicateCandidates = findCompanyDuplicateCandidates(database, tenant, {
+    name,
+    website: mapped(document, row, mapping, "website"),
+    careersUrl: mapped(document, row, mapping, "careersUrl"),
+  });
+  if (duplicateCandidates.length > 0) {
+    return report(
+      row.line,
+      "would-warn",
+      formatDuplicateCandidateReason(DUPLICATE_COMPANY_WARNING, duplicateCandidates),
+      duplicateCandidates,
+    );
+  }
+  return report(row.line, "would-create", "Ready to import.");
 }
 
 function companyByName(
@@ -437,30 +472,35 @@ function planOpportunity(
     return report(row.line, "would-skip", "Stage value is invalid.");
   }
   const foundCompany = companyByName(database, tenant, companyName);
-  if (!foundCompany) {
-    return request.createMissingCompanies
-      ? report(row.line, "would-warn", `Company "${companyName}" will be created with this opportunity.`)
-      : report(row.line, "would-skip", `Company not found: "${companyName}".`);
+  if (!foundCompany && !request.createMissingCompanies) {
+    return report(row.line, "would-skip", `Company not found: "${companyName}".`);
   }
   const jobId = mapped(document, row, request.mapping, "jobId");
-  if (jobId) {
-    const duplicate = database
-      .select({ id: opportunity.id })
-      .from(opportunity)
-      .where(
-        and(
-          eq(opportunity.workspaceId, tenant.workspaceId),
-          eq(opportunity.companyId, foundCompany.id),
-          eq(opportunity.jobId, jobId),
-        ),
-      )
-      .get();
-    if (duplicate) {
-      return report(row.line, "would-skip", `Exact company and job ID already exist: "${companyName}" / "${jobId}".`);
-    }
-    return report(row.line, "would-create", "Ready to import.");
+  const duplicateCandidates = findOpportunityDuplicateCandidates(database, tenant, {
+    companyId: foundCompany?.id ?? "",
+    role,
+    jobId,
+    url: mapped(document, row, request.mapping, "url"),
+    location: mapped(document, row, request.mapping, "location"),
+    postedOn: mapped(document, row, request.mapping, "postedOn"),
+    deadlineOn: mapped(document, row, request.mapping, "deadlineOn"),
+  });
+  if (duplicateCandidates.length > 0) {
+    return report(
+      row.line,
+      "would-warn",
+      formatDuplicateCandidateReason(DUPLICATE_JOB_WARNING, duplicateCandidates),
+      duplicateCandidates,
+    );
   }
-  return report(row.line, "would-warn", "Ready to import; no job ID was mapped, so exact company and job ID duplicate checking cannot run.");
+  if (!foundCompany) {
+    return report(
+      row.line,
+      "would-warn",
+      `Company "${companyName}" will be created with this opportunity.`,
+    );
+  }
+  return report(row.line, "would-create", "Ready to import.");
 }
 
 export function planImport(
@@ -519,19 +559,15 @@ export function planImport(
     if (row.status === "would-warn") summary.wouldWarn += 1;
     if (row.status === "would-skip") summary.wouldSkip += 1;
   }
-  const duplicateCheck =
-    request.entitySet === "companies"
-      ? "Exact company name within your workspace."
-      : request.entitySet === "contacts"
-        ? "Exact normalized contact email within your workspace; rows without email are warned."
-        : "Exact company and job ID within your workspace; rows without job ID are warned.";
-  return { entitySet: request.entitySet, dryRun: true, duplicateCheck, summary, rows };
+  const check = duplicateCheckLabel(request.entitySet);
+  return { entitySet: request.entitySet, dryRun: true, duplicateCheck: check, summary, rows };
 }
 
 function companyInput(
   document: CsvDocument,
   row: CsvRow,
   mapping: Record<string, string>,
+  acknowledgeDuplicates = false,
 ): CreateCompanyInput {
   return {
     name: mapped(document, row, mapping, "name"),
@@ -542,6 +578,7 @@ function companyInput(
     locations: mapped(document, row, mapping, "locations"),
     target: booleanValue(mapped(document, row, mapping, "target")) ?? false,
     notes: mapped(document, row, mapping, "notes"),
+    acknowledgeDuplicates,
   };
 }
 
@@ -580,6 +617,7 @@ function opportunityInput(
   row: CsvRow,
   mapping: Record<string, string>,
   companyId: string,
+  acknowledgeDuplicates = false,
 ): CreateOpportunityInput {
   const interestScore = mapped(document, row, mapping, "interestScore");
   const bucket = mapped(document, row, mapping, "bucket");
@@ -608,15 +646,16 @@ function opportunityInput(
     bucket: bucket ? (bucket as CreateOpportunityInput["bucket"]) : undefined,
     stage: stage ? (stage as CreateOpportunityInput["stage"]) : undefined,
     nextAction: mapped(document, row, mapping, "nextAction"),
+    acknowledgeDuplicates,
   };
 }
 
-function duplicateCheck(entitySet: ImportEntitySet): string {
+function duplicateCheckLabel(entitySet: ImportEntitySet): string {
   return entitySet === "companies"
-    ? "Exact company name within your workspace."
+    ? "Same name or same website/careers URL within your workspace. Apply skips a match unless you override that row."
     : entitySet === "contacts"
       ? "Exact normalized contact email within your workspace; rows without email are warned."
-      : "Exact company and job ID within your workspace; rows without job ID are warned.";
+      : "Same URL, same company and job ID, or same company, role, location and close dates within your workspace. Apply skips a match unless you override that row.";
 }
 
 export function executeImport(
@@ -647,12 +686,16 @@ export function executeImport(
         if (planned.status === "would-skip") {
           return { line: row.line, status: "skipped" as const, reason: planned.reason };
         }
+        const override = (request.overrideLines ?? []).includes(row.line);
+        if ((planned.candidates?.length ?? 0) > 0 && !override) {
+          return { line: row.line, status: "skipped" as const, reason: planned.reason };
+        }
 
         if (request.entitySet === "companies") {
           createCompanyInTransaction(
             transaction,
             tenant,
-            companyInput(document, row, request.mapping),
+            companyInput(document, row, request.mapping, override),
           );
         } else {
           const companyName = mapped(document, row, request.mapping, "company");
@@ -662,6 +705,7 @@ export function executeImport(
           if (!ownedCompany && companyName && request.createMissingCompanies) {
             ownedCompany = createCompanyInTransaction(transaction, tenant, {
               name: companyName,
+              acknowledgeDuplicates: override,
             });
           }
           if (request.entitySet === "contacts") {
@@ -674,7 +718,13 @@ export function executeImport(
             createOpportunityInTransaction(
               transaction,
               tenant,
-              opportunityInput(document, row, request.mapping, ownedCompany!.id),
+              opportunityInput(
+                document,
+                row,
+                request.mapping,
+                ownedCompany!.id,
+                override,
+              ),
             );
           }
         }
@@ -710,7 +760,7 @@ export function executeImport(
   return {
     entitySet: request.entitySet,
     dryRun: false,
-    duplicateCheck: duplicateCheck(request.entitySet),
+    duplicateCheck: duplicateCheckLabel(request.entitySet),
     summary,
     rows,
   };

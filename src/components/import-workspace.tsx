@@ -16,6 +16,12 @@ type ReportRow = {
     | "created-with-warning"
     | "skipped";
   reason: string;
+  candidates?: Array<{
+    id: string;
+    label: string;
+    href: string;
+    signals: string[];
+  }>;
 };
 type Report = {
   entitySet: EntitySet;
@@ -148,6 +154,7 @@ export function ImportWorkspace() {
   const [mapping, setMapping] = useState<Mapping>({});
   const [createMissingCompanies, setCreateMissingCompanies] = useState(false);
   const [report, setReport] = useState<Report | null>(null);
+  const [overrideLines, setOverrideLines] = useState<number[]>([]);
   const [pending, setPending] = useState(false);
   const [loadingMapping, setLoadingMapping] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
@@ -188,6 +195,7 @@ export function ImportWorkspace() {
   async function chooseFile(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     setReport(null);
+    setOverrideLines([]);
     setMessage(null);
     if (!file) {
       setFileName("");
@@ -238,6 +246,7 @@ export function ImportWorkspace() {
       return next;
     });
     setReport(null);
+    setOverrideLines([]);
   }
 
   const requiredReady = FIELD_CONFIG[entitySet]
@@ -248,6 +257,9 @@ export function ImportWorkspace() {
     );
   const canPreview =
     csv.length > 0 && requiredReady && !pending && !loadingMapping;
+  const showOverrideColumn =
+    report?.dryRun === true &&
+    report.rows.some((row) => (row.candidates?.length ?? 0) > 0);
 
   async function requestReport(dryRun: boolean) {
     setPending(true);
@@ -274,6 +286,7 @@ export function ImportWorkspace() {
           csv,
           mapping,
           createMissingCompanies,
+          ...(dryRun ? {} : { overrideLines }),
         }),
       });
       const body: unknown = await response.json();
@@ -282,6 +295,7 @@ export function ImportWorkspace() {
         return;
       }
       setReport(body);
+      if (dryRun) setOverrideLines([]);
     } catch {
       setMessage("Could not reach Job Pilot. Check the connection and retry.");
     } finally {
@@ -312,6 +326,7 @@ export function ImportWorkspace() {
               setLoadingMapping(true);
               setMapping({});
               setReport(null);
+              setOverrideLines([]);
               setMessage(null);
             }}
             value={entitySet}
@@ -344,6 +359,7 @@ export function ImportWorkspace() {
               onChange={(event) => {
                 setCreateMissingCompanies(event.target.checked);
                 setReport(null);
+                setOverrideLines([]);
               }}
               type="checkbox"
             />
@@ -453,6 +469,7 @@ export function ImportWorkspace() {
                     <th scope="col">Line</th>
                     <th scope="col">Result</th>
                     <th scope="col">Reason</th>
+                    {showOverrideColumn ? <th scope="col">Override</th> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -466,6 +483,27 @@ export function ImportWorkspace() {
                         </span>
                       </td>
                       <td data-label="Reason">{row.reason}</td>
+                      {showOverrideColumn ? (
+                        <td data-label="Override">
+                          {(row.candidates?.length ?? 0) > 0 ? (
+                            <label className="checkbox-field import-override">
+                              <input
+                                checked={overrideLines.includes(row.line)}
+                                disabled={pending}
+                                onChange={(event) => {
+                                  setOverrideLines((current) =>
+                                    event.target.checked
+                                      ? [...current, row.line]
+                                      : current.filter((line) => line !== row.line),
+                                  );
+                                }}
+                                type="checkbox"
+                              />
+                              <span>Create anyway</span>
+                            </label>
+                          ) : null}
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>

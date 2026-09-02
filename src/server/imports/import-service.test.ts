@@ -70,6 +70,54 @@ describe("CSV import apply", () => {
     expect(fixture.rowCount("company")).toBe(2);
   });
 
+  it("names a job-ID candidate on dry run and creates a second row only with a per-row override", () => {
+    const fixture = newFixture();
+    const company = createCompany(fixture.client.db, fixture.tenantA, {
+      name: "Microsoft",
+    });
+    const original = createOpportunity(fixture.client.db, fixture.tenantA, {
+      companyId: company.id,
+      role: "SDE",
+      jobId: "182763",
+    });
+    const request = {
+      entitySet: "opportunities" as const,
+      csv: "Company,Role,Job ID\nMicrosoft,SDE,182763",
+      mapping: { company: "Company", role: "Role", jobId: "Job ID" },
+      createMissingCompanies: false,
+    };
+
+    const planned = planImport(fixture.client.db, fixture.tenantA, {
+      ...request,
+      dryRun: true,
+    });
+    expect(planned.rows[0]).toMatchObject({
+      line: 2,
+      status: "would-warn",
+      reason: expect.stringContaining("This job may already be tracked."),
+      candidates: [{ id: original.id, label: "Microsoft · SDE" }],
+    });
+    expect(apply(fixture, request).summary).toEqual({
+      created: 0,
+      warned: 0,
+      skipped: 1,
+    });
+    expect(fixture.rowCount("opportunity")).toBe(1);
+
+    const overridden = apply(fixture, { ...request, overrideLines: [2] });
+    expect(overridden.summary).toEqual({ created: 0, warned: 1, skipped: 0 });
+    expect(fixture.rowCount("opportunity")).toBe(2);
+    const payload = fixture.client.sqlite
+      .prepare(
+        "select payload_json as payload from activity_event where kind = 'OPPORTUNITY_CREATED' order by at desc limit 1",
+      )
+      .get() as { payload: string };
+    expect(JSON.parse(payload.payload)).toMatchObject({
+      duplicateOverride: true,
+      candidateIds: [original.id],
+    });
+  });
+
   it("reports later exact duplicates inside one dry-run file", () => {
     const fixture = newFixture();
 
