@@ -15,6 +15,10 @@ const TEXT_FIELDS = [
   "nextActionDue",
 ] as const;
 const ALLOWED_FIELDS = new Set<string>(["name", "target", "tags", ...TEXT_FIELDS]);
+const ALLOWED_CREATE_FIELDS = new Set<string>([
+  ...ALLOWED_FIELDS,
+  "acknowledgeDuplicates",
+]);
 
 async function readObject(request: Request): Promise<Record<string, unknown> | null> {
   if (!request.headers.get("content-type")?.startsWith("application/json")) {
@@ -31,8 +35,11 @@ async function readObject(request: Request): Promise<Record<string, unknown> | n
   }
 }
 
-function hasOnlyCompanyFields(body: Record<string, unknown>): boolean {
-  return Object.keys(body).every((key) => ALLOWED_FIELDS.has(key));
+function hasOnlyCompanyFields(
+  body: Record<string, unknown>,
+  allowed: Set<string> = ALLOWED_FIELDS,
+): boolean {
+  return Object.keys(body).every((key) => allowed.has(key));
 }
 
 function hasValidOptionalFields(body: Record<string, unknown>): boolean {
@@ -43,6 +50,12 @@ function hasValidOptionalFields(body: Record<string, unknown>): boolean {
     "tags" in body &&
     (!Array.isArray(body.tags) ||
       !body.tags.every((tag) => typeof tag === "string"))
+  ) {
+    return false;
+  }
+  if (
+    "acknowledgeDuplicates" in body &&
+    typeof body.acknowledgeDuplicates !== "boolean"
   ) {
     return false;
   }
@@ -62,7 +75,7 @@ export async function readCreateCompanyInput(
 
   if (
     !body ||
-    !hasOnlyCompanyFields(body) ||
+    !hasOnlyCompanyFields(body, ALLOWED_CREATE_FIELDS) ||
     !hasValidOptionalFields(body) ||
     typeof body.name !== "string"
   ) {

@@ -15,6 +15,7 @@ import {
   type OpportunitySelectableStage,
 } from "../../domain/opportunity";
 import { shiftCalendarDate } from "../../domain/referral";
+import { duplicateOverridePayload } from "../../domain/duplicate";
 import { logEvent } from "../db/activity";
 import type { AppDatabase, AppTransaction } from "../db/client";
 import {
@@ -27,6 +28,7 @@ import {
 } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
 import { replaceEntityTagsInTransaction } from "./tags";
+import { requireOpportunityDuplicatesAcknowledged } from "./duplicates";
 
 export type Opportunity = typeof opportunity.$inferSelect;
 export type OpportunityApplication = {
@@ -82,6 +84,7 @@ export type CreateOpportunityInput = {
   stage?: OpportunitySelectableStage;
   nextAction?: string | null;
   nextActionDue?: string | null;
+  acknowledgeDuplicates?: boolean;
   now?: Date;
 };
 
@@ -122,6 +125,7 @@ export type CreateOpportunityFromConversationInput = {
   role: string;
   jobId?: string | null;
   companyId?: string | null;
+  acknowledgeDuplicates?: boolean;
   now?: Date;
 };
 
@@ -423,25 +427,37 @@ export function createOpportunityInTransaction(
   const id = input.id ?? randomUUID();
   const now = input.now ?? new Date();
   const companyId = requiredText(input.companyId, "Company");
+  const role = requiredText(input.role, "Role");
+  const jobId = optionalText(input.jobId);
+  const url = optionalHttpUrl(input.url);
+  const location = optionalText(input.location);
+  const postedOn = optionalDate(input.postedOn, "Posting date");
+  const deadlineOn = optionalDate(input.deadlineOn, "Deadline");
 
   requireOwnedCompany(transaction, tenant, companyId);
+  const duplicates = requireOpportunityDuplicatesAcknowledged(
+    transaction,
+    tenant,
+    { companyId, role, jobId, url, location, postedOn, deadlineOn },
+    input.acknowledgeDuplicates,
+  );
   transaction
     .insert(opportunity)
     .values({
       id,
       workspaceId: tenant.workspaceId,
       companyId,
-      role: requiredText(input.role, "Role"),
-      jobId: optionalText(input.jobId),
-      url: optionalHttpUrl(input.url),
-      location: optionalText(input.location),
+      role,
+      jobId,
+      url,
+      location,
       workMode: optionalText(input.workMode),
       employmentType: optionalText(input.employmentType),
       experienceRequirement: optionalText(input.experienceRequirement),
       source: optionalText(input.source),
       discoveredOn: optionalDate(input.discoveredOn, "Date discovered"),
-      postedOn: optionalDate(input.postedOn, "Posting date"),
-      deadlineOn: optionalDate(input.deadlineOn, "Deadline"),
+      postedOn,
+      deadlineOn,
       compensation: optionalText(input.compensation),
       priority: optionalText(input.priority),
       interestScore: optionalInteger(input.interestScore),
@@ -471,6 +487,10 @@ export function createOpportunityInTransaction(
     kind: "OPPORTUNITY_CREATED",
     entityType: "opportunity",
     entityId: id,
+    payload:
+      duplicates.length > 0
+        ? duplicateOverridePayload(duplicates)
+        : undefined,
   });
 
   return selectOpportunity(transaction, tenant, id)!;
@@ -867,6 +887,7 @@ export function createOpportunityFromConversation(
       role: input.role,
       jobId: input.jobId,
       source: "Conversation",
+      acknowledgeDuplicates: input.acknowledgeDuplicates,
       now: input.now,
     });
     writeOpportunityContactLink(

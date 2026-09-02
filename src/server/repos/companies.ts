@@ -2,10 +2,12 @@ import { randomUUID } from "node:crypto";
 
 import { and, asc, eq } from "drizzle-orm";
 
+import { duplicateOverridePayload } from "../../domain/duplicate";
 import { logEvent } from "../db/activity";
 import type { AppDatabase, AppTransaction } from "../db/client";
 import { company } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
+import { requireCompanyDuplicatesAcknowledged } from "./duplicates";
 import {
   clearEntityTagsInTransaction,
   replaceEntityTagsInTransaction,
@@ -26,6 +28,7 @@ export type CreateCompanyInput = {
   tags?: string[];
   nextAction?: string | null;
   nextActionDue?: string | null;
+  acknowledgeDuplicates?: boolean;
   now?: Date;
 };
 
@@ -132,14 +135,23 @@ export function createCompanyInTransaction(
 ): Company {
   const id = input.id ?? randomUUID();
   const now = input.now ?? new Date();
+  const name = requiredName(input.name);
+  const website = optionalHttpUrl(input.website, "Website");
+  const careersUrl = optionalHttpUrl(input.careersUrl, "Careers URL");
+  const duplicates = requireCompanyDuplicatesAcknowledged(
+    transaction,
+    tenant,
+    { name, website, careersUrl },
+    input.acknowledgeDuplicates,
+  );
   const created = transaction
     .insert(company)
     .values({
       id,
       workspaceId: tenant.workspaceId,
-      name: requiredName(input.name),
-      website: optionalHttpUrl(input.website, "Website"),
-      careersUrl: optionalHttpUrl(input.careersUrl, "Careers URL"),
+      name,
+      website,
+      careersUrl,
       industry: optionalText(input.industry),
       type: optionalText(input.type),
       locations: optionalText(input.locations),
@@ -168,6 +180,10 @@ export function createCompanyInTransaction(
     kind: "COMPANY_CREATED",
     entityType: "company",
     entityId: created.id,
+    payload:
+      duplicates.length > 0
+        ? duplicateOverridePayload(duplicates)
+        : undefined,
   });
 
   return created;

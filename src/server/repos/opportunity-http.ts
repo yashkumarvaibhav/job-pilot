@@ -36,6 +36,10 @@ const ALLOWED_FIELDS = new Set<string>([
   "referralPreferred",
   "tags",
 ]);
+const ALLOWED_CREATE_FIELDS = new Set<string>([
+  ...ALLOWED_FIELDS,
+  "acknowledgeDuplicates",
+]);
 
 async function readObject(request: Request): Promise<Record<string, unknown> | null> {
   if (!request.headers.get("content-type")?.startsWith("application/json")) {
@@ -51,8 +55,11 @@ async function readObject(request: Request): Promise<Record<string, unknown> | n
   }
 }
 
-function validShape(body: Record<string, unknown>): boolean {
-  if (!Object.keys(body).every((key) => ALLOWED_FIELDS.has(key))) return false;
+function validShape(
+  body: Record<string, unknown>,
+  allowed: Set<string> = ALLOWED_FIELDS,
+): boolean {
+  if (!Object.keys(body).every((key) => allowed.has(key))) return false;
   if (
     !TEXT_FIELDS.every(
       (field) =>
@@ -80,7 +87,11 @@ function validShape(body: Record<string, unknown>): boolean {
     "tags" in body &&
     (!Array.isArray(body.tags) ||
       !body.tags.every((tag) => typeof tag === "string"))
-  );
+  ) &&
+    !(
+      "acknowledgeDuplicates" in body &&
+      typeof body.acknowledgeDuplicates !== "boolean"
+    );
 }
 
 export async function readCreateOpportunityInput(
@@ -88,7 +99,7 @@ export async function readCreateOpportunityInput(
 ): Promise<CreateOpportunityInput | null> {
   const body = await readObject(request);
   return body &&
-    validShape(body) &&
+    validShape(body, ALLOWED_CREATE_FIELDS) &&
     typeof body.companyId === "string" &&
     typeof body.role === "string"
     ? (body as CreateOpportunityInput)
@@ -118,6 +129,7 @@ const FROM_CONVERSATION_FIELDS = new Set([
   "role",
   "jobId",
   "companyId",
+  "acknowledgeDuplicates",
 ]);
 
 function optionalString(
@@ -154,11 +166,20 @@ export async function readFromConversationInput(
   if (companyId === undefined && "companyId" in body) {
     return null;
   }
+  if (
+    "acknowledgeDuplicates" in body &&
+    typeof body.acknowledgeDuplicates !== "boolean"
+  ) {
+    return null;
+  }
   return {
     contactId: body.contactId,
     role: body.role,
     ...(jobId !== undefined ? { jobId } : {}),
     ...(companyId !== undefined ? { companyId } : {}),
+    ...(typeof body.acknowledgeDuplicates === "boolean"
+      ? { acknowledgeDuplicates: body.acknowledgeDuplicates }
+      : {}),
   };
 }
 

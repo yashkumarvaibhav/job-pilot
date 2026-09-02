@@ -157,4 +157,45 @@ describe("company route handlers", () => {
     expect(listResponse.status).toBe(401);
     expect(createResponse.status).toBe(401);
   });
+
+  it("returns 409 with workspace-local candidates and creates on acknowledge", async () => {
+    const fixture = newFixture();
+    const original = createCompany(fixture.client.db, fixture.tenantA, {
+      id: "microsoft",
+      name: "Microsoft",
+    });
+    createCompany(fixture.client.db, fixture.tenantB, {
+      id: "private",
+      name: "Microsoft",
+    });
+
+    const blocked = await POST(
+      jsonRequest("http://localhost/api/companies", "POST", {
+        name: "Microsoft",
+      }),
+    );
+    expect(blocked.status).toBe(409);
+    expect(await blocked.json()).toEqual({
+      error: "This company may already be tracked.",
+      candidates: [
+        {
+          id: original.id,
+          entityType: "company",
+          label: "Microsoft",
+          href: `/companies/${original.id}`,
+          signals: ["same_name"],
+        },
+      ],
+    });
+    expect(fixture.rowCount("company")).toBe(2);
+
+    const created = await POST(
+      jsonRequest("http://localhost/api/companies", "POST", {
+        name: "Microsoft",
+        acknowledgeDuplicates: true,
+      }),
+    );
+    expect(created.status).toBe(201);
+    expect(fixture.rowCount("company")).toBe(3);
+  });
 });

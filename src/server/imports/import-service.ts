@@ -6,6 +6,7 @@ import {
   type CsvDocument,
   type CsvRow,
 } from "../../domain/csv-import";
+import { DuplicateConflictError } from "../../domain/duplicate";
 import { isContactRelationship, isNetworkingStatus } from "../../domain/contact";
 import {
   isOpportunityBucket,
@@ -691,7 +692,8 @@ export function executeImport(
       if (
         error instanceof CompanyInputError ||
         error instanceof ContactInputError ||
-        error instanceof OpportunityInputError
+        error instanceof OpportunityInputError ||
+        error instanceof DuplicateConflictError
       ) {
         rows.push({ line: row.line, status: "skipped", reason: error.message });
       } else {

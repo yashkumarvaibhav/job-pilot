@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { calendarDateInZone } from "@/domain/referral";
+import { DuplicateConflictError } from "@/domain/duplicate";
 import { currentTenant } from "@/server/auth/current-session";
 import { getWorkspaceSettings } from "@/server/db/foundation";
 import { getDatabase } from "@/server/db/runtime";
@@ -15,6 +16,7 @@ import {
   opportunityResponse,
   readCreateOpportunityInput,
 } from "@/server/repos/opportunity-http";
+import { duplicateConflictResponse } from "@/server/repos/duplicate-http";
 
 export const runtime = "nodejs";
 
@@ -56,6 +58,9 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof OpportunityInputError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    if (error instanceof DuplicateConflictError) {
+      return duplicateConflictResponse(error);
     }
     throw error;
   }

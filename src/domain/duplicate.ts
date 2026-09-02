@@ -47,6 +47,24 @@ export type DuplicateConflict = {
   candidates: DuplicateCandidate[];
 };
 
+export class DuplicateConflictError extends Error {
+  readonly candidates: DuplicateCandidate[];
+
+  constructor(message: string, candidates: DuplicateCandidate[]) {
+    super(message);
+    this.name = "DuplicateConflictError";
+    this.candidates = candidates;
+  }
+}
+
+export function duplicateOverridePayload(candidates: DuplicateCandidate[]) {
+  return {
+    duplicateOverride: true,
+    candidateIds: candidates.map((candidate) => candidate.id),
+    signals: [...new Set(candidates.flatMap((candidate) => candidate.signals))],
+  };
+}
+
 export function duplicateSignalLabel(signal: DuplicateSignal): string {
   return SIGNAL_LABELS[signal];
 }

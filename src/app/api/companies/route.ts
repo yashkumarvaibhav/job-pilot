@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { currentTenant } from "@/server/auth/current-session";
 import { getDatabase } from "@/server/db/runtime";
+import { DuplicateConflictError } from "@/domain/duplicate";
 import {
   CompanyInputError,
   createCompany,
@@ -11,6 +12,7 @@ import {
   companyResponse,
   readCreateCompanyInput,
 } from "@/server/repos/company-http";
+import { duplicateConflictResponse } from "@/server/repos/duplicate-http";
 
 export const runtime = "nodejs";
 
@@ -47,6 +49,9 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof CompanyInputError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    if (error instanceof DuplicateConflictError) {
+      return duplicateConflictResponse(error);
     }
     throw error;
   }

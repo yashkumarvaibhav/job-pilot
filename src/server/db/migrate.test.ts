@@ -62,7 +62,7 @@ describe("migrateDatabase", () => {
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 14 });
+      ).toEqual({ count: 15 });
 
       for (const indexName of [
         "company_workspace_id_id_unique",
@@ -90,7 +90,7 @@ describe("migrateDatabase", () => {
         "opportunity_workspace_stage_idx",
         "opportunity_workspace_deadline_idx",
         "opportunity_workspace_next_action_due_idx",
-        "opportunity_workspace_company_job_id_unique",
+        "opportunity_workspace_company_job_id_idx",
         "opportunity_contact_workspace_id_id_unique",
         "opportunity_contact_workspace_pair_unique",
         "opportunity_contact_workspace_opportunity_idx",
@@ -166,6 +166,14 @@ describe("migrateDatabase", () => {
           )
           .get(),
       ).toEqual({ unique: 1 });
+
+      expect(
+        client.sqlite
+          .prepare(
+            "select \"unique\" from pragma_index_list('opportunity') where name = 'opportunity_workspace_company_job_id_idx'",
+          )
+          .get(),
+      ).toEqual({ unique: 0 });
 
       const activityForeignKeys = client.sqlite
         .prepare(

@@ -151,4 +151,59 @@ describe("opportunity route handlers", () => {
       (await listRoute(new Request("http://localhost/api/opportunities"))).status,
     ).toBe(401);
   });
+
+  it("returns 409 for the same job ID and creates a second row on acknowledge", async () => {
+    const fixture = newFixture();
+    const company = createCompany(fixture.client.db, fixture.tenantA, {
+      id: "microsoft",
+      name: "Microsoft",
+    });
+    const original = createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "ms-sde",
+      companyId: company.id,
+      role: "SDE",
+      jobId: "182763",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantB, {
+      id: "private",
+      companyId: createCompany(fixture.client.db, fixture.tenantB, {
+        id: "private-co",
+        name: "Microsoft",
+      }).id,
+      role: "SDE",
+      jobId: "182763",
+    });
+
+    const blocked = await POST(
+      jsonRequest("http://localhost/api/opportunities", "POST", {
+        companyId: company.id,
+        role: "SDE",
+        jobId: "182763",
+      }),
+    );
+    expect(blocked.status).toBe(409);
+    expect(await blocked.json()).toEqual({
+      error: "This job may already be tracked.",
+      candidates: [
+        {
+          id: original.id,
+          entityType: "opportunity",
+          label: "Microsoft · SDE",
+          href: `/opportunities/${original.id}`,
+          signals: ["same_company_job_id"],
+        },
+      ],
+    });
+
+    const created = await POST(
+      jsonRequest("http://localhost/api/opportunities", "POST", {
+        companyId: company.id,
+        role: "SDE",
+        jobId: "182763",
+        acknowledgeDuplicates: true,
+      }),
+    );
+    expect(created.status).toBe(201);
+    expect(fixture.rowCount("opportunity")).toBe(3);
+  });
 });

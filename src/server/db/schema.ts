@@ -448,7 +448,7 @@ export const opportunity = sqliteTable(
       table.workspaceId,
       table.nextActionDue,
     ),
-    uniqueIndex("opportunity_workspace_company_job_id_unique").on(
+    index("opportunity_workspace_company_job_id_idx").on(
       table.workspaceId,
       table.companyId,
       table.jobId,
