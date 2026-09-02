@@ -143,7 +143,19 @@ export type SessionCookieAttributes = {
 /** Secure is on wherever the app is actually served over TLS (§62). */
 export function sessionCookieIsSecure(
   nodeEnv: string | undefined = process.env.NODE_ENV,
+  request: { host?: string | null; proto?: string | null } = {},
 ): boolean {
+  const proto = request.proto?.split(",")[0]?.trim().toLowerCase() ?? "";
+  if (proto === "https") {
+    return true;
+  }
+  if (proto === "http") {
+    return false;
+  }
+  const host = (request.host ?? "").split(":")[0].toLowerCase();
+  if (host === "127.0.0.1" || host === "localhost" || host === "::1") {
+    return false;
+  }
   return nodeEnv === "production";
 }
 

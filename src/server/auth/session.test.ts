@@ -186,11 +186,30 @@ describe("revokeSession", () => {
 });
 
 describe("sessionCookieIsSecure", () => {
-  it("is on in production and off everywhere else", () => {
+  it("is on in production TLS and off on loopback HTTP", () => {
     expect(sessionCookieIsSecure("production")).toBe(true);
     expect(sessionCookieIsSecure("development")).toBe(false);
     expect(sessionCookieIsSecure("test")).toBe(false);
     expect(sessionCookieIsSecure(undefined)).toBe(false);
+    expect(
+      sessionCookieIsSecure("production", { host: "127.0.0.1:8061" }),
+    ).toBe(false);
+    expect(
+      sessionCookieIsSecure("production", { host: "localhost:8061" }),
+    ).toBe(false);
+    expect(
+      sessionCookieIsSecure("production", {
+        host: "127.0.0.1:8061",
+        proto: "https",
+      }),
+    ).toBe(true);
+    expect(
+      sessionCookieIsSecure("production", {
+        host: "jobpilot.yashkumarvaibhav.me",
+        proto: "https",
+      }),
+    ).toBe(true);
+    expect(sessionCookieIsSecure("production", { proto: "http" })).toBe(false);
   });
 });
 

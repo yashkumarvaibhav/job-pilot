@@ -6,6 +6,7 @@ const originalEmail = process.env.DEMO_ACCOUNT_EMAIL;
 
 vi.mock("next/headers", () => ({
   cookies: async () => ({ get: () => undefined, set: vi.fn() }),
+  headers: async () => ({ get: () => null }),
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),

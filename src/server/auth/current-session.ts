@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { getDatabase } from "../db/runtime";
@@ -36,6 +36,7 @@ export async function requireTenant(): Promise<TenantContext> {
 /** Signs the account in and replaces whatever token the browser presented. */
 export async function establishSession(userId: string): Promise<void> {
   const jar = await cookies();
+  const headerList = await headers();
   const session = startSession(getDatabase(), userId, {
     previousToken: jar.get(SESSION_COOKIE_NAME)?.value ?? null,
   });
@@ -44,7 +45,10 @@ export async function establishSession(userId: string): Promise<void> {
     SESSION_COOKIE_NAME,
     session.token,
     sessionCookieAttributes({
-      secure: sessionCookieIsSecure(),
+      secure: sessionCookieIsSecure(process.env.NODE_ENV, {
+        host: headerList.get("host"),
+        proto: headerList.get("x-forwarded-proto"),
+      }),
       expires: session.expiresAt,
     }),
   );
