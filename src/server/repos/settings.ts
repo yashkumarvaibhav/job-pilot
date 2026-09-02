@@ -10,7 +10,7 @@ import { logEvent } from "../db/activity";
 import type { AppDatabase } from "../db/client";
 import { settings } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
-import { DEFAULT_TIME_ZONE, isValidIanaTimeZone } from "../db/timezone";
+import { isValidIanaTimeZone } from "../db/timezone";
 
 export type WorkspaceSettingsView = {
   displayName: string;
@@ -101,27 +101,6 @@ export function updateWorkspaceSettings(
     }
   }
 
-  const displayName = boundedProfileText(input.displayName, "Display name");
-  if (displayName.length === 0) {
-    throw new SettingsInputError("Display name is required.");
-  }
-  const university = boundedProfileText(input.university ?? "", "University");
-
-  const timezone = (input.timezone ?? DEFAULT_TIME_ZONE).trim();
-  if (!isValidIanaTimeZone(timezone)) {
-    throw new SettingsInputError(`${timezone} is not an IANA timezone name.`);
-  }
-
-  let quiet: { quietStart: number | null; quietEnd: number | null };
-  try {
-    quiet = parseQuietHours({ start: input.quietStart, end: input.quietEnd });
-  } catch (error) {
-    if (error instanceof QuietHoursError) {
-      throw new SettingsInputError(error.message);
-    }
-    throw error;
-  }
-
   const now = input.now ?? new Date();
 
   return database.transaction((transaction) => {
@@ -132,6 +111,44 @@ export function updateWorkspaceSettings(
       .get();
     if (!before) {
       throw new SettingsInputError("This workspace has no settings row.");
+    }
+
+    const displayName = boundedProfileText(input.displayName, "Display name");
+    if (displayName.length === 0) {
+      throw new SettingsInputError("Display name is required.");
+    }
+    // Absent means keep; an empty string is a deliberate clear.
+    const university =
+      input.university === undefined
+        ? (before.university ?? "")
+        : boundedProfileText(input.university ?? "", "University");
+
+    // An omitted zone keeps the saved one; an empty one is a typo, not a reset.
+    const timezone = (input.timezone ?? before.timezone).trim();
+    if (!isValidIanaTimeZone(timezone)) {
+      throw new SettingsInputError(
+        `${timezone.length > 0 ? timezone : "That"} is not an IANA timezone name.`,
+      );
+    }
+
+    let quiet: { quietStart: number | null; quietEnd: number | null };
+    if (input.quietStart === undefined && input.quietEnd === undefined) {
+      quiet = {
+        quietStart: before.quietStart ?? null,
+        quietEnd: before.quietEnd ?? null,
+      };
+    } else {
+      try {
+        quiet = parseQuietHours({
+          start: input.quietStart,
+          end: input.quietEnd,
+        });
+      } catch (error) {
+        if (error instanceof QuietHoursError) {
+          throw new SettingsInputError(error.message);
+        }
+        throw error;
+      }
     }
 
     const row = transaction
