@@ -5,16 +5,32 @@ import {
   ContactStatusChip,
   relationshipLabel,
 } from "@/components/contact-status";
+import {
+  CONTACT_RELATIONSHIPS,
+  NETWORKING_STATUSES,
+} from "@/domain/contact";
+import {
+  pageSearchParams,
+  type PageSearchParams,
+} from "@/domain/list-filter";
 import { requireTenant } from "@/server/auth/current-session";
 import { getDatabase } from "@/server/db/runtime";
 import { listCompanies } from "@/server/repos/companies";
-import { listContacts } from "@/server/repos/contacts";
+import {
+  listContacts,
+  parseContactListFilter,
+} from "@/server/repos/contacts";
 
-export default async function ContactsPage() {
+type Props = { searchParams?: Promise<PageSearchParams> };
+
+export default async function ContactsPage({ searchParams }: Props = {}) {
   const tenant = await requireTenant();
   const database = getDatabase();
-  const contacts = listContacts(database, tenant);
+  const query = pageSearchParams(await searchParams);
+  const filter = parseContactListFilter(query);
+  const contacts = listContacts(database, tenant, filter);
   const companies = listCompanies(database, tenant);
+  const hasFilters = Object.keys(filter).length > 0;
 
   return (
     <section className="contact-page">
@@ -30,9 +46,87 @@ export default async function ContactsPage() {
         <ContactCreatePanel companies={companies} />
       </header>
 
+      <form aria-label="Filter contacts" className="list-filter" method="get">
+        <div className="list-filter__fields">
+          <div className="field">
+            <label htmlFor="contact-company-filter">Company</label>
+            <select
+              defaultValue={filter.companyId ?? ""}
+              id="contact-company-filter"
+              name="company"
+            >
+              <option value="">All companies</option>
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="contact-status-filter">Status</label>
+            <select
+              defaultValue={filter.status ?? ""}
+              id="contact-status-filter"
+              name="status"
+            >
+              <option value="">All statuses</option>
+              {NETWORKING_STATUSES.map((status) => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="contact-relationship-filter">Relationship</label>
+            <select
+              defaultValue={filter.relationship ?? ""}
+              id="contact-relationship-filter"
+              name="relationship"
+            >
+              <option value="">All relationships</option>
+              {CONTACT_RELATIONSHIPS.map((relationship) => (
+                <option key={relationship.value} value={relationship.value}>
+                  {relationship.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="contact-response-filter">No response for</label>
+            <select
+              defaultValue={filter.noResponseDays?.toString() ?? ""}
+              id="contact-response-filter"
+              name="noResponseDays"
+            >
+              <option value="">Any response age</option>
+              <option value="3">More than 3 days</option>
+              <option value="7">More than 7 days</option>
+              <option value="14">More than 14 days</option>
+              <option value="30">More than 30 days</option>
+            </select>
+          </div>
+        </div>
+        <div className="list-filter__actions">
+          <button className="btn" type="submit">
+            Apply filters
+          </button>
+          {hasFilters ? (
+            <Link className="btn btn--ghost" href="/contacts">
+              Clear filters
+            </Link>
+          ) : null}
+        </div>
+      </form>
+
       {contacts.length === 0 ? (
         <div className="data-state data-state--empty">
-          <p>No contacts yet. Networking does not need a job first.</p>
+          <p>
+            {hasFilters
+              ? "No contacts match these filters."
+              : "No contacts yet. Networking does not need a job first."}
+          </p>
         </div>
       ) : (
         <>

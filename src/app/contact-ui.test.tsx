@@ -94,6 +94,63 @@ describe("contact screens", () => {
     expect(html).toContain('aria-hidden="true"');
   });
 
+  it("renders URL-backed contact filters and filtered empty copy", async () => {
+    const fixture = newFixture();
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "microsoft",
+      name: "Microsoft",
+    });
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "google",
+      name: "Google",
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "rahul",
+      companyId: "microsoft",
+      name: "Rahul Sharma",
+      relationship: "alumni",
+      networkingStatus: "checking_for_openings",
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "priya",
+      companyId: "google",
+      name: "Priya Nair",
+      networkingStatus: "not_contacted",
+    });
+
+    const html = renderToStaticMarkup(
+      await ContactsPage({
+        searchParams: Promise.resolve({
+          company: "microsoft",
+          relationship: "alumni",
+          status: "checking_for_openings",
+        }),
+      }),
+    );
+    for (const expected of [
+      'name="company"',
+      'name="relationship"',
+      'name="status"',
+      'name="noResponseDays"',
+      "Apply filters",
+      "Clear filters",
+      "Rahul Sharma",
+    ]) {
+      expect(html).toContain(expected);
+    }
+    expect(html).not.toContain("Priya Nair");
+    expect(html).toContain('<option value="microsoft" selected="">Microsoft</option>');
+    expect(html).toContain('<option value="alumni" selected="">Alumni</option>');
+
+    const empty = renderToStaticMarkup(
+      await ContactsPage({
+        searchParams: Promise.resolve({ status: "do_not_contact" }),
+      }),
+    );
+    expect(empty).toContain("No contacts match these filters.");
+    expect(empty).not.toContain("No contacts yet.");
+  });
+
   it("renders contact identity, methods and every networking status on detail", async () => {
     const fixture = newFixture();
     const microsoft = createCompany(fixture.client.db, fixture.tenantA, {

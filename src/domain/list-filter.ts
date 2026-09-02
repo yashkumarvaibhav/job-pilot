@@ -1,4 +1,21 @@
 export type FilterOption = { value: string; label: string };
+export type PageSearchParams = Record<
+  string,
+  string | string[] | undefined
+>;
+
+export function pageSearchParams(
+  values: PageSearchParams | undefined,
+): URLSearchParams {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(values ?? {})) {
+    const selected = Array.isArray(value) ? value[0] : value;
+    if (selected) {
+      search.set(key, selected);
+    }
+  }
+  return search;
+}
 
 export function filterOptionValue<T extends FilterOption>(
   options: readonly T[],

@@ -89,6 +89,63 @@ describe("opportunity screens", () => {
     expect(html).toContain('aria-hidden="true"');
   });
 
+  it("applies URL-backed job filters and preserves them in bucket links", async () => {
+    const fixture = newFixture();
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "microsoft",
+      name: "Microsoft",
+    });
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "google",
+      name: "Google",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "ms-sde",
+      companyId: "microsoft",
+      role: "SDE",
+      priority: "High",
+      deadlineOn: "2026-09-03",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "google-swe",
+      companyId: "google",
+      role: "Software Engineer",
+      priority: "Medium",
+      deadlineOn: "2026-09-20",
+    });
+
+    const html = renderToStaticMarkup(
+      await OpportunitiesPage({
+        searchParams: Promise.resolve({
+          bucket: "all",
+          company: "microsoft",
+          priority: "High",
+        }),
+      }),
+    );
+    for (const expected of [
+      'name="company"',
+      'name="priority"',
+      'name="deadlineWithinDays"',
+      'name="appliedWithinDays"',
+      "Apply filters",
+      "Clear filters",
+      "SDE",
+    ]) {
+      expect(html).toContain(expected);
+    }
+    expect(html).not.toContain("Software Engineer");
+    expect(html).toContain("company=microsoft");
+    expect(html).toContain("priority=High");
+
+    const empty = renderToStaticMarkup(
+      await OpportunitiesPage({
+        searchParams: Promise.resolve({ priority: "Missing" }),
+      }),
+    );
+    expect(empty).toContain("No opportunities match these filters.");
+  });
+
   it("renders persisted detail fields and only pursuit stages in the edit form", async () => {
     const fixture = newFixture();
     const company = createCompany(fixture.client.db, fixture.tenantA, {

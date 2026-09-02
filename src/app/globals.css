@@ -1556,19 +1556,25 @@ main:focus {
   font-size: 0.78rem;
 }
 
-.referral-stage-filter {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
+.list-filter {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--raised);
+}
+
+.list-filter__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   gap: var(--space-3);
 }
 
-.referral-stage-filter .field {
-  min-width: 12rem;
-}
-
-.referral-stage-filter .btn {
-  min-height: var(--target-min);
+.list-filter__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .application-block {

@@ -99,9 +99,7 @@ describe("referral screens", () => {
         searchParams: Promise.resolve({ preset: "promised_not_received" }),
       }),
     );
-    expect(promised).toContain(
-      "No referral requests. Open an opportunity and ask someone.",
-    );
+    expect(promised).toContain("No referral requests match these filters.");
     expect(promised).not.toContain('href="/referrals/referral-rahul"');
 
     updateReferral(fixture.client.db, fixture.tenantA, created!.id, {
@@ -114,6 +112,71 @@ describe("referral screens", () => {
     );
     expect(after).toContain("Rahul Sharma");
     expect(after).toContain("Referral Promised");
+  });
+
+  it("applies URL-backed referral filters with tenant-owned company options", async () => {
+    const fixture = newFixture();
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "microsoft",
+      name: "Microsoft",
+    });
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "google",
+      name: "Google",
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "rahul",
+      companyId: "microsoft",
+      name: "Rahul Sharma",
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "priya",
+      companyId: "google",
+      name: "Priya Nair",
+    });
+    createReferral(fixture.client.db, fixture.tenantA, {
+      id: "rahul-request",
+      contactId: "rahul",
+      channel: "email",
+      stage: "requested",
+      requestedOn: "2026-08-20",
+    });
+    createReferral(fixture.client.db, fixture.tenantA, {
+      id: "priya-request",
+      contactId: "priya",
+      channel: "email",
+      stage: "requested",
+      requestedOn: "2026-08-20",
+    });
+
+    const html = renderToStaticMarkup(
+      await ReferralsPage({
+        searchParams: Promise.resolve({
+          company: "microsoft",
+          stage: "requested",
+          noResponseDays: "3",
+        }),
+      }),
+    );
+    for (const expected of [
+      'name="company"',
+      'name="stage"',
+      'name="noResponseDays"',
+      "Apply filters",
+      "Clear filters",
+      "Rahul Sharma",
+    ]) {
+      expect(html).toContain(expected);
+    }
+    expect(html).not.toContain('href="/referrals/priya-request"');
+    expect(html).toContain('<option value="microsoft" selected="">Microsoft</option>');
+
+    const empty = renderToStaticMarkup(
+      await ReferralsPage({
+        searchParams: Promise.resolve({ stage: "declined" }),
+      }),
+    );
+    expect(empty).toContain("No referral requests match these filters.");
   });
 
   it("keeps Potential Contact in the detail stage list after Received", async () => {
