@@ -5,6 +5,7 @@ import {
   DO_NOT_CONTACT,
   NETWORKING_STATUSES,
   NetworkingStatusTransitionError,
+  isNetworkingTerminalStatus,
   transitionNetworkingStatus,
 } from "./contact";
 
@@ -65,5 +66,12 @@ describe("contact domain", () => {
         overrideDoNotContact: true,
       }),
     ).toBe("keep_in_touch");
+  });
+
+  it("treats Do Not Contact and Inactive as terminal for due work", () => {
+    expect(isNetworkingTerminalStatus("do_not_contact")).toBe(true);
+    expect(isNetworkingTerminalStatus("inactive")).toBe(true);
+    expect(isNetworkingTerminalStatus("waiting_for_reply")).toBe(false);
+    expect(isNetworkingTerminalStatus("checking_for_openings")).toBe(false);
   });
 });

@@ -110,6 +110,7 @@ export function getTodaySnapshot(
     .where(
       and(
         eq(interaction.workspaceId, tenant.workspaceId),
+        eq(interaction.direction, "inbound"),
         eq(interaction.requiresReply, true),
         isNull(interaction.replyResolvedAt),
       ),

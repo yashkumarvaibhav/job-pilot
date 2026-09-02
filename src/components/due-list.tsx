@@ -61,7 +61,6 @@ export function DueItemCollection({
                   <td>
                     {row.origin === "derived" ? (
                       <ConvertDueItemButton
-                        label={verb}
                         sourceKey={row.sourceKey}
                         title={row.title}
                       />
@@ -106,7 +105,6 @@ export function DueItemCollection({
               </span>
               {row.origin === "derived" ? (
                 <ConvertDueItemButton
-                  label={verb}
                   sourceKey={row.sourceKey}
                   title={row.title}
                 />

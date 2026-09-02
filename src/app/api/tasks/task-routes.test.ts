@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { dueSourceKey } from "../../../domain/due-source";
+import { calendarDateInZone } from "../../../domain/referral";
 import { createContact, updateContact } from "../../../server/repos/contacts";
 import { createTask } from "../../../server/repos/tasks";
 import { createTenantTestFixture } from "../../../test/tenant-fixture";
@@ -140,6 +141,51 @@ describe("task route handlers", () => {
     );
     expect(await listed.json()).toEqual([
       expect.objectContaining({ title: "Secret" }),
+    ]);
+  });
+
+  it("lists Today's due items on source=followups without leaking tenant B", async () => {
+    const fixture = newFixture();
+    const asOfA = calendarDateInZone("Asia/Kolkata");
+    const asOfB = calendarDateInZone("America/New_York");
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "priya",
+      name: "Priya Nair",
+      networkingStatus: "waiting_for_reply",
+      followUpOn: asOfA,
+    });
+    createContact(fixture.client.db, fixture.tenantB, {
+      id: "b-priya",
+      name: "Hidden Priya",
+      networkingStatus: "waiting_for_reply",
+      followUpOn: asOfB,
+    });
+
+    const listed = await listRoute(
+      jsonRequest("http://localhost/api/tasks?source=followups", "GET"),
+    );
+    expect(listed.status).toBe(200);
+    const body = (await listed.json()) as Array<Record<string, unknown>>;
+    expect(body).toEqual([
+      expect.objectContaining({
+        sourceKey: dueSourceKey("contact_next_action", "priya"),
+        origin: "derived",
+        title: "Follow up",
+        entityLabel: "Priya Nair",
+      }),
+    ]);
+    expect(JSON.stringify(body)).not.toContain("Hidden Priya");
+    expect(JSON.stringify(body)).not.toContain("workspace");
+
+    mocks.tenant = fixture.tenantB;
+    const foreign = await listRoute(
+      jsonRequest("http://localhost/api/tasks?source=followups", "GET"),
+    );
+    expect(await foreign.json()).toEqual([
+      expect.objectContaining({
+        entityLabel: "Hidden Priya",
+        sourceKey: dueSourceKey("contact_next_action", "b-priya"),
+      }),
     ]);
   });
 });

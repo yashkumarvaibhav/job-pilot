@@ -11,6 +11,11 @@ import {
   type OpportunityStage,
 } from "./opportunity";
 
+export {
+  derivedDueItemTitle as todayDerivedActionTitle,
+  DERIVED_REFERRAL_CHECK_TITLE as TODAY_REFERRAL_CHECK_TITLE,
+} from "./due-source";
+
 export const TODAY_EMPTY =
   "Nothing due today. Add a contact or a job to start the loop.";
 

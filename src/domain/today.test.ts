@@ -10,6 +10,7 @@ import {
   todayDoNowHeading,
   todayDoNowVerb,
   todayDoNowVerbForKey,
+  todayDerivedActionTitle,
   todayOpportunityPipelineTile,
 } from "./today";
 
@@ -55,6 +56,15 @@ describe("Today domain", () => {
         "Rahul Sharma",
       ),
     ).toBe("Follow up with Rahul Sharma");
+    expect(
+      todayDerivedActionTitle("contact_next_action", "  Ping Priya  "),
+    ).toBe("Ping Priya");
+    expect(todayDerivedActionTitle("contact_next_action", "")).toBe(
+      "Follow up",
+    );
+    expect(todayDerivedActionTitle("referral_follow_up", null)).toBe(
+      "Check referral",
+    );
   });
 
   it("rolls opportunity and application stages into the six pipeline tiles", () => {

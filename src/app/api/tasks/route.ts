@@ -6,6 +6,7 @@ import { getWorkspaceSettings } from "@/server/db/foundation";
 import { getDatabase } from "@/server/db/runtime";
 import { DEFAULT_TIME_ZONE } from "@/server/db/timezone";
 import {
+  dueItemResponse,
   readCreateTaskInput,
   taskResponse,
 } from "@/server/repos/task-http";
@@ -15,6 +16,7 @@ import {
   parseTaskListFilter,
   TaskInputError,
 } from "@/server/repos/tasks";
+import { listTodayDueItems } from "@/server/repos/today";
 
 export const runtime = "nodejs";
 
@@ -30,10 +32,16 @@ export async function GET(request: Request) {
   const timeZone =
     getWorkspaceSettings(database, tenant, tenant.workspaceId)?.timezone ??
     DEFAULT_TIME_ZONE;
+  const asOfOn = calendarDateInZone(timeZone);
   const filter = parseTaskListFilter(
     new URL(request.url).searchParams,
-    calendarDateInZone(timeZone),
+    asOfOn,
   );
+  if (filter.source === "followups") {
+    return NextResponse.json(
+      listTodayDueItems(database, tenant, asOfOn).map(dueItemResponse),
+    );
+  }
   return NextResponse.json(
     listTasks(database, tenant, filter).map(taskResponse),
   );

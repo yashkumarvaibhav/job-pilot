@@ -3,10 +3,13 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq, isNotNull, sql } from "drizzle-orm";
 
 import {
+  derivedDueItemTitle,
   dueSourceKey,
   parseDueSourceKey,
   type DueSourceKind,
 } from "../../domain/due-source";
+import { isNetworkingTerminalStatus } from "../../domain/contact";
+import { isReferralTerminalStage } from "../../domain/referral";
 import {
   DEFAULT_TASK_PRIORITY,
   DEFAULT_TASK_SOURCE,
@@ -57,6 +60,7 @@ export type TaskListFilter = {
   status?: TaskStatus;
   due?: "overdue" | "today" | "later";
   asOfOn?: string;
+  source?: "followups";
 };
 
 export type CreateTaskInput = {
@@ -90,14 +94,17 @@ export function parseTaskListFilter(
 ): TaskListFilter {
   const statusValue = searchParams.get("status");
   const dueValue = searchParams.get("due");
+  const sourceValue = searchParams.get("source");
   const status = isTaskStatus(statusValue) ? statusValue : undefined;
   const due =
     dueValue === "overdue" || dueValue === "today" || dueValue === "later"
       ? dueValue
       : undefined;
+  const source = sourceValue === "followups" ? "followups" : undefined;
   return {
     ...(status ? { status } : {}),
     ...(due ? { due, asOfOn } : {}),
+    ...(source ? { source, asOfOn } : {}),
   };
 }
 
@@ -374,18 +381,27 @@ function loadDerivedSource(
         title: contact.nextAction,
         dueOn: contact.followUpOn,
         label: contact.name,
+        networkingStatus: contact.networkingStatus,
       })
       .from(contact)
       .where(
         and(eq(contact.workspaceId, tenant.workspaceId), eq(contact.id, entityId)),
       )
       .get();
-    const title = optionalText(row?.title);
     const dueOn = optionalText(row?.dueOn);
-    if (!row || title === null || dueOn === null) {
+    if (
+      !row ||
+      dueOn === null ||
+      isNetworkingTerminalStatus(row.networkingStatus)
+    ) {
       return undefined;
     }
-    return { title, dueOn, entityType: "contact", entityLabel: row.label };
+    return {
+      title: derivedDueItemTitle("contact_next_action", row.title),
+      dueOn,
+      entityType: "contact",
+      entityLabel: row.label,
+    };
   }
   if (kind === "opportunity_next_action") {
     const row = transaction
@@ -426,6 +442,7 @@ function loadDerivedSource(
       title: referralRequest.nextAction,
       dueOn: referralRequest.followUpOn,
       label: contact.name,
+      stage: referralRequest.stage,
     })
     .from(referralRequest)
     .innerJoin(
@@ -442,12 +459,16 @@ function loadDerivedSource(
       ),
     )
     .get();
-  const title = optionalText(row?.title);
   const dueOn = optionalText(row?.dueOn);
-  if (!row || title === null || dueOn === null) {
+  if (!row || dueOn === null || isReferralTerminalStage(row.stage)) {
     return undefined;
   }
-  return { title, dueOn, entityType: "referral", entityLabel: row.label };
+  return {
+    title: derivedDueItemTitle("referral_follow_up", row.title),
+    dueOn,
+    entityType: "referral",
+    entityLabel: row.label,
+  };
 }
 
 function findOpenDerivedTask(
@@ -780,20 +801,18 @@ export function listDueItems(
         title: contact.nextAction,
         dueOn: contact.followUpOn,
         label: contact.name,
+        networkingStatus: contact.networkingStatus,
       })
       .from(contact)
       .where(
         and(
           eq(contact.workspaceId, tenant.workspaceId),
-          isNotNull(contact.nextAction),
           isNotNull(contact.followUpOn),
-          sql`length(trim(${contact.nextAction})) > 0`,
         ),
       )
       .all()) {
-      const title = optionalText(row.title);
       const dueOn = optionalText(row.dueOn);
-      if (title === null || dueOn === null) {
+      if (dueOn === null || isNetworkingTerminalStatus(row.networkingStatus)) {
         continue;
       }
       const sourceKey = dueSourceKey("contact_next_action", row.id);
@@ -803,7 +822,7 @@ export function listDueItems(
       items.push({
         sourceKey,
         origin: "derived",
-        title,
+        title: derivedDueItemTitle("contact_next_action", row.title),
         dueOn,
         entityType: "contact",
         entityId: row.id,
@@ -869,6 +888,7 @@ export function listDueItems(
         title: referralRequest.nextAction,
         dueOn: referralRequest.followUpOn,
         label: contact.name,
+        stage: referralRequest.stage,
       })
       .from(referralRequest)
       .innerJoin(
@@ -881,15 +901,12 @@ export function listDueItems(
       .where(
         and(
           eq(referralRequest.workspaceId, tenant.workspaceId),
-          isNotNull(referralRequest.nextAction),
           isNotNull(referralRequest.followUpOn),
-          sql`length(trim(${referralRequest.nextAction})) > 0`,
         ),
       )
       .all()) {
-      const title = optionalText(row.title);
       const dueOn = optionalText(row.dueOn);
-      if (title === null || dueOn === null) {
+      if (dueOn === null || isReferralTerminalStage(row.stage)) {
         continue;
       }
       const sourceKey = dueSourceKey("referral_follow_up", row.id);
@@ -899,7 +916,7 @@ export function listDueItems(
       items.push({
         sourceKey,
         origin: "derived",
-        title,
+        title: derivedDueItemTitle("referral_follow_up", row.title),
         dueOn,
         entityType: "referral",
         entityId: row.id,

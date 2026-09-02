@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   dueSourceKey,
+  derivedDueItemTitle,
   parseDueSourceKey,
   reschedulePreservesKey,
 } from "./due-source";
@@ -40,5 +41,15 @@ describe("due-source keys", () => {
       entityId: "rahul",
     });
     expect(parseDueSourceKey("not-a-key")).toBeNull();
+  });
+
+  it("titles a derived due item from the next-action string or a stable default", () => {
+    expect(derivedDueItemTitle("contact_next_action", " Ping Priya ")).toBe(
+      "Ping Priya",
+    );
+    expect(derivedDueItemTitle("contact_next_action", "")).toBe("Follow up");
+    expect(derivedDueItemTitle("referral_follow_up", null)).toBe(
+      "Check referral",
+    );
   });
 });

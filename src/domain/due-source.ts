@@ -78,3 +78,25 @@ export function reschedulePreservesKey(
   void _toOn;
   return key;
 }
+
+export const DERIVED_REFERRAL_CHECK_TITLE = "Check referral";
+
+export function derivedDueItemTitle(
+  kind: DueSourceKind,
+  nextAction: string | null | undefined,
+): string {
+  const custom = typeof nextAction === "string" ? nextAction.trim() : "";
+  if (custom.length > 0) {
+    return custom;
+  }
+  switch (kind) {
+    case "referral_follow_up":
+      return DERIVED_REFERRAL_CHECK_TITLE;
+    case "opportunity_next_action":
+      return "Apply";
+    case "task":
+      return "Do";
+    default:
+      return "Follow up";
+  }
+}

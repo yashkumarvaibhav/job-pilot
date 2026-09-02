@@ -47,6 +47,15 @@ export type NetworkingStatus =
 
 export const DEFAULT_NETWORKING_STATUS: NetworkingStatus = "not_contacted";
 export const DO_NOT_CONTACT: NetworkingStatus = "do_not_contact";
+export const NETWORKING_TERMINAL_STATUSES = [
+  "do_not_contact",
+  "inactive",
+] as const satisfies readonly NetworkingStatus[];
+
+export type NetworkingTerminalStatus =
+  (typeof NETWORKING_TERMINAL_STATUSES)[number];
+
+const networkingTerminalValues = new Set<string>(NETWORKING_TERMINAL_STATUSES);
 
 const networkingStatusValues = new Set<string>(
   NETWORKING_STATUSES.map(({ value }) => value),
@@ -60,6 +69,12 @@ const methodKindValues = new Set<string>(
 
 export function isNetworkingStatus(value: unknown): value is NetworkingStatus {
   return typeof value === "string" && networkingStatusValues.has(value);
+}
+
+export function isNetworkingTerminalStatus(
+  value: unknown,
+): value is NetworkingTerminalStatus {
+  return typeof value === "string" && networkingTerminalValues.has(value);
 }
 
 export function isContactRelationship(
