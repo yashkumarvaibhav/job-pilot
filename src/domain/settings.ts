@@ -9,6 +9,26 @@ export const SETTINGS_PROFILE_MAX = 120;
 
 export const QUIET_HOURS_OFF_LABEL = "Off";
 
+export const SETTINGS_LOADING = "Loading settings";
+
+export const SETTINGS_ERROR = "Could not load settings";
+
+export const TIMEZONE_HELP =
+  "Today, quiet hours, digests and scheduling use this zone. Saving a new zone does not move any timestamp already stored.";
+
+export const QUIET_HOURS_HELP =
+  "The notification center still lists everything during quiet hours. A future morning digest is what will wait for them to end.";
+
+export const GMAIL_NOT_CONNECTED_TITLE = "Gmail is not connected yet";
+
+export const GMAIL_NOT_CONNECTED_HELP =
+  "Connecting a mailbox arrives with the Gmail phase. Until then nothing here reads or sends mail, and there is no address to disconnect.";
+
+export const SCORING_EMPTY_TITLE = "Scoring weights are not set yet";
+
+export const SCORING_EMPTY_HELP =
+  "Opportunity scoring arrives with the scoring phase. When it does, its terms become numeric fields here rather than a hidden file.";
+
 /** Modern IANA names this platform's ICU may still enumerate under a legacy alias. */
 const MODERN_ZONE_NAMES = [
   "America/Argentina/Buenos_Aires",
