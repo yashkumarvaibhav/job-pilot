@@ -102,20 +102,33 @@ function writeUpload(uploadsRoot: string, name: string, contents: string) {
   return createHash("sha256").update(contents).digest("hex");
 }
 
+/** Real JP-0023 rows, so restore verification runs against the real schema. */
 function addDocumentVersion(
   databasePath: string,
   rows: { id: string; storageKey: string; sha256: string }[],
 ) {
   const database = new Database(databasePath);
   try {
-    database.exec(
-      "create table document_version (id text primary key, storage_key text not null, sha256 text not null)",
-    );
+    database.pragma("foreign_keys = ON");
+    database
+      .prepare(
+        "insert into document (id, workspace_id, name, kind, created_at, updated_at) values (?, ?, ?, 'resume', 0, 0)",
+      )
+      .run("doc-1", "workspace-a", "Backend Java");
     const insert = database.prepare(
-      "insert into document_version (id, storage_key, sha256) values (?, ?, ?)",
+      "insert into document_version (id, workspace_id, document_id, label, storage_key, sha256, byte_size, content_type, created_at)" +
+        " values (?, 'workspace-a', 'doc-1', ?, ?, ?, ?, 'application/pdf', 0)",
     );
+    let index = 0;
     for (const row of rows) {
-      insert.run(row.id, row.storageKey, row.sha256);
+      index += 1;
+      insert.run(
+        row.id,
+        `v${index}`,
+        row.storageKey,
+        row.sha256,
+        Math.max(1, row.sha256.length),
+      );
     }
   } finally {
     database.close();

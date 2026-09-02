@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
 
 import { rolledUpPipelineStage } from "../../domain/application";
@@ -7,6 +11,7 @@ import { createTenantTestFixture } from "../../test/tenant-fixture";
 import { listApplications, applyToOpportunity } from "./applications";
 import { createCompany, getCompany, listCompanies } from "./companies";
 import { createContact, getContact, listContacts, updateContact } from "./contacts";
+import { createDocument, storeDocumentVersion } from "./documents";
 import { createInteraction } from "./interactions";
 import {
   createOpportunity,
@@ -34,8 +39,14 @@ describe("P01 walkthrough", () => {
 
   function newFixture() {
     const fixture = createTenantTestFixture();
-    fixtures.push(fixture);
-    return fixture;
+    const uploadsRoot = mkdtempSync(join(tmpdir(), "job-pilot-walkthrough-"));
+    fixtures.push({
+      dispose: () => {
+        fixture.dispose();
+        rmSync(uploadsRoot, { force: true, recursive: true });
+      },
+    });
+    return { ...fixture, uploadsRoot };
   }
 
   const now = new Date("2026-09-02T02:00:00.000Z");
@@ -45,6 +56,7 @@ describe("P01 walkthrough", () => {
     const db = fixture.client.db;
     const a = fixture.tenantA;
     const b = fixture.tenantB;
+    const uploadsRoot = fixture.uploadsRoot;
     const asOfOn = calendarDateInZone("Asia/Kolkata", now);
     const tomorrowOn = shiftCalendarDate(asOfOn, 1);
 
@@ -181,16 +193,31 @@ describe("P01 walkthrough", () => {
       ),
     ).toBe(true);
 
+    // §39: the application records which stored version was used, not a typed label.
+    createDocument(db, a, { id: "doc-backend", name: "Backend Resume", now });
+    const backendV4 = storeDocumentVersion(
+      db,
+      a,
+      {
+        id: "version-backend-4",
+        documentId: "doc-backend",
+        label: "v4",
+        bytes: new Uint8Array([37, 80, 68, 70]),
+        contentType: "application/pdf",
+        now,
+      },
+      uploadsRoot,
+    );
     applyToOpportunity(db, a, {
       opportunityId: atlassianSde.id,
       portal: "Workday",
       appliedOn: asOfOn,
-      resumeVersionId: "Backend Resume v4",
+      resumeVersionId: backendV4.id,
       now,
     });
     const appliedAtlassian = getOpportunity(db, a, atlassianSde.id);
     expect(appliedAtlassian?.application?.resumeVersionId).toBe(
-      "Backend Resume v4",
+      "version-backend-4",
     );
     expect(
       rolledUpPipelineStage(

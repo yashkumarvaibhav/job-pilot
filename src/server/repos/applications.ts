@@ -9,7 +9,13 @@ import {
 } from "../../domain/application";
 import { logEvent } from "../db/activity";
 import type { AppDatabase, AppTransaction } from "../db/client";
-import { application, company, opportunity } from "../db/schema";
+import {
+  application,
+  company,
+  documentUsage,
+  documentVersion,
+  opportunity,
+} from "../db/schema";
 import type { TenantContext } from "../db/tenant";
 
 export type Application = typeof application.$inferSelect;
@@ -182,6 +188,63 @@ function ownedOpportunity(
     .get();
 }
 
+/**
+ * `application.resume_version_id` and the matching `document_usage` row are one
+ * fact, written together: §39 says an application records exactly which version
+ * it used, and a delete is refused on the strength of that usage row. If the two
+ * could drift, a version still in use would become deletable.
+ */
+function syncResumeVersionUsage(
+  transaction: AppTransaction,
+  tenant: TenantContext,
+  applicationId: string,
+  versionId: string | null,
+  at: Date,
+): void {
+  transaction
+    .delete(documentUsage)
+    .where(
+      and(
+        eq(documentUsage.workspaceId, tenant.workspaceId),
+        eq(documentUsage.entityType, "application"),
+        eq(documentUsage.entityId, applicationId),
+      ),
+    )
+    .run();
+
+  if (versionId === null) {
+    return;
+  }
+
+  const owned = transaction
+    .select()
+    .from(documentVersion)
+    .where(
+      and(
+        eq(documentVersion.workspaceId, tenant.workspaceId),
+        eq(documentVersion.id, versionId),
+      ),
+    )
+    .get();
+  if (!owned) {
+    throw new ApplicationInputError(
+      "That resume version is not in this workspace.",
+    );
+  }
+
+  transaction
+    .insert(documentUsage)
+    .values({
+      id: randomUUID(),
+      workspaceId: tenant.workspaceId,
+      versionId,
+      entityType: "application",
+      entityId: applicationId,
+      createdAt: at,
+    })
+    .run();
+}
+
 export function applyToOpportunity(
   database: AppDatabase,
   tenant: TenantContext,
@@ -219,6 +282,13 @@ export function applyToOpportunity(
         createdAt: now,
       })
       .run();
+    syncResumeVersionUsage(
+      transaction,
+      tenant,
+      id,
+      optionalText(input.resumeVersionId),
+      now,
+    );
     transaction
       .update(opportunity)
       .set({ stage: "applied" })
@@ -344,6 +414,15 @@ export function updateApplication(
         ),
       )
       .run();
+    if (input.resumeVersionId !== undefined) {
+      syncResumeVersionUsage(
+        transaction,
+        tenant,
+        id,
+        values.resumeVersionId ?? null,
+        at,
+      );
+    }
     logEvent(transaction, tenant, {
       at,
       kind: "APPLICATION_UPDATED",

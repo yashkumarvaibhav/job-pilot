@@ -20,6 +20,15 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { createBackup } from "./backup/backup.mjs";
 import { restoreBackup } from "./backup/restore.mjs";
 
+
+/** The tag of the newest committed migration, so a new one never fails this. */
+function latestMigrationTag() {
+  const journal = JSON.parse(
+    readFileSync(resolve("drizzle", "meta", "_journal.json"), "utf8"),
+  );
+  return journal.entries.at(-1).tag;
+}
+
 const APP_ROOT = process.cwd();
 const MIGRATIONS_FOLDER = resolve(APP_ROOT, "drizzle");
 
@@ -58,11 +67,7 @@ function seedDatabase(databasePath) {
       insertSettings.run(`workspace-${tenant}`, `Tenant ${tenant.toUpperCase()}`, zone);
     }
 
-    // JP-0023 owns this table; until then the self-test stands in for it, so
-    // the pairing rules are exercised before there is real data to lose.
-    database.exec(
-      "create table document_version (id text primary key, storage_key text not null, sha256 text not null)",
-    );
+    // JP-0023 owns document/document_version; the migration above created them.
   } finally {
     database.close();
   }
@@ -72,8 +77,15 @@ function seedDocuments(databasePath, uploadsRoot, count) {
   mkdirSync(uploadsRoot, { recursive: true });
   const database = new Database(databasePath);
   try {
+    database.pragma("foreign_keys = ON");
+    database
+      .prepare(
+        "insert into document (id, workspace_id, name, kind, created_at, updated_at) values (?, ?, ?, 'resume', 0, 0)",
+      )
+      .run("document-1", "workspace-a", "Backend Java");
     const insert = database.prepare(
-      "insert into document_version (id, storage_key, sha256) values (?, ?, ?)",
+      "insert into document_version (id, workspace_id, document_id, label, storage_key, sha256, byte_size, content_type, created_at)" +
+        " values (?, 'workspace-a', 'document-1', ?, ?, ?, ?, 'application/pdf', 0)",
     );
     for (let index = 0; index < count; index += 1) {
       const storageKey = `resume-${index}.pdf`;
@@ -81,8 +93,10 @@ function seedDocuments(databasePath, uploadsRoot, count) {
       writeFileSync(join(uploadsRoot, storageKey), contents, "utf8");
       insert.run(
         `doc-${index}`,
+        `v${index + 1}`,
         storageKey,
         createHash("sha256").update(contents).digest("hex"),
+        contents.length,
       );
     }
   } finally {
@@ -163,7 +177,7 @@ async function concurrentWriterCase() {
     );
     check(
       "the manifest records a schema version",
-      backup.manifest.schema.latestTag === "0012_interview",
+      backup.manifest.schema.latestTag === latestMigrationTag(),
       backup.manifest.schema.latestTag ?? "none",
     );
 

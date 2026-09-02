@@ -66,22 +66,46 @@ function seedTwoTenants(databasePath: string) {
   }
 }
 
-/** Stand in for JP-0023's table, which does not exist yet. */
+/** Real JP-0023 rows: the backup contract is checked against the real schema. */
 function addDocumentVersion(
   databasePath: string,
   rows: { id: string; storageKey: string; sha256: string }[],
 ) {
   const database = new Database(databasePath);
   try {
-    database.exec(
-      "create table document_version (id text primary key, storage_key text not null, sha256 text not null)",
-    );
+    database.pragma("foreign_keys = ON");
+    database
+      .prepare(
+        "insert into document (id, workspace_id, name, kind, created_at, updated_at) values (?, ?, ?, 'resume', 0, 0)",
+      )
+      .run("doc-1", "workspace-a", "Backend Java");
     const insert = database.prepare(
-      "insert into document_version (id, storage_key, sha256) values (?, ?, ?)",
+      "insert into document_version (id, workspace_id, document_id, label, storage_key, sha256, byte_size, content_type, created_at)" +
+        " values (?, 'workspace-a', 'doc-1', ?, ?, ?, ?, 'application/pdf', 0)",
     );
+    let index = 0;
     for (const row of rows) {
-      insert.run(row.id, row.storageKey, row.sha256);
+      index += 1;
+      insert.run(
+        row.id,
+        `v${index}`,
+        row.storageKey,
+        row.sha256,
+        Math.max(1, row.sha256.length),
+      );
     }
+  } finally {
+    database.close();
+  }
+}
+
+/** A database older than the document migration still backs up and restores. */
+function dropDocumentTables(databasePath: string) {
+  const database = new Database(databasePath);
+  try {
+    database.exec("drop table document_usage");
+    database.exec("drop table document_version");
+    database.exec("drop table document");
   } finally {
     database.close();
   }
@@ -157,7 +181,14 @@ describe("createBackup — captured snapshot", () => {
     expect(result.manifest.tables.workspace).toBe(2);
     expect(result.manifest.tables.settings).toBe(2);
     expect(result.manifest.schema.appliedMigrations).toBeGreaterThan(0);
-    expect(result.manifest.schema.latestTag).toBe("0012_interview");
+    // Read from the journal, not hardcoded: every new migration would otherwise
+    // fail a test that has nothing to do with the change being made.
+    const journal = JSON.parse(
+      readFileSync(resolve("drizzle", "meta", "_journal.json"), "utf8"),
+    ) as { entries: { tag: string }[] };
+    expect(result.manifest.schema.latestTag).toBe(
+      journal.entries[journal.entries.length - 1].tag,
+    );
     expect(result.manifest.tables.task).toBe(0);
     expect(result.manifest.tables.tag).toBe(0);
     expect(result.manifest.tables.entity_tag).toBe(0);
@@ -180,9 +211,10 @@ describe("createBackup — captured snapshot", () => {
     }
   });
 
-  it("copies uploads and records an empty document map before document_version exists", () => {
+  it("copies uploads and records an empty document map for a pre-document database", () => {
     const app = scratchApp();
     seedTwoTenants(app.databasePath);
+    dropDocumentTables(app.databasePath);
     writeUpload(app.uploadsRoot, "resume.pdf", "synthetic resume bytes");
 
     const result = createBackup({ appRoot: app.root });
