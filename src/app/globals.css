@@ -646,6 +646,19 @@ main:focus {
   background: var(--hover);
 }
 
+/* Destructive is text-level, never a red fill and never the teal primary:
+   teal means action, and a delete must not read as the thing to press. */
+.btn--danger {
+  border-color: var(--line);
+  background: var(--raised);
+  color: var(--danger);
+}
+
+.btn--danger:hover {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
 .field {
   display: grid;
   gap: var(--space-1);
@@ -2390,6 +2403,17 @@ main:focus {
   white-space: nowrap;
 }
 
+/* A row header naming a document is content, not a column label: the uppercase
+   micro-caps treatment belongs to the header row only. */
+.document-table tbody th[scope="row"] {
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.83rem;
+  font-weight: 700;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
 .document-kind {
   color: var(--muted);
   font-family: var(--font-sans);
@@ -2410,6 +2434,7 @@ main:focus {
 
 .document-new-form .btn,
 .document-upload-form .btn,
+.document-card .btn,
 .document-table .btn {
   min-height: var(--target-min);
   justify-self: start;

@@ -161,7 +161,9 @@ function UploadVersionForm({ document }: { document: DocumentView }) {
       <div className="field">
         <label htmlFor={`${formId}-label`}>Version label</label>
         <input
-          defaultValue={suggestedVersionLabel(document.versions.length)}
+          defaultValue={suggestedVersionLabel(
+            document.versions.map((version) => version.label),
+          )}
           disabled={pending}
           id={`${formId}-label`}
           name="label"

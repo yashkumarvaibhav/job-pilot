@@ -38,9 +38,22 @@ export function documentVersionLabel(
   return `${documentName.trim()} ${versionLabel.trim()}`.trim();
 }
 
-/** The next label to suggest for a document that already has `count` versions. */
-export function suggestedVersionLabel(count: number): string {
-  return `v${count + 1}`;
+/**
+ * The next label to suggest. Labels are the owner's own ("Backend Java v3"), so
+ * this reads the numbers already used rather than counting rows — a document
+ * whose first upload was called v3 should suggest v4, not v2.
+ */
+export function suggestedVersionLabel(
+  existing: readonly string[] | number,
+): string {
+  if (typeof existing === "number") {
+    return `v${existing + 1}`;
+  }
+  const highest = existing.reduce((best, label) => {
+    const match = /(\d+)\s*$/.exec(label.trim());
+    return match ? Math.max(best, Number(match[1])) : best;
+  }, 0);
+  return `v${Math.max(highest, existing.length) + 1}`;
 }
 
 export const DOCUMENT_EMPTY =

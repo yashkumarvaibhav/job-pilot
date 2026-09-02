@@ -37,8 +37,12 @@ describe("document domain", () => {
   it("names a version the way §39 writes them", () => {
     expect(documentVersionLabel("Backend Java", "v3")).toBe("Backend Java v3");
     expect(documentVersionLabel(" General SWE ", " v5 ")).toBe("General SWE v5");
-    expect(suggestedVersionLabel(0)).toBe("v1");
-    expect(suggestedVersionLabel(4)).toBe("v5");
+    expect(suggestedVersionLabel([])).toBe("v1");
+    expect(suggestedVersionLabel(["v1", "v2"])).toBe("v3");
+    // A document whose first upload was already v3 suggests v4, not v2.
+    expect(suggestedVersionLabel(["v3"])).toBe("v4");
+    expect(suggestedVersionLabel(["Draft", "v9", "v2"])).toBe("v10");
+    expect(suggestedVersionLabel(["Draft"])).toBe("v2");
   });
 
   it("allows only the declared upload types, case-insensitively", () => {
