@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   APPLICATION_STAGES,
   applicationResultLabel,
+  isOfferDecision,
+  isOpenOfferDeadline,
+  offerDecisionLabel,
   rolledUpPipelineStage,
 } from "./application";
 
@@ -54,5 +57,14 @@ describe("application domain", () => {
     expect(applicationResultLabel("under_review")).toBe("—");
     expect(applicationResultLabel("offer")).toBe("Offer");
     expect(applicationResultLabel("rejected")).toBe("Rejected");
+  });
+
+  it("treats an offer deadline as open until a decision is recorded", () => {
+    expect(isOfferDecision("accepted")).toBe(true);
+    expect(isOfferDecision("maybe")).toBe(false);
+    expect(isOpenOfferDeadline("2026-09-01", null)).toBe(true);
+    expect(isOpenOfferDeadline("2026-09-01", "accepted")).toBe(false);
+    expect(isOpenOfferDeadline(null, null)).toBe(false);
+    expect(offerDecisionLabel("declined")).toBe("Declined");
   });
 });

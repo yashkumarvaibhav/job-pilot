@@ -6,6 +6,7 @@ import { useEffect, useId, useState } from "react";
 import {
   BriefcaseBusiness,
   CalendarClock,
+  ClipboardCheck,
   Handshake,
   ListTodo,
   MessagesSquare,
@@ -43,6 +44,8 @@ const kindVisuals: Record<
   opportunity_deadline: { icon: CalendarClock, tone: "warning" },
   referral_follow_up: { icon: Handshake, tone: "success" },
   interview: { icon: MessagesSquare, tone: "info" },
+  assessment_deadline: { icon: ClipboardCheck, tone: "warning" },
+  offer_deadline: { icon: Handshake, tone: "warning" },
   task: { icon: ListTodo, tone: "muted" },
 };
 

@@ -4,13 +4,14 @@ import {
   calendarDateInZone,
   isReferralTerminalStage,
 } from "../../domain/referral";
-import { parseDueSourceKey } from "../../domain/due-source";
+import { parseDueSourceKey, isDeadlineObjectKind } from "../../domain/due-source";
 import {
   TODAY_ACTIVITY_LIMIT,
   isDueOnOrBefore,
   todayDoNowVerbForKey,
   todayOpportunityPipelineTile,
 } from "../../domain/today";
+import { isDueInsideHorizon } from "../../domain/assessment";
 import { getWorkspaceSettings } from "../db/foundation";
 import type { AppDatabase } from "../db/client";
 import { interaction } from "../db/schema";
@@ -57,10 +58,16 @@ export function listTodayDueItems(
   now: Date = new Date(),
 ): DueItem[] {
   const snoozed = listSnoozedDueKeys(database, tenant, now);
-  return listDueItems(database, tenant).filter(
-    (item) =>
-      isDueOnOrBefore(item.dueOn, asOfOn) && !snoozed.has(item.sourceKey),
-  );
+  return listDueItems(database, tenant).filter((item) => {
+    if (snoozed.has(item.sourceKey)) {
+      return false;
+    }
+    const kind = parseDueSourceKey(item.sourceKey)?.kind;
+    if (kind && isDeadlineObjectKind(kind)) {
+      return isDueInsideHorizon(item.dueOn, asOfOn);
+    }
+    return isDueOnOrBefore(item.dueOn, asOfOn);
+  });
 }
 
 function emptyPipeline(): TodayPipeline {
@@ -107,6 +114,13 @@ export function getTodaySnapshot(
     }
   }
 
+  for (const item of doNow) {
+    const kind = parseDueSourceKey(item.sourceKey)?.kind;
+    if (kind && isDeadlineObjectKind(kind)) {
+      deadlines += 1;
+    }
+  }
+
   for (const row of listReferrals(database, tenant, { asOfOn })) {
     if (!isReferralTerminalStage(row.stage)) {
       pipeline.referral += 1;
@@ -135,11 +149,14 @@ export function getTodaySnapshot(
     asOfOn,
     timeZone,
     stats: {
-      followUps: doNow.filter(
-        (item) =>
+      followUps: doNow.filter((item) => {
+        const kind = parseDueSourceKey(item.sourceKey)?.kind;
+        return (
           item.origin === "derived" &&
-          parseDueSourceKey(item.sourceKey)?.kind !== "interview",
-      ).length,
+          kind !== "interview" &&
+          (kind == null || !isDeadlineObjectKind(kind))
+        );
+      }).length,
       needReply,
       deadlines,
       interviewsToday: countInterviewsOn(database, tenant, asOfOn, timeZone),

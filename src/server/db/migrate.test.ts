@@ -53,6 +53,7 @@ describe("migrateDatabase", () => {
           "workspace",
           "notification",
           "interview",
+          "assessment",
           "document",
           "document_version",
           "document_usage",
@@ -62,7 +63,7 @@ describe("migrateDatabase", () => {
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 15 });
+      ).toEqual({ count: 16 });
 
       for (const indexName of [
         "company_workspace_id_id_unique",
@@ -99,6 +100,7 @@ describe("migrateDatabase", () => {
         "application_workspace_opportunity_unique",
         "application_workspace_stage_idx",
         "application_workspace_applied_on_idx",
+        "application_workspace_offer_deadline_idx",
         "referral_request_workspace_id_id_unique",
         "referral_request_workspace_contact_idx",
         "referral_request_workspace_opportunity_idx",
@@ -141,6 +143,10 @@ describe("migrateDatabase", () => {
         "interview_workspace_opportunity_round_unique",
         "interview_workspace_opportunity_idx",
         "interview_workspace_at_idx",
+        "assessment_workspace_id_id_unique",
+        "assessment_workspace_opportunity_idx",
+        "assessment_workspace_application_idx",
+        "assessment_workspace_due_idx",
       ]) {
         const columns = client.sqlite
           .prepare(
@@ -486,6 +492,8 @@ describe("migrateDatabase", () => {
         "resume_version_id",
         "stage",
         "notes",
+        "offer_deadline_on",
+        "offer_decision",
         "created_at",
       ]);
       expect(
@@ -548,6 +556,63 @@ describe("migrateDatabase", () => {
       expect(interviewOpportunityForeignKeys).toEqual([
         { table: "opportunity", from: "workspace_id", to: "workspace_id" },
         { table: "opportunity", from: "opportunity_id", to: "id" },
+      ]);
+
+      const assessmentColumns = client.sqlite
+        .prepare(
+          "select name, \"notnull\", dflt_value from pragma_table_info('assessment') order by cid",
+        )
+        .all() as {
+        name: string;
+        notnull: number;
+        dflt_value: string | null;
+      }[];
+      expect(assessmentColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "opportunity_id",
+        "application_id",
+        "kind",
+        "platform",
+        "invited_at",
+        "window_opens_at",
+        "due_at",
+        "duration_minutes",
+        "status",
+        "result",
+        "notes",
+        "created_at",
+      ]);
+      expect(
+        assessmentColumns.find((column) => column.name === "opportunity_id")
+          ?.notnull,
+      ).toBe(1);
+      expect(
+        assessmentColumns.find((column) => column.name === "application_id")
+          ?.notnull,
+      ).toBe(0);
+      expect(
+        assessmentColumns.find((column) => column.name === "status")
+          ?.dflt_value,
+      ).toBe("'invited'");
+
+      const assessmentOpportunityForeignKeys = client.sqlite
+        .prepare(
+          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('assessment') where \"table\" = 'opportunity' order by seq",
+        )
+        .all();
+      expect(assessmentOpportunityForeignKeys).toEqual([
+        { table: "opportunity", from: "workspace_id", to: "workspace_id" },
+        { table: "opportunity", from: "opportunity_id", to: "id" },
+      ]);
+      const assessmentApplicationForeignKeys = client.sqlite
+        .prepare(
+          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('assessment') where \"table\" = 'application' order by seq",
+        )
+        .all();
+      expect(assessmentApplicationForeignKeys).toEqual([
+        { table: "application", from: "workspace_id", to: "workspace_id" },
+        { table: "application", from: "application_id", to: "id" },
       ]);
 
       const referralColumns = client.sqlite

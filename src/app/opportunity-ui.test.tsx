@@ -8,6 +8,7 @@ import { applyToOpportunity, updateApplication } from "../server/repos/applicati
 import { createCompany } from "../server/repos/companies";
 import { createContact } from "../server/repos/contacts";
 import { createInterview } from "../server/repos/interviews";
+import { createAssessment } from "../server/repos/assessments";
 import { createOpportunity, linkContactToOpportunity } from "../server/repos/opportunities";
 import { createTenantTestFixture } from "../test/tenant-fixture";
 
@@ -292,6 +293,8 @@ describe("opportunity screens", () => {
     expect(html).toContain("Application stage");
     expect(html).toContain("Greenhouse");
     expect(html).toContain("Save application");
+    expect(html).toContain("Offer deadline");
+    expect(html).toContain("Offer decision");
     expect(html).not.toContain("Mark applied");
   });
 
@@ -333,5 +336,45 @@ describe("opportunity screens", () => {
     expect(css).toContain(".interview-table-wrap");
     expect(css).toContain(".interview-card-list");
     expect(css).toContain("@media (max-width: 767px)");
+  });
+
+  it("lists assessments with the round list and keeps the rolled-up chip on application.stage", async () => {
+    const fixture = newFixture();
+    const company = createCompany(fixture.client.db, fixture.tenantA, {
+      id: "google",
+      name: "Google",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "google-swe",
+      companyId: company.id,
+      role: "SDE",
+    });
+    createAssessment(fixture.client.db, fixture.tenantA, {
+      id: "oa-google",
+      opportunityId: "google-swe",
+      kind: "Online Assessment",
+      platform: "HackerRank",
+      dateOn: "2026-09-03",
+      time: "18:00",
+    });
+
+    const html = renderToStaticMarkup(
+      await OpportunityDetailPage({
+        params: Promise.resolve({ id: "google-swe" }),
+      }),
+    );
+    expect(html).toContain("Assessments");
+    expect(html).toContain('class="tbl assessment-table"');
+    expect(html).toContain('class="assessment-card-list"');
+    expect(html).toContain("Online Assessment");
+    expect(html).toContain("HackerRank");
+    expect(html).toContain("Add assessment");
+    expect(html).toContain("Save assessment");
+    expect(html).toContain("Invited");
+    expect(html).toContain("Mark applied");
+    expect(html).toContain("Pursuit stage");
+    const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
+    expect(css).toContain(".assessment-table-wrap");
+    expect(css).toContain(".assessment-card-list");
   });
 });

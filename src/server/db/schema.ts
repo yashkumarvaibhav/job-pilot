@@ -28,7 +28,12 @@ import type {
 import {
   DEFAULT_APPLICATION_STAGE,
   type ApplicationStage,
+  type OfferDecision,
 } from "../../domain/application";
+import {
+  DEFAULT_ASSESSMENT_STATUS,
+  type AssessmentStatus,
+} from "../../domain/assessment";
 import {
   DEFAULT_OPPORTUNITY_BUCKET,
   DEFAULT_OPPORTUNITY_STAGE,
@@ -677,6 +682,8 @@ export const application = sqliteTable(
       .notNull()
       .default(DEFAULT_APPLICATION_STAGE),
     notes: text("notes"),
+    offerDeadlineOn: text("offer_deadline_on"),
+    offerDecision: text("offer_decision").$type<OfferDecision | null>(),
     createdAt: utcInstant("created_at").notNull(),
   },
   (table) => [
@@ -693,6 +700,10 @@ export const application = sqliteTable(
       table.workspaceId,
       table.appliedOn,
     ),
+    index("application_workspace_offer_deadline_idx").on(
+      table.workspaceId,
+      table.offerDeadlineOn,
+    ),
     sameWorkspaceForeignKey(
       "application_opportunity_fk",
       { workspaceId: table.workspaceId, parentId: table.opportunityId },
@@ -702,6 +713,10 @@ export const application = sqliteTable(
     check(
       "application_stage_valid",
       sql`${table.stage} in ('applied', 'application_confirmed', 'under_review', 'oa_received', 'oa_completed', 'interview_scheduled', 'interview_round_1', 'interview_round_2', 'hiring_manager', 'hr', 'offer', 'rejected', 'withdrawn', 'ghosted')`,
+    ),
+    check(
+      "application_offer_decision_valid",
+      sql`${table.offerDecision} is null or ${table.offerDecision} in ('accepted', 'declined')`,
     ),
   ],
 );
@@ -742,6 +757,59 @@ export const interview = sqliteTable(
     ).onDelete("cascade"),
     check("interview_kind_not_blank", sql`length(trim(${table.kind})) > 0`),
     check("interview_round_index_positive", sql`${table.roundIndex} >= 1`),
+  ],
+);
+
+export const assessment = sqliteTable(
+  "assessment",
+  {
+    ...workspaceOwnedEntityColumns(),
+    opportunityId: text("opportunity_id").notNull(),
+    applicationId: text("application_id"),
+    kind: text("kind").notNull(),
+    platform: text("platform"),
+    invitedAt: utcInstant("invited_at"),
+    windowOpensAt: utcInstant("window_opens_at"),
+    dueAt: utcInstant("due_at"),
+    durationMinutes: integer("duration_minutes"),
+    status: text("status")
+      .$type<AssessmentStatus>()
+      .notNull()
+      .default(DEFAULT_ASSESSMENT_STATUS),
+    result: text("result"),
+    notes: text("notes"),
+    createdAt: utcInstant("created_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("assessment", table),
+    index("assessment_workspace_opportunity_idx").on(
+      table.workspaceId,
+      table.opportunityId,
+    ),
+    index("assessment_workspace_application_idx").on(
+      table.workspaceId,
+      table.applicationId,
+    ),
+    index("assessment_workspace_due_idx").on(table.workspaceId, table.dueAt),
+    sameWorkspaceForeignKey(
+      "assessment_opportunity_fk",
+      { workspaceId: table.workspaceId, parentId: table.opportunityId },
+      opportunity,
+    ).onDelete("cascade"),
+    sameWorkspaceForeignKey(
+      "assessment_application_fk",
+      { workspaceId: table.workspaceId, parentId: table.applicationId },
+      application,
+    ).onDelete("cascade"),
+    check("assessment_kind_not_blank", sql`length(trim(${table.kind})) > 0`),
+    check(
+      "assessment_status_valid",
+      sql`${table.status} in ('invited', 'completed', 'cancelled')`,
+    ),
+    check(
+      "assessment_duration_minutes_positive",
+      sql`${table.durationMinutes} is null or ${table.durationMinutes} > 0`,
+    ),
   ],
 );
 

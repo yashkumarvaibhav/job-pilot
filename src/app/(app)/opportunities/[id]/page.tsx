@@ -5,6 +5,11 @@ import {
   MarkAppliedForm,
 } from "@/components/application-forms";
 import {
+  AssessmentAddForm,
+  AssessmentEditForm,
+  AssessmentStatusChip,
+} from "@/components/assessment-forms";
+import {
   InterviewAddForm,
   InterviewEditForm,
 } from "@/components/interview-forms";
@@ -33,10 +38,12 @@ import {
   listOpportunityContacts,
 } from "@/server/repos/opportunities";
 import { listInterviews } from "@/server/repos/interviews";
+import { listAssessments } from "@/server/repos/assessments";
 import { listReferrals } from "@/server/repos/referrals";
 import { listActivity } from "@/server/repos/activity";
 import { listEntityTags, listTags } from "@/server/repos/tags";
 import { formatInterviewWhen } from "@/domain/interview";
+import { isAssessmentStatus } from "@/domain/assessment";
 import { calendarDateInZone } from "@/domain/referral";
 
 type Props = { params: Promise<{ id: string }> };
@@ -119,6 +126,10 @@ export default async function OpportunityDetailPage({ params }: Props) {
     entityId: row.id,
   });
   const interviews = listInterviews(database, tenant, row.id);
+  const assessments = listAssessments(database, tenant, row.id);
+  const applicationChoices = row.application
+    ? [{ id: row.application.id, label: `${row.companyName} application` }]
+    : [];
   const fields = [
     ["Job ID", row.jobId],
     ["Job URL", row.url],
@@ -288,6 +299,105 @@ export default async function OpportunityDetailPage({ params }: Props) {
             versions={versionChoices}
           />
         )}
+      </section>
+      <section
+        aria-labelledby="assessments-heading"
+        className="detail-section"
+        id="assessments"
+      >
+        <h2 id="assessments-heading">Assessments</h2>
+        {assessments.length === 0 ? (
+          <p className="section-empty">
+            No assessments yet. A recruiter-sourced assessment is valid before an
+            application exists.
+          </p>
+        ) : (
+          <>
+            <div className="table-scroll assessment-table-wrap">
+              <table className="tbl assessment-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Kind</th>
+                    <th scope="col">Platform</th>
+                    <th scope="col">Window</th>
+                    <th scope="col">Deadline</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Application</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {assessments.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.kind}</td>
+                      <td>{item.platform ?? "—"}</td>
+                      <td className="tnum">{item.windowLabel}</td>
+                      <td className="tnum">{item.whenLabel}</td>
+                      <td>
+                        {isAssessmentStatus(item.status) ? (
+                          <AssessmentStatusChip status={item.status} />
+                        ) : (
+                          item.status
+                        )}
+                      </td>
+                      <td>
+                        {item.applicationId ? "Linked application" : "None"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <ul aria-label="Assessments" className="assessment-card-list">
+              {assessments.map((item) => (
+                <li className="assessment-list-card" key={item.id}>
+                  <span className="assessment-list-card__heading">
+                    <strong>
+                      {item.kind}
+                      {item.platform ? ` · ${item.platform}` : ""}
+                    </strong>
+                    {isAssessmentStatus(item.status) ? (
+                      <AssessmentStatusChip status={item.status} />
+                    ) : null}
+                  </span>
+                  <span className="tnum">{item.whenLabel}</span>
+                  <span>
+                    {item.applicationId
+                      ? "Linked application"
+                      : "No linked application"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {assessments.map((item) => {
+              const when = formatInterviewWhen(item.dueAt, timeZone);
+              return (
+                <AssessmentEditForm
+                  applications={applicationChoices}
+                  key={item.id}
+                  row={{
+                    id: item.id,
+                    kind: item.kind,
+                    platform: item.platform,
+                    dateOn: when.dateOn,
+                    time: when.time,
+                    durationMinutes: item.durationMinutes,
+                    status: isAssessmentStatus(item.status)
+                      ? item.status
+                      : "invited",
+                    result: item.result,
+                    notes: item.notes,
+                    applicationId: item.applicationId,
+                  }}
+                />
+              );
+            })}
+          </>
+        )}
+        <AssessmentAddForm
+          applications={applicationChoices}
+          defaultDateOn={asOfOn}
+          opportunityId={row.id}
+        />
       </section>
       <section
         aria-labelledby="interviews-heading"

@@ -22,6 +22,8 @@ const UPDATE_TEXT_FIELDS = [
   "resumeVersionId",
   "notes",
   "stage",
+  "offerDeadlineOn",
+  "offerDecision",
 ] as const;
 
 async function readObject(

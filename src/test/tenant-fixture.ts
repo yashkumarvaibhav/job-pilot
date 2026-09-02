@@ -28,6 +28,7 @@ type FoundationTable =
   | "entity_tag"
   | "notification"
   | "interview"
+  | "assessment"
   | "document"
   | "document_version"
   | "document_usage";

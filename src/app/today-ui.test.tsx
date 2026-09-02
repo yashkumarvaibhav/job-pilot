@@ -2,7 +2,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TODAY_EMPTY } from "../domain/today";
-import { calendarDateInZone } from "../domain/referral";
+import { calendarDateInZone, shiftCalendarDate } from "../domain/referral";
+import { applyToOpportunity, updateApplication } from "../server/repos/applications";
+import { createAssessment } from "../server/repos/assessments";
 import { createCompany } from "../server/repos/companies";
 import { createContact, updateContact } from "../server/repos/contacts";
 import { createInterview } from "../server/repos/interviews";
@@ -112,6 +114,46 @@ describe("Today screen", () => {
     expect(html).toContain("Round 1 · Coding");
     expect(html).toContain("Interview");
     expect(html).toContain("Microsoft SDE");
+  });
+
+  it("lists a complete Google assessment due tomorrow and an overdue offer with an icon", async () => {
+    const fixture = newFixture();
+    const asOfOn = calendarDateInZone("Asia/Kolkata");
+    const tomorrow = shiftCalendarDate(asOfOn, 1);
+    const yesterday = shiftCalendarDate(asOfOn, -1);
+    const company = createCompany(fixture.client.db, fixture.tenantA, {
+      id: "google",
+      name: "Google",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "google-swe",
+      companyId: company.id,
+      role: "SDE",
+    });
+    createAssessment(fixture.client.db, fixture.tenantA, {
+      id: "oa-google",
+      opportunityId: "google-swe",
+      kind: "Online Assessment",
+      platform: "HackerRank",
+      dateOn: tomorrow,
+      time: "18:00",
+    });
+    applyToOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "google-app",
+      opportunityId: "google-swe",
+      portal: "Greenhouse",
+      appliedOn: asOfOn,
+    });
+    updateApplication(fixture.client.db, fixture.tenantA, "google-app", {
+      offerDeadlineOn: yesterday,
+    });
+
+    const html = renderToStaticMarkup(await Home());
+    expect(html).toContain("Complete Google assessment");
+    expect(html).toContain("offer deadline");
+    expect(html).toContain("Overdue");
+    expect(html).toContain("aria-hidden=\"true\"");
+    expect(html).toContain("Deadlines");
   });
 
   it("designs loading and error states", () => {

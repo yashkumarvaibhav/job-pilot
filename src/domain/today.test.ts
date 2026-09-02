@@ -46,6 +46,8 @@ describe("Today domain", () => {
     expect(todayDoNowVerb("contact_next_action")).toBe("Follow up");
     expect(todayDoNowVerb("opportunity_next_action")).toBe("Apply");
     expect(todayDoNowVerb("interview")).toBe("Interview");
+    expect(todayDoNowVerb("assessment_deadline")).toBe("Complete");
+    expect(todayDoNowVerb("offer_deadline")).toBe("Decide");
     expect(todayDoNowVerb("task")).toBe("Do");
     expect(
       todayDoNowVerbForKey(dueSourceKey("contact_next_action", "rahul")),
@@ -57,6 +59,20 @@ describe("Today domain", () => {
         "Rahul Sharma",
       ),
     ).toBe("Follow up with Rahul Sharma");
+    expect(
+      todayDoNowHeading(
+        dueSourceKey("assessment_deadline", "oa-google"),
+        "Complete",
+        "Google",
+      ),
+    ).toBe("Complete Google assessment");
+    expect(
+      todayDoNowHeading(
+        dueSourceKey("offer_deadline", "google-app"),
+        "Decide",
+        "Google SDE",
+      ),
+    ).toBe("Google SDE offer deadline");
     expect(
       todayDerivedActionTitle("contact_next_action", "  Ping Priya  "),
     ).toBe("Ping Priya");

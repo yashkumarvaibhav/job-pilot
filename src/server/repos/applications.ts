@@ -5,8 +5,12 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import {
   DEFAULT_APPLICATION_STAGE,
   isApplicationStage,
+  isOfferDecision,
+  isOpenOfferDeadline,
   type ApplicationStage,
+  type OfferDecision,
 } from "../../domain/application";
+import { derivedDueItemTitle } from "../../domain/due-source";
 import { logEvent } from "../db/activity";
 import type { AppDatabase, AppTransaction } from "../db/client";
 import {
@@ -46,7 +50,10 @@ export type UpdateApplicationInput = Partial<
     | "resumeVersionId"
     | "notes"
   > & { stage: ApplicationStage }
->;
+> & {
+  offerDeadlineOn?: string | null;
+  offerDecision?: OfferDecision | string | null;
+};
 
 export class ApplicationInputError extends Error {
   constructor(message: string) {
@@ -89,6 +96,32 @@ function requiredDate(value: string, label: string): string {
 function validStage(value: unknown): ApplicationStage {
   if (!isApplicationStage(value)) {
     throw new ApplicationInputError("Choose a valid application stage.");
+  }
+  return value;
+}
+
+function optionalDate(value: string | null | undefined, label: string): string | null {
+  if (value == null) {
+    return null;
+  }
+  const normalized = value.trim();
+  if (normalized.length === 0) {
+    return null;
+  }
+  return requiredDate(normalized, label);
+}
+
+function optionalDecision(
+  value: OfferDecision | string | null | undefined,
+): OfferDecision | null {
+  if (value == null) {
+    return null;
+  }
+  if (typeof value === "string" && value.trim().length === 0) {
+    return null;
+  }
+  if (!isOfferDecision(value)) {
+    throw new ApplicationInputError("Choose a valid offer decision.");
   }
   return value;
 }
@@ -382,6 +415,13 @@ function updateValues(input: UpdateApplicationInput) {
     values.resumeVersionId = optionalText(input.resumeVersionId);
   if (input.notes !== undefined) values.notes = optionalText(input.notes);
   if (input.stage !== undefined) values.stage = validStage(input.stage);
+  if (input.offerDeadlineOn !== undefined)
+    values.offerDeadlineOn = optionalDate(
+      input.offerDeadlineOn,
+      "Offer deadline",
+    );
+  if (input.offerDecision !== undefined)
+    values.offerDecision = optionalDecision(input.offerDecision);
 
   return values;
 }
@@ -430,7 +470,82 @@ export function updateApplication(
       entityId: id,
       payload: { fields: Object.keys(values).sort() },
     });
+    if (
+      input.offerDeadlineOn !== undefined &&
+      values.offerDeadlineOn != null &&
+      values.offerDeadlineOn !== current.offerDeadlineOn
+    ) {
+      logEvent(transaction, tenant, {
+        at,
+        kind: "OFFER_DEADLINE_SET",
+        entityType: "application",
+        entityId: id,
+        payload: {
+          opportunityId: current.opportunityId,
+          offerDeadlineOn: values.offerDeadlineOn,
+        },
+      });
+    }
 
     return selectApplication(transaction, tenant, id)!;
   });
+}
+
+export function listOpenOfferDeadlineDueRows(
+  database: AppDatabase | AppTransaction,
+  tenant: TenantContext,
+): Array<{
+  id: string;
+  opportunityId: string;
+  title: string;
+  dueOn: string;
+  entityLabel: string;
+}> {
+  const rows = database
+    .select({
+      id: application.id,
+      opportunityId: application.opportunityId,
+      offerDeadlineOn: application.offerDeadlineOn,
+      offerDecision: application.offerDecision,
+      companyName: company.name,
+      role: opportunity.role,
+    })
+    .from(application)
+    .innerJoin(
+      opportunity,
+      and(
+        eq(opportunity.workspaceId, application.workspaceId),
+        eq(opportunity.id, application.opportunityId),
+      ),
+    )
+    .innerJoin(
+      company,
+      and(
+        eq(company.workspaceId, opportunity.workspaceId),
+        eq(company.id, opportunity.companyId),
+      ),
+    )
+    .where(eq(application.workspaceId, tenant.workspaceId))
+    .all();
+
+  const due: Array<{
+    id: string;
+    opportunityId: string;
+    title: string;
+    dueOn: string;
+    entityLabel: string;
+  }> = [];
+  for (const row of rows) {
+    if (!isOpenOfferDeadline(row.offerDeadlineOn, row.offerDecision)) {
+      continue;
+    }
+    due.push({
+      id: row.id,
+      opportunityId: row.opportunityId,
+      title: derivedDueItemTitle("offer_deadline", null),
+      dueOn: row.offerDeadlineOn as string,
+      entityLabel: `${row.companyName} ${row.role}`.trim(),
+    });
+  }
+  return due;
 }

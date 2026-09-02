@@ -34,6 +34,36 @@ export const APPLICATION_RESULT_STAGES = [
 export type ApplicationResultStage =
   (typeof APPLICATION_RESULT_STAGES)[number];
 
+export const OFFER_DECISIONS = [
+  { value: "accepted", label: "Accepted" },
+  { value: "declined", label: "Declined" },
+] as const;
+
+export type OfferDecision = (typeof OFFER_DECISIONS)[number]["value"];
+
+const offerDecisionValues = new Set<string>(
+  OFFER_DECISIONS.map((decision) => decision.value),
+);
+
+export function isOfferDecision(value: unknown): value is OfferDecision {
+  return typeof value === "string" && offerDecisionValues.has(value);
+}
+
+export function offerDecisionLabel(value: OfferDecision): string {
+  return OFFER_DECISIONS.find((decision) => decision.value === value)!.label;
+}
+
+export function isOpenOfferDeadline(
+  offerDeadlineOn: string | null | undefined,
+  offerDecision: string | null | undefined,
+): boolean {
+  return (
+    typeof offerDeadlineOn === "string" &&
+    offerDeadlineOn.length > 0 &&
+    (offerDecision == null || offerDecision.length === 0)
+  );
+}
+
 const applicationStageValues = new Set<string>(
   APPLICATION_STAGES.map(({ value }) => value),
 );

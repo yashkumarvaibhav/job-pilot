@@ -1495,7 +1495,9 @@ main:focus {
 .task-form,
 .task-form-grid,
 .interview-form,
-.interview-form-grid {
+.interview-form-grid,
+.assessment-form,
+.assessment-form-grid {
   display: grid;
   gap: var(--space-4);
 }
@@ -1504,7 +1506,8 @@ main:focus {
 .application-form-grid,
 .referral-form-grid,
 .task-form-grid,
-.interview-form-grid {
+.interview-form-grid,
+.assessment-form-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -1512,7 +1515,8 @@ main:focus {
 .application-form > .btn,
 .referral-form > .btn,
 .task-form > .btn,
-.interview-form > .btn {
+.interview-form > .btn,
+.assessment-form > .btn {
   justify-self: start;
 }
 
@@ -1521,18 +1525,28 @@ main:focus {
 }
 
 .task-form-wide,
-.interview-form-wide {
+.interview-form-wide,
+.assessment-form-wide {
   grid-column: 1 / -1;
 }
 
-.interview-form-actions {
+.interview-form-actions,
+.assessment-form-actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
 }
 
-.interview-form-actions .btn {
+.interview-form-actions .btn,
+.assessment-form-actions .btn {
   min-height: var(--target-min);
+}
+
+.due-when {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .task-complete {
@@ -1640,7 +1654,8 @@ main:focus {
 .application-card-list,
 .referral-card-list,
 .task-card-list,
-.interview-card-list {
+.interview-card-list,
+.assessment-card-list {
   display: none;
   margin: 0;
   padding: 0;
@@ -2057,7 +2072,8 @@ main:focus {
   .application-form-grid,
   .referral-form-grid,
   .task-form-grid,
-  .interview-form-grid {
+  .interview-form-grid,
+  .assessment-form-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -2069,7 +2085,8 @@ main:focus {
   .application-table-wrap,
   .referral-table-wrap,
   .task-table-wrap,
-  .interview-table-wrap {
+  .interview-table-wrap,
+  .assessment-table-wrap {
     display: none;
   }
 
@@ -2082,7 +2099,8 @@ main:focus {
   .application-card-list,
   .referral-card-list,
   .task-card-list,
-  .interview-card-list {
+  .interview-card-list,
+  .assessment-card-list {
     display: grid;
     gap: var(--space-3);
   }
@@ -2091,7 +2109,8 @@ main:focus {
   .application-list-card,
   .referral-list-card,
   .task-list-card,
-  .interview-list-card {
+  .interview-list-card,
+  .assessment-list-card {
     display: grid;
     min-height: var(--target-min);
     gap: var(--space-2);
@@ -2115,7 +2134,8 @@ main:focus {
   .application-list-card__heading,
   .referral-list-card__heading,
   .task-list-card__heading,
-  .interview-list-card__heading {
+  .interview-list-card__heading,
+  .assessment-list-card__heading {
     display: flex;
     min-width: 0;
     align-items: center;

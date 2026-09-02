@@ -5,6 +5,7 @@ import { useId, useState } from "react";
 
 import {
   APPLICATION_STAGES,
+  OFFER_DECISIONS,
   type ApplicationStage,
 } from "@/domain/application";
 import { DOCUMENT_NO_VERSION_LABEL } from "@/domain/document";
@@ -188,6 +189,8 @@ export function ApplicationEditForm({
     resumeVersionId: string | null;
     notes: string | null;
     stage: ApplicationStage;
+    offerDeadlineOn: string | null;
+    offerDecision: string | null;
   };
 }) {
   const formId = useId();
@@ -210,6 +213,8 @@ export function ApplicationEditForm({
       resumeVersionId: String(form.get("resumeVersionId") ?? ""),
       notes: String(form.get("notes") ?? ""),
       stage: String(form.get("stage") ?? ""),
+      offerDeadlineOn: String(form.get("offerDeadlineOn") ?? ""),
+      offerDecision: String(form.get("offerDecision") ?? ""),
     };
 
     try {
@@ -299,6 +304,33 @@ export function ApplicationEditForm({
             {APPLICATION_STAGES.map((stage) => (
               <option key={stage.value} value={stage.value}>
                 {stage.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor={`${formId}-offer-deadline`}>Offer deadline</label>
+          <input
+            className="tnum"
+            defaultValue={application.offerDeadlineOn ?? ""}
+            disabled={pending}
+            id={`${formId}-offer-deadline`}
+            name="offerDeadlineOn"
+            type="date"
+          />
+        </div>
+        <div className="field">
+          <label htmlFor={`${formId}-offer-decision`}>Offer decision</label>
+          <select
+            defaultValue={application.offerDecision ?? ""}
+            disabled={pending}
+            id={`${formId}-offer-decision`}
+            name="offerDecision"
+          >
+            <option value="">Not decided</option>
+            {OFFER_DECISIONS.map((decision) => (
+              <option key={decision.value} value={decision.value}>
+                {decision.label}
               </option>
             ))}
           </select>

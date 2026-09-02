@@ -40,6 +40,8 @@ export type OpportunityApplication = {
   referrer: string | null;
   resumeVersionId: string | null;
   notes: string | null;
+  offerDeadlineOn: string | null;
+  offerDecision: string | null;
 };
 export type OpportunityListItem = Opportunity & {
   companyName: string;
@@ -299,6 +301,8 @@ function opportunityApplication(
         referrer: row.referrer,
         resumeVersionId: row.resumeVersionId,
         notes: row.notes,
+        offerDeadlineOn: row.offerDeadlineOn,
+        offerDecision: row.offerDecision,
       }
     : null;
 }

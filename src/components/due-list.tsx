@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { AlarmClock } from "lucide-react";
 
 import { ConvertDueItemButton, TaskCompleteButton } from "@/components/task-forms";
 import { taskEntityHref } from "@/components/task-status";
+import { isOverdueOn } from "@/domain/assessment";
 import {
   TODAY_EMPTY,
   todayDoNowHeading,
@@ -9,10 +11,21 @@ import {
 } from "@/domain/today";
 import type { DueItem } from "@/server/repos/tasks";
 
+function OverdueChip() {
+  return (
+    <span className="chip contact-status-chip" data-tone="danger">
+      <AlarmClock aria-hidden="true" />
+      Overdue
+    </span>
+  );
+}
+
 export function DueItemCollection({
+  asOfOn,
   empty = TODAY_EMPTY,
   rows,
 }: {
+  asOfOn?: string;
   empty?: string;
   rows: DueItem[];
 }) {
@@ -44,6 +57,7 @@ export function DueItemCollection({
             {rows.map((row) => {
               const href = taskEntityHref(row.entityType, row.entityId);
               const verb = todayDoNowVerbForKey(row.sourceKey);
+              const overdue = asOfOn != null && isOverdueOn(row.dueOn, asOfOn);
               return (
                 <tr key={row.sourceKey}>
                   <td>{verb}</td>
@@ -57,7 +71,12 @@ export function DueItemCollection({
                     )}
                   </td>
                   <td>{row.title}</td>
-                  <td className="tnum">{row.dueOn ?? "—"}</td>
+                  <td className="tnum">
+                    <span className="due-when">
+                      {row.dueOn ?? "—"}
+                      {overdue ? <OverdueChip /> : null}
+                    </span>
+                  </td>
                   <td>
                     {row.origin === "derived" ? (
                       <ConvertDueItemButton
@@ -85,10 +104,12 @@ export function DueItemCollection({
             verb,
             row.entityLabel,
           );
+          const overdue = asOfOn != null && isOverdueOn(row.dueOn, asOfOn);
           return (
             <li className="task-list-card" key={row.sourceKey}>
               <span className="task-list-card__heading">
                 <strong>{heading}</strong>
+                {overdue ? <OverdueChip /> : null}
               </span>
               <span>{row.title}</span>
               <span>

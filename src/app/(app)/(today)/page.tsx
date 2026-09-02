@@ -37,7 +37,11 @@ export default async function Home() {
 
       <section aria-labelledby="do-now">
         <h2 id="do-now">Do Now</h2>
-        <DueItemCollection empty={TODAY_EMPTY} rows={snapshot.doNow} />
+        <DueItemCollection
+          asOfOn={snapshot.asOfOn}
+          empty={TODAY_EMPTY}
+          rows={snapshot.doNow}
+        />
       </section>
 
       <section aria-labelledby="pipeline">

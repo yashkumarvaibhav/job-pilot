@@ -59,6 +59,13 @@ import {
   updateInterview,
 } from "./interviews";
 import {
+  createAssessment,
+  deleteAssessment,
+  getAssessment,
+  listAssessments,
+  updateAssessment,
+} from "./assessments";
+import {
   completeNotifications,
   dismissNotifications,
   listMutedNotificationKinds,
@@ -113,6 +120,8 @@ const TENANT_ROUTE_FILES = [
   "activity/route.ts",
   "applications/[id]/route.ts",
   "applications/route.ts",
+  "assessments/[id]/route.ts",
+  "assessments/route.ts",
   "companies/[id]/route.ts",
   "companies/route.ts",
   "contacts/[id]/interactions/[interactionId]/mark-replied/route.ts",
@@ -247,6 +256,13 @@ describe("registered tenant perimeter", () => {
       dateOn: "2026-09-03",
       time: "10:00",
     })!;
+    const assessment = createAssessment(database, tenant, {
+      id: "private-assessment",
+      opportunityId: opportunity.id,
+      kind: "Private OA",
+      dateOn: "2026-09-03",
+      time: "18:00",
+    })!;
     const tagged = attachTag(database, tenant, {
       id: "private-tag",
       label: "Private boundary tag",
@@ -286,6 +302,7 @@ describe("registered tenant perimeter", () => {
       referral,
       task,
       interview,
+      assessment,
       tagId: tagged.tagId,
       document,
       version,
@@ -331,6 +348,9 @@ describe("registered tenant perimeter", () => {
     expect(getInterview(database, a, privateRows.interview.id)).toEqual(
       getInterview(database, a, "missing-interview"),
     );
+    expect(getAssessment(database, a, privateRows.assessment.id)).toEqual(
+      getAssessment(database, a, "missing-assessment"),
+    );
     expect(getTag(database, a, privateRows.tagId)).toEqual(
       getTag(database, a, "missing-tag"),
     );
@@ -368,6 +388,8 @@ describe("registered tenant perimeter", () => {
     expect(completeTask(database, a, privateRows.task.id)).toBeUndefined();
     expect(updateInterview(database, a, privateRows.interview.id, { notes: "x" })).toBeUndefined();
     expect(deleteInterview(database, a, privateRows.interview.id)).toBe(false);
+    expect(updateAssessment(database, a, privateRows.assessment.id, { notes: "x" })).toBeUndefined();
+    expect(deleteAssessment(database, a, privateRows.assessment.id)).toBe(false);
     expect(deleteTag(database, a, privateRows.tagId)).toBe(false);
 
     expect(() =>
@@ -438,6 +460,12 @@ describe("registered tenant perimeter", () => {
       }),
     ).toBeUndefined();
     expect(
+      createAssessment(database, a, {
+        opportunityId: privateRows.opportunity.id,
+        kind: "Cross boundary OA",
+      }),
+    ).toBeUndefined();
+    expect(
       attachTag(database, a, {
         label: "Cross boundary",
         entityType: "company",
@@ -502,6 +530,8 @@ describe("registered tenant perimeter", () => {
       notifications: listNotifications(database, a, "all", { now }),
       interviews: listInterviews(database, a),
       filteredInterviews: listInterviews(database, a, privateRows.opportunity.id),
+      assessments: listAssessments(database, a),
+      filteredAssessments: listAssessments(database, a, privateRows.opportunity.id),
       documents: listDocuments(database, a),
       versionChoices: listVersionChoices(database, a),
       versionNames: [...versionDisplayNames(database, a)],

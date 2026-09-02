@@ -5,6 +5,8 @@ export const DUE_SOURCE_KINDS = [
   "opportunity_deadline",
   "referral_follow_up",
   "interview",
+  "assessment_deadline",
+  "offer_deadline",
   "task",
 ] as const;
 
@@ -44,6 +46,10 @@ export function dueSourceKey(kind: DueSourceKind, entityId: string): string {
       return `referral:${id}:follow_up`;
     case "interview":
       return `interview:${id}`;
+    case "assessment_deadline":
+      return `assessment:${id}:deadline`;
+    case "offer_deadline":
+      return `application:${id}:offer_deadline`;
     case "task":
       return `task:${id}`;
   }
@@ -52,6 +58,16 @@ export function dueSourceKey(kind: DueSourceKind, entityId: string): string {
 export function parseDueSourceKey(
   key: string,
 ): { kind: DueSourceKind; entityId: string } | null {
+  const assessment = key.match(/^assessment:(.+):deadline$/);
+  if (assessment) {
+    return { kind: "assessment_deadline", entityId: assessment[1] };
+  }
+
+  const offer = key.match(/^application:(.+):offer_deadline$/);
+  if (offer) {
+    return { kind: "offer_deadline", entityId: offer[1] };
+  }
+
   const deadline = key.match(/^opportunity:(.+):deadline$/);
   if (deadline) {
     return { kind: "opportunity_deadline", entityId: deadline[1] };
@@ -115,9 +131,17 @@ export function derivedDueItemTitle(
       return "Application deadline";
     case "interview":
       return "Interview";
+    case "assessment_deadline":
+      return "Complete assessment";
+    case "offer_deadline":
+      return "Offer deadline";
     case "task":
       return "Do";
     default:
       return "Follow up";
   }
+}
+
+export function isDeadlineObjectKind(kind: DueSourceKind): boolean {
+  return kind === "assessment_deadline" || kind === "offer_deadline";
 }

@@ -94,6 +94,10 @@ export function todayDoNowVerb(kind: DueSourceKind): string {
       return "Apply";
     case "interview":
       return "Interview";
+    case "assessment_deadline":
+      return "Complete";
+    case "offer_deadline":
+      return "Decide";
     case "task":
       return "Do";
     default:
@@ -114,6 +118,16 @@ export function todayDoNowHeading(
   const parsed = parseDueSourceKey(sourceKey);
   if (parsed?.kind === "contact_next_action" && entityLabel.length > 0) {
     return `${verb} with ${entityLabel}`;
+  }
+  if (parsed?.kind === "assessment_deadline") {
+    return entityLabel.length > 0
+      ? `Complete ${entityLabel} assessment`
+      : "Complete assessment";
+  }
+  if (parsed?.kind === "offer_deadline") {
+    return entityLabel.length > 0
+      ? `${entityLabel} offer deadline`
+      : "Offer deadline";
   }
   return entityLabel.length > 0 ? entityLabel : verb;
 }

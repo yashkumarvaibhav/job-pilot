@@ -15,6 +15,12 @@ import {
   interviewRoundTitle,
 } from "../../domain/interview";
 import {
+  assessmentDueOn,
+  derivedAssessmentTitle,
+  isOpenAssessmentStatus,
+} from "../../domain/assessment";
+import { isOpenOfferDeadline } from "../../domain/application";
+import {
   DEFAULT_TASK_PRIORITY,
   DEFAULT_TASK_SOURCE,
   DEFAULT_TASK_STATUS,
@@ -33,6 +39,7 @@ import type { AppDatabase, AppTransaction } from "../db/client";
 import { getWorkspaceSettings } from "../db/foundation";
 import {
   application,
+  assessment,
   company,
   contact,
   interview,
@@ -43,6 +50,8 @@ import {
 import type { TenantContext } from "../db/tenant";
 import { DEFAULT_TIME_ZONE } from "../db/timezone";
 import { listPendingInterviewDueRows } from "./interviews";
+import { listOpenAssessmentDueRows } from "./assessments";
+import { listOpenOfferDeadlineDueRows } from "./applications";
 
 export type Task = typeof task.$inferSelect;
 
@@ -351,6 +360,8 @@ function derivedKindToLink(
     case "referral_follow_up":
       return "referral";
     case "interview":
+    case "assessment_deadline":
+    case "offer_deadline":
       return "opportunity";
     case "task":
       return null;
@@ -524,6 +535,93 @@ function loadDerivedSource(
     }
     return {
       title: interviewRoundTitle(row.roundIndex, row.kind),
+      dueOn,
+      entityType: "opportunity",
+      entityId: row.opportunityId,
+      entityLabel: row.label,
+    };
+  }
+  if (kind === "assessment_deadline") {
+    const timeZone =
+      getWorkspaceSettings(transaction, tenant, tenant.workspaceId)?.timezone ??
+      DEFAULT_TIME_ZONE;
+    const row = transaction
+      .select({
+        dueAt: assessment.dueAt,
+        status: assessment.status,
+        opportunityId: assessment.opportunityId,
+        companyName: company.name,
+      })
+      .from(assessment)
+      .innerJoin(
+        opportunity,
+        and(
+          eq(opportunity.workspaceId, assessment.workspaceId),
+          eq(opportunity.id, assessment.opportunityId),
+        ),
+      )
+      .innerJoin(
+        company,
+        and(
+          eq(company.workspaceId, opportunity.workspaceId),
+          eq(company.id, opportunity.companyId),
+        ),
+      )
+      .where(
+        and(
+          eq(assessment.workspaceId, tenant.workspaceId),
+          eq(assessment.id, entityId),
+        ),
+      )
+      .get();
+    const dueOn = assessmentDueOn(row?.dueAt, timeZone);
+    if (!row || dueOn === null || !isOpenAssessmentStatus(row.status)) {
+      return undefined;
+    }
+    return {
+      title: derivedDueItemTitle("assessment_deadline", derivedAssessmentTitle(row.companyName)),
+      dueOn,
+      entityType: "opportunity",
+      entityId: row.opportunityId,
+      entityLabel: row.companyName,
+    };
+  }
+  if (kind === "offer_deadline") {
+    const row = transaction
+      .select({
+        offerDeadlineOn: application.offerDeadlineOn,
+        offerDecision: application.offerDecision,
+        opportunityId: application.opportunityId,
+        label: sql<string>`trim(${company.name} || ' ' || ${opportunity.role})`,
+      })
+      .from(application)
+      .innerJoin(
+        opportunity,
+        and(
+          eq(opportunity.workspaceId, application.workspaceId),
+          eq(opportunity.id, application.opportunityId),
+        ),
+      )
+      .innerJoin(
+        company,
+        and(
+          eq(company.workspaceId, opportunity.workspaceId),
+          eq(company.id, opportunity.companyId),
+        ),
+      )
+      .where(
+        and(
+          eq(application.workspaceId, tenant.workspaceId),
+          eq(application.id, entityId),
+        ),
+      )
+      .get();
+    const dueOn = optionalText(row?.offerDeadlineOn);
+    if (!row || dueOn === null || !isOpenOfferDeadline(row.offerDeadlineOn, row.offerDecision)) {
+      return undefined;
+    }
+    return {
+      title: derivedDueItemTitle("offer_deadline", null),
       dueOn,
       entityType: "opportunity",
       entityId: row.opportunityId,
@@ -1031,6 +1129,46 @@ export function listDueItems(
       timeZone,
     )) {
       const sourceKey = dueSourceKey("interview", row.id);
+      if (suppressed.has(sourceKey)) {
+        continue;
+      }
+      items.push({
+        sourceKey,
+        origin: "derived",
+        title: row.title,
+        dueOn: row.dueOn,
+        entityType: "opportunity",
+        entityId: row.opportunityId,
+        entityLabel: row.entityLabel,
+        taskId: null,
+        derivedFromKey: null,
+        priority: null,
+        status: null,
+      });
+    }
+
+    for (const row of listOpenAssessmentDueRows(transaction, tenant, timeZone)) {
+      const sourceKey = dueSourceKey("assessment_deadline", row.id);
+      if (suppressed.has(sourceKey)) {
+        continue;
+      }
+      items.push({
+        sourceKey,
+        origin: "derived",
+        title: row.title,
+        dueOn: row.dueOn,
+        entityType: "opportunity",
+        entityId: row.opportunityId,
+        entityLabel: row.entityLabel,
+        taskId: null,
+        derivedFromKey: null,
+        priority: null,
+        status: null,
+      });
+    }
+
+    for (const row of listOpenOfferDeadlineDueRows(transaction, tenant)) {
+      const sourceKey = dueSourceKey("offer_deadline", row.id);
       if (suppressed.has(sourceKey)) {
         continue;
       }

@@ -25,10 +25,28 @@ describe("due-source keys", () => {
       "referral:referral-rahul:follow_up",
     );
     expect(dueSourceKey("interview", "round-1")).toBe("interview:round-1");
+    expect(dueSourceKey("assessment_deadline", "oa-google")).toBe(
+      "assessment:oa-google:deadline",
+    );
+    expect(dueSourceKey("offer_deadline", "google-app")).toBe(
+      "application:google-app:offer_deadline",
+    );
     expect(dueSourceKey("task", "task-prep")).toBe("task:task-prep");
     expect(parseDueSourceKey(dueSourceKey("interview", "round-1"))).toEqual({
       kind: "interview",
       entityId: "round-1",
+    });
+    expect(
+      parseDueSourceKey(dueSourceKey("assessment_deadline", "oa-google")),
+    ).toEqual({
+      kind: "assessment_deadline",
+      entityId: "oa-google",
+    });
+    expect(
+      parseDueSourceKey(dueSourceKey("offer_deadline", "google-app")),
+    ).toEqual({
+      kind: "offer_deadline",
+      entityId: "google-app",
     });
 
     for (const key of [
@@ -67,5 +85,12 @@ describe("due-source keys", () => {
       "Application deadline",
     );
     expect(derivedDueItemTitle("interview", null)).toBe("Interview");
+    expect(derivedDueItemTitle("assessment_deadline", null)).toBe(
+      "Complete assessment",
+    );
+    expect(
+      derivedDueItemTitle("assessment_deadline", "Complete Google assessment"),
+    ).toBe("Complete Google assessment");
+    expect(derivedDueItemTitle("offer_deadline", null)).toBe("Offer deadline");
   });
 });

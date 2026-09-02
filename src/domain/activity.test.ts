@@ -18,6 +18,24 @@ describe("activity copy", () => {
     ).toBe("Application submitted → Razorpay SDE");
     expect(
       formatActivityHeadline({
+        kind: "ASSESSMENT_INVITED",
+        entityLabel: "Google SDE",
+      }),
+    ).toBe("Assessment invited → Google SDE");
+    expect(
+      formatActivityHeadline({
+        kind: "ASSESSMENT_COMPLETED",
+        entityLabel: "Google SDE",
+      }),
+    ).toBe("Assessment completed → Google SDE");
+    expect(
+      formatActivityHeadline({
+        kind: "OFFER_DEADLINE_SET",
+        entityLabel: "Google SDE",
+      }),
+    ).toBe("Offer deadline set → Google SDE");
+    expect(
+      formatActivityHeadline({
         kind: "INTERACTION_REPLIED",
         entityLabel: "Rahul Sharma",
         payload: { channel: "email" },
