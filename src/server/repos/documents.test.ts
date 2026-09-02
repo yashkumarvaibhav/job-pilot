@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { documentVersionLabel } from "../../domain/document";
 import { createTenantTestFixture } from "../../test/tenant-fixture";
+import { WORKSPACE_STORAGE_FULL } from "../../domain/document";
 import {
   DocumentInputError,
   createDocument,
@@ -15,6 +16,7 @@ import {
   readDocumentVersionFile,
   recordVersionUsage,
   storeDocumentVersion,
+  workspaceStoredBytes,
 } from "./documents";
 import { applyToOpportunity } from "./applications";
 import { createCompany } from "./companies";
@@ -333,5 +335,64 @@ describe("document repository", () => {
     expect(listDocuments(fixture.client.db, fixture.tenantA)[0].versions).toEqual(
       [],
     );
+  });
+
+  it("stops one workspace filling the disk, and says so", () => {
+    const fixture = newFixture();
+    createDocument(fixture.client.db, fixture.tenantA, {
+      id: "doc-a",
+      name: "Backend Java",
+    });
+
+    // Two 8 MB uploads fit inside the cap; the eleventh would pass it.
+    for (let index = 0; index < 25; index += 1) {
+      storeDocumentVersion(
+        fixture.client.db,
+        fixture.tenantA,
+        {
+          documentId: "doc-a",
+          label: `v${index + 1}`,
+          bytes: new Uint8Array(8 * 1024 * 1024),
+          contentType: "application/pdf",
+        },
+        fixture.root,
+      );
+    }
+
+    expect(
+      workspaceStoredBytes(fixture.client.db, fixture.tenantA),
+    ).toBe(25 * 8 * 1024 * 1024);
+    expect(() =>
+      storeDocumentVersion(
+        fixture.client.db,
+        fixture.tenantA,
+        {
+          documentId: "doc-a",
+          label: "v26",
+          bytes: new Uint8Array(8 * 1024 * 1024),
+          contentType: "application/pdf",
+        },
+        fixture.root,
+      ),
+    ).toThrow(WORKSPACE_STORAGE_FULL);
+
+    // Another workspace still has its own full allowance.
+    createDocument(fixture.client.db, fixture.tenantB, {
+      id: "doc-b",
+      name: "Their Resume",
+    });
+    expect(() =>
+      storeDocumentVersion(
+        fixture.client.db,
+        fixture.tenantB,
+        {
+          documentId: "doc-b",
+          label: "v1",
+          bytes: new Uint8Array([37, 80, 68, 70]),
+          contentType: "application/pdf",
+        },
+        fixture.root,
+      ),
+    ).not.toThrow();
   });
 });

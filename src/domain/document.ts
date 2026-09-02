@@ -71,6 +71,21 @@ export const DOCUMENT_NO_VERSION_LABEL = "No version recorded";
 export const UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
 
 /**
+ * A per-workspace ceiling on stored bytes. Uploads are the first endpoint that
+ * lets a signed-in account consume disk on a shared host, and one workspace must
+ * not be able to fill it for everyone. Perimeter limits (rate, session, CSRF)
+ * remain JP-0048's; this is the storage half only.
+ */
+export const WORKSPACE_STORAGE_MAX_BYTES = 200 * 1024 * 1024;
+
+export function workspaceStorageExceeded(
+  storedBytes: number,
+  incomingBytes: number,
+): boolean {
+  return storedBytes + incomingBytes > WORKSPACE_STORAGE_MAX_BYTES;
+}
+
+/**
  * A small allowlist rather than a sniffing library: the product needs resumes and
  * transcripts, and an unknown type is a refusal, not a guess.
  */
@@ -104,6 +119,10 @@ export const UPLOAD_TYPE_REFUSED = `Upload a PDF, Word file, text file or image.
 export const UPLOAD_TOO_LARGE = `That file is larger than ${
   UPLOAD_MAX_BYTES / (1024 * 1024)
 } MB.`;
+
+export const WORKSPACE_STORAGE_FULL = `This workspace has reached its ${
+  WORKSPACE_STORAGE_MAX_BYTES / (1024 * 1024)
+} MB document limit. Delete a version you no longer need.`;
 
 /**
  * The stored path, relative to the uploads root. Never the name the browser sent:

@@ -8,7 +8,9 @@ import {
   UPLOAD_MAX_BYTES,
   UPLOAD_TOO_LARGE,
   UPLOAD_TYPE_REFUSED,
+  WORKSPACE_STORAGE_FULL,
   documentVersionLabel,
+  workspaceStorageExceeded,
   isDocumentKind,
   storageKeyFor,
   uploadExtensionFor,
@@ -228,6 +230,19 @@ export function getDocumentVersion(
     .get();
 }
 
+/** Bytes this workspace already holds on disk. */
+export function workspaceStoredBytes(
+  database: AppDatabase,
+  tenant: TenantContext,
+): number {
+  return database
+    .select()
+    .from(documentVersion)
+    .where(eq(documentVersion.workspaceId, tenant.workspaceId))
+    .all()
+    .reduce((total, row) => total + row.byteSize, 0);
+}
+
 export function storeDocumentVersion(
   database: AppDatabase,
   tenant: TenantContext,
@@ -249,6 +264,14 @@ export function storeDocumentVersion(
   const owner = getDocument(database, tenant, input.documentId);
   if (!owner) {
     throw new DocumentInputError("That document is not in this workspace.");
+  }
+  if (
+    workspaceStorageExceeded(
+      workspaceStoredBytes(database, tenant),
+      input.bytes.byteLength,
+    )
+  ) {
+    throw new DocumentInputError(WORKSPACE_STORAGE_FULL);
   }
 
   const id = input.id ?? randomUUID();
