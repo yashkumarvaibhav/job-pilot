@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, gte, lte } from "drizzle-orm";
 
 import type {
   ApplicationStage,
 } from "../../domain/application";
+import { positiveDayCount } from "../../domain/list-filter";
 import {
   DEFAULT_OPPORTUNITY_BUCKET,
   DEFAULT_OPPORTUNITY_STAGE,
@@ -13,6 +14,7 @@ import {
   type OpportunityBucket,
   type OpportunitySelectableStage,
 } from "../../domain/opportunity";
+import { shiftCalendarDate } from "../../domain/referral";
 import { logEvent } from "../db/activity";
 import type { AppDatabase, AppTransaction } from "../db/client";
 import {
@@ -41,7 +43,17 @@ export type OpportunityListItem = Opportunity & {
   companyName: string;
   application: OpportunityApplication | null;
 };
-export type OpportunityListFilter = OpportunityBucket | "all";
+export type OpportunityListFilter =
+  | OpportunityBucket
+  | "all"
+  | {
+      bucket?: OpportunityBucket | "all";
+      companyId?: string;
+      priority?: string;
+      deadlineWithinDays?: number;
+      appliedWithinDays?: number;
+      asOfOn?: string;
+    };
 
 export type CreateOpportunityInput = {
   id?: string;
@@ -518,13 +530,35 @@ export function listOpportunities(
   tenant: TenantContext,
   filter: OpportunityListFilter = "all",
 ): OpportunityListItem[] {
-  const filterCondition =
-    filter === "all"
-      ? eq(opportunity.workspaceId, tenant.workspaceId)
-      : and(
-          eq(opportunity.workspaceId, tenant.workspaceId),
-          eq(opportunity.bucket, filter),
-        );
+  const selected = typeof filter === "string" ? { bucket: filter } : filter;
+  const conditions = [eq(opportunity.workspaceId, tenant.workspaceId)];
+  if (selected.bucket && selected.bucket !== "all") {
+    conditions.push(eq(opportunity.bucket, selected.bucket));
+  }
+  if (selected.companyId) {
+    conditions.push(eq(opportunity.companyId, selected.companyId));
+  }
+  if (selected.priority) {
+    conditions.push(eq(opportunity.priority, selected.priority));
+  }
+  if (selected.deadlineWithinDays !== undefined && selected.asOfOn) {
+    conditions.push(gte(opportunity.deadlineOn, selected.asOfOn));
+    conditions.push(
+      lte(
+        opportunity.deadlineOn,
+        shiftCalendarDate(selected.asOfOn, selected.deadlineWithinDays),
+      ),
+    );
+  }
+  if (selected.appliedWithinDays !== undefined && selected.asOfOn) {
+    conditions.push(
+      gte(
+        application.appliedOn,
+        shiftCalendarDate(selected.asOfOn, -selected.appliedWithinDays),
+      ),
+    );
+    conditions.push(lte(application.appliedOn, selected.asOfOn));
+  }
 
   return database
     .select({
@@ -547,10 +581,35 @@ export function listOpportunities(
         eq(application.opportunityId, opportunity.id),
       ),
     )
-    .where(filterCondition)
+    .where(and(...conditions))
     .orderBy(asc(company.name), asc(opportunity.role), asc(opportunity.id))
     .all()
     .map(toOpportunityListItem);
+}
+
+export function parseOpportunityListFilter(
+  search: URLSearchParams,
+  asOfOn: string,
+): Exclude<OpportunityListFilter, string> {
+  const bucketValue = search.get("bucket");
+  const bucket = isOpportunityBucket(bucketValue) ? bucketValue : "all";
+  const companyId = search.get("company")?.trim() || undefined;
+  const priority = search.get("priority")?.trim() || undefined;
+  const deadlineWithinDays = positiveDayCount(
+    search.get("deadlineWithinDays"),
+  );
+  const appliedWithinDays = positiveDayCount(search.get("appliedWithinDays"));
+  return {
+    bucket,
+    ...(companyId ? { companyId } : {}),
+    ...(priority ? { priority } : {}),
+    ...(deadlineWithinDays !== undefined
+      ? { deadlineWithinDays, asOfOn }
+      : {}),
+    ...(appliedWithinDays !== undefined
+      ? { appliedWithinDays, asOfOn }
+      : {}),
+  };
 }
 
 export function getOpportunity(

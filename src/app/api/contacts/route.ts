@@ -11,6 +11,7 @@ import {
   ContactInputError,
   createContact,
   listContacts,
+  parseContactListFilter,
 } from "@/server/repos/contacts";
 
 export const runtime = "nodejs";
@@ -18,13 +19,20 @@ export const runtime = "nodejs";
 const AUTHENTICATION_REQUIRED = { error: "Authentication required." };
 const INVALID_CONTACT = { error: "Enter valid contact details." };
 
-export async function GET() {
+export async function GET(request?: Request) {
   const tenant = await currentTenant();
   if (!tenant) {
     return NextResponse.json(AUTHENTICATION_REQUIRED, { status: 401 });
   }
+  const search = request
+    ? new URL(request.url).searchParams
+    : new URLSearchParams();
   return NextResponse.json(
-    listContacts(getDatabase(), tenant).map(contactListResponse),
+    listContacts(
+      getDatabase(),
+      tenant,
+      parseContactListFilter(search),
+    ).map(contactListResponse),
   );
 }
 

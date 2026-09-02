@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 
+import { calendarDateInZone } from "@/domain/referral";
 import { currentTenant } from "@/server/auth/current-session";
+import { getWorkspaceSettings } from "@/server/db/foundation";
 import { getDatabase } from "@/server/db/runtime";
+import { DEFAULT_TIME_ZONE } from "@/server/db/timezone";
 import {
   OpportunityInputError,
   createOpportunity,
   listOpportunities,
-  type OpportunityListFilter,
+  parseOpportunityListFilter,
 } from "@/server/repos/opportunities";
 import {
   opportunityResponse,
@@ -23,11 +26,16 @@ export async function GET(request: Request) {
   if (!tenant) {
     return NextResponse.json(AUTHENTICATION_REQUIRED, { status: 401 });
   }
-  const value = new URL(request.url).searchParams.get("bucket") ?? "all";
-  const filter: OpportunityListFilter =
-    value === "saved" || value === "active" || value === "all" ? value : "all";
+  const database = getDatabase();
+  const timeZone =
+    getWorkspaceSettings(database, tenant, tenant.workspaceId)?.timezone ??
+    DEFAULT_TIME_ZONE;
+  const filter = parseOpportunityListFilter(
+    new URL(request.url).searchParams,
+    calendarDateInZone(timeZone),
+  );
   return NextResponse.json(
-    listOpportunities(getDatabase(), tenant, filter).map(opportunityResponse),
+    listOpportunities(database, tenant, filter).map(opportunityResponse),
   );
 }
 

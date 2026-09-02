@@ -9,6 +9,7 @@ import {
 } from "../../domain/interaction";
 import {
   DEFAULT_REFERRAL_STAGE,
+  REFERRAL_STAGES,
   ReferralStageTransitionError,
   isReferralListPreset,
   isReferralStage,
@@ -17,6 +18,10 @@ import {
   type ReferralListPreset,
   type ReferralStage,
 } from "../../domain/referral";
+import {
+  filterOptionValue,
+  positiveDayCount,
+} from "../../domain/list-filter";
 import { logEvent } from "../db/activity";
 import type { AppDatabase, AppTransaction } from "../db/client";
 import {
@@ -40,6 +45,8 @@ export type ReferralListFilter = {
   asOfOn: string;
   preset?: ReferralListPreset;
   stage?: ReferralStage;
+  companyId?: string;
+  noResponseDays?: number;
   contactId?: string;
   opportunityId?: string;
 };
@@ -257,6 +264,11 @@ export function listReferrals(
   if (filter.opportunityId) {
     conditions.push(eq(referralRequest.opportunityId, filter.opportunityId));
   }
+  if (filter.companyId) {
+    conditions.push(
+      sql`coalesce(${opportunityCompany.id}, ${contactCompany.id}) = ${filter.companyId}`,
+    );
+  }
   if (filter.preset === "no_reply") {
     conditions.push(eq(referralRequest.stage, "requested"));
     conditions.push(
@@ -272,6 +284,14 @@ export function listReferrals(
   } else if (filter.preset === "received_not_applied") {
     conditions.push(eq(referralRequest.stage, "referral_received"));
     conditions.push(isNull(application.id));
+  } else if (filter.noResponseDays !== undefined) {
+    conditions.push(eq(referralRequest.stage, "requested"));
+    conditions.push(
+      lte(
+        referralRequest.requestedOn,
+        shiftCalendarDate(filter.asOfOn, -filter.noResponseDays),
+      ),
+    );
   } else if (filter.stage) {
     conditions.push(eq(referralRequest.stage, filter.stage));
   }
@@ -505,11 +525,19 @@ export function parseReferralListFilter(
   const stageValue = search.get("stage");
   const contactId = search.get("contactId") ?? undefined;
   const opportunityId = search.get("opportunityId") ?? undefined;
+  const companyId = search.get("company")?.trim() || undefined;
+  const stage = filterOptionValue(
+    REFERRAL_STAGES,
+    stageValue,
+  ) as ReferralStage | undefined;
+  const noResponseDays = positiveDayCount(search.get("noResponseDays"));
   return {
     asOfOn,
-    preset: isReferralListPreset(presetValue) ? presetValue : undefined,
-    stage: isReferralStage(stageValue) ? stageValue : undefined,
-    contactId: contactId || undefined,
-    opportunityId: opportunityId || undefined,
+    ...(isReferralListPreset(presetValue) ? { preset: presetValue } : {}),
+    ...(stage ? { stage } : {}),
+    ...(contactId ? { contactId } : {}),
+    ...(opportunityId ? { opportunityId } : {}),
+    ...(companyId ? { companyId } : {}),
+    ...(noResponseDays !== undefined ? { noResponseDays } : {}),
   };
 }

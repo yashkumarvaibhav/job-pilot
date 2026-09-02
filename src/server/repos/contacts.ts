@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, lte } from "drizzle-orm";
 
 import {
+  CONTACT_RELATIONSHIPS,
   DEFAULT_NETWORKING_STATUS,
+  NETWORKING_STATUSES,
   isContactMethodKind,
   isContactRelationship,
   isNetworkingStatus,
@@ -12,6 +14,10 @@ import {
   type ContactRelationship,
   type NetworkingStatus,
 } from "../../domain/contact";
+import {
+  filterOptionValue,
+  positiveDayCount,
+} from "../../domain/list-filter";
 import { normalizeEmail } from "../auth/email";
 import { logEvent } from "../db/activity";
 import type { AppDatabase, AppTransaction } from "../db/client";
@@ -30,6 +36,14 @@ export type Contact = typeof contact.$inferSelect;
 export type ContactMethod = typeof contactMethod.$inferSelect;
 export type ContactListItem = Contact & { companyName: string | null };
 export type ContactDetail = ContactListItem & { methods: ContactMethod[] };
+
+export type ContactListFilter = {
+  companyId?: string;
+  relationship?: ContactRelationship;
+  status?: NetworkingStatus;
+  noResponseDays?: number;
+  asOf?: Date;
+};
 
 export type ContactMethodInput = {
   id?: string;
@@ -406,7 +420,26 @@ export function createContactInTransaction(
 export function listContacts(
   database: AppDatabase,
   tenant: TenantContext,
+  filter: ContactListFilter = {},
 ): ContactListItem[] {
+  const conditions = [eq(contact.workspaceId, tenant.workspaceId)];
+  if (filter.companyId) {
+    conditions.push(eq(contact.companyId, filter.companyId));
+  }
+  if (filter.relationship) {
+    conditions.push(eq(contact.relationship, filter.relationship));
+  }
+  if (filter.status) {
+    conditions.push(eq(contact.networkingStatus, filter.status));
+  }
+  if (filter.noResponseDays !== undefined) {
+    const asOf = filter.asOf ?? new Date();
+    const threshold = new Date(
+      asOf.getTime() - filter.noResponseDays * 24 * 60 * 60 * 1000,
+    );
+    conditions.push(eq(contact.networkingStatus, "waiting_for_reply"));
+    conditions.push(lte(contact.lastInteractionAt, threshold));
+  }
   return database
     .select({ contact, companyName: company.name })
     .from(contact)
@@ -417,10 +450,34 @@ export function listContacts(
         eq(company.id, contact.companyId),
       ),
     )
-    .where(eq(contact.workspaceId, tenant.workspaceId))
+    .where(and(...conditions))
     .orderBy(asc(contact.name), asc(contact.id))
     .all()
     .map(({ contact: row, companyName }) => ({ ...row, companyName }));
+}
+
+export function parseContactListFilter(
+  search: URLSearchParams,
+  now?: Date,
+): ContactListFilter {
+  const companyId = search.get("company")?.trim() || undefined;
+  const relationship = filterOptionValue(
+    CONTACT_RELATIONSHIPS,
+    search.get("relationship"),
+  ) as ContactRelationship | undefined;
+  const status = filterOptionValue(
+    NETWORKING_STATUSES,
+    search.get("status"),
+  ) as NetworkingStatus | undefined;
+  const noResponseDays = positiveDayCount(search.get("noResponseDays"));
+  return {
+    ...(companyId ? { companyId } : {}),
+    ...(relationship ? { relationship } : {}),
+    ...(status ? { status } : {}),
+    ...(noResponseDays !== undefined
+      ? { noResponseDays, asOf: now ?? new Date() }
+      : {}),
+  };
 }
 
 export function getContact(
