@@ -1,6 +1,6 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -63,7 +63,7 @@ describe("migrateDatabase", () => {
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 16 });
+      ).toEqual({ count: 17 });
 
       for (const indexName of [
         "company_workspace_id_id_unique",
@@ -825,6 +825,44 @@ describe("migrateDatabase", () => {
     }
   });
 
+  it("grandfathers accounts created before verification delivery existed", () => {
+    const directory = mkdtempSync(join(tmpdir(), "job-pilot-backfill-"));
+    temporaryDirectories.push(directory);
+    const databasePath = join(directory, "legacy.sqlite");
+    const client = openDatabase(databasePath);
+
+    try {
+      client.sqlite.exec(
+        readFileSync(resolve("drizzle/0000_flawless_hydra.sql"), "utf8"),
+      );
+      const createdAt = Date.parse("2026-09-01T09:00:00.000Z");
+      client.sqlite
+        .prepare(
+          `insert into user_account
+            (id, email_normalized, password_hash, status, created_at, updated_at)
+           values ('legacy-user', 'legacy@invalid.test', 'hash', 'active', ?, ?)`,
+        )
+        .run(createdAt, createdAt);
+
+      client.sqlite.exec(
+        readFileSync(
+          resolve("drizzle/0016_account_verification_backfill.sql"),
+          "utf8",
+        ),
+      );
+
+      expect(
+        client.sqlite
+          .prepare(
+            "select email_verified_at from user_account where id = 'legacy-user'",
+          )
+          .get(),
+      ).toEqual({ email_verified_at: createdAt });
+    } finally {
+      client.close();
+    }
+  });
+
   it("satisfies the backup document contract the moment the table lands", async () => {
     const directory = mkdtempSync(join(tmpdir(), "job-pilot-migrate-"));
     temporaryDirectories.push(directory);
@@ -845,5 +883,4 @@ describe("migrateDatabase", () => {
       client.close();
     }
   });
-
 });

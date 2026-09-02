@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { configuredAccountMailPort } from "../../../server/auth/account-mail";
 import { GET, dynamic, runtime } from "./route";
 
 describe("GET /api/ready", () => {
@@ -22,5 +23,10 @@ describe("GET /api/ready", () => {
   it("is dynamic and runs on Node, so systemd probes the live process", () => {
     expect(dynamic).toBe("force-dynamic");
     expect(runtime).toBe("nodejs");
+  });
+
+  it("stays green while account mail is unavailable", async () => {
+    expect(configuredAccountMailPort()).toBeNull();
+    expect((await GET()).status).toBe(200);
   });
 });

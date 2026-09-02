@@ -22,6 +22,9 @@ export default function LoginPage() {
           : "Job Pilot keeps one private workspace for each account."}
       </p>
       <AccountForm mode="login" />
+      <p className="auth-switch">
+        <Link href="/forgot-password">Forgot password?</Link>
+      </p>
       {demoMode ? null : (
         <p className="auth-switch">
           No account yet? <Link href="/signup">Create account</Link>

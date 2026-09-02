@@ -162,7 +162,11 @@ const TENANT_ROUTE_FILES = [
 const NON_TENANT_ROUTE_FILES = [
   "auth/login/route.ts",
   "auth/logout/route.ts",
+  "auth/recovery/request/route.ts",
+  "auth/recovery/reset/route.ts",
   "auth/signup/route.ts",
+  "auth/verification/request/route.ts",
+  "auth/verify/route.ts",
   "ready/route.ts",
 ] as const;
 

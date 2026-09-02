@@ -51,9 +51,16 @@ function insertSyntheticData(database, configuration) {
   database.transaction(() => {
     database.prepare(
       `insert into user_account
-        (id, email_normalized, password_hash, status, created_at, updated_at)
-       values (?, ?, ?, 'active', ?, ?)`,
-    ).run(IDS.user, configuration.accountEmail, hashPassword(configuration.accountPassword), now, now);
+        (id, email_normalized, password_hash, email_verified_at, status, created_at, updated_at)
+       values (?, ?, ?, ?, 'active', ?, ?)`,
+    ).run(
+      IDS.user,
+      configuration.accountEmail,
+      hashPassword(configuration.accountPassword),
+      now,
+      now,
+      now,
+    );
     database.prepare(
       "insert into workspace (id, owner_user_id, created_at) values (?, ?, ?)",
     ).run(IDS.workspace, IDS.user, now);

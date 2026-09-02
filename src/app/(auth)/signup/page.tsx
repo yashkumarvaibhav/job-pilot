@@ -6,6 +6,8 @@ import {
   DEMO_SIGNUP_CLOSED_MESSAGE,
   isDemoMode,
 } from "@/server/demo-mode";
+import { ACCOUNT_MAIL_UNAVAILABLE_MESSAGE } from "@/lib/account";
+import { configuredAccountMailPort } from "@/server/auth/account-mail";
 
 export const metadata: Metadata = {
   title: "Create account · Job Pilot",
@@ -20,6 +22,19 @@ export default function SignupPage() {
         <p className="auth-lede">{DEMO_SIGNUP_CLOSED_MESSAGE}</p>
         <p className="auth-switch">
           Return to <Link href="/login">Sign in</Link>
+        </p>
+      </section>
+    );
+  }
+
+  if (!configuredAccountMailPort()) {
+    return (
+      <section className="auth-card">
+        <p className="eyebrow">Account email unavailable</p>
+        <h1>Account creation paused</h1>
+        <p className="auth-lede">{ACCOUNT_MAIL_UNAVAILABLE_MESSAGE}</p>
+        <p className="auth-switch">
+          Already registered? <Link href="/login">Sign in</Link>
         </p>
       </section>
     );

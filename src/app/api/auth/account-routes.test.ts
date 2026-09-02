@@ -16,6 +16,10 @@ import { openDatabase, type DatabaseClient } from "../../../server/db/client";
 const mocks = vi.hoisted(() => ({
   database: undefined as unknown,
   cookieSet: vi.fn(),
+  mailPort: {
+    sendVerification: vi.fn(),
+    sendPasswordReset: vi.fn(),
+  },
 }));
 
 vi.mock("next/headers", () => ({
@@ -28,6 +32,9 @@ vi.mock("next/headers", () => ({
 }));
 vi.mock("@/server/db/runtime", () => ({
   getDatabase: () => mocks.database,
+}));
+vi.mock("@/server/auth/account-mail", () => ({
+  configuredAccountMailPort: () => mocks.mailPort,
 }));
 
 import { POST as login } from "./login/route";
@@ -88,6 +95,8 @@ describe("account endpoint rate limiting", () => {
   afterEach(() => {
     for (const cleanup of cleanups.splice(0)) cleanup();
     mocks.cookieSet.mockClear();
+    mocks.mailPort.sendVerification.mockClear();
+    mocks.mailPort.sendPasswordReset.mockClear();
   });
 
   it("locks the attempt after the limit and says nothing about why", async () => {

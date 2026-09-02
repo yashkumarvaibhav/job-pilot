@@ -15,6 +15,48 @@ export type Credentials = {
 export async function readCredentials(
   request: Request,
 ): Promise<Credentials | null> {
+  const body = await readJsonObject(request);
+  if (!body) return null;
+
+  const { email, password } = body;
+
+  return typeof email === "string" && typeof password === "string"
+    ? { email, password }
+    : null;
+}
+
+export async function readEmail(
+  request: Request,
+): Promise<{ email: string } | null> {
+  const body = await readJsonObject(request);
+  return body && typeof body.email === "string"
+    ? { email: body.email }
+    : null;
+}
+
+export async function readToken(
+  request: Request,
+): Promise<{ token: string } | null> {
+  const body = await readJsonObject(request);
+  return body && typeof body.token === "string"
+    ? { token: body.token }
+    : null;
+}
+
+export async function readPasswordReset(
+  request: Request,
+): Promise<{ token: string; password: string } | null> {
+  const body = await readJsonObject(request);
+  return body &&
+    typeof body.token === "string" &&
+    typeof body.password === "string"
+    ? { token: body.token, password: body.password }
+    : null;
+}
+
+async function readJsonObject(
+  request: Request,
+): Promise<Record<string, unknown> | null> {
   if (!request.headers.get("content-type")?.startsWith("application/json")) {
     return null;
   }
@@ -31,9 +73,5 @@ export async function readCredentials(
     return null;
   }
 
-  const { email, password } = body as Record<string, unknown>;
-
-  return typeof email === "string" && typeof password === "string"
-    ? { email, password }
-    : null;
+  return body as Record<string, unknown>;
 }

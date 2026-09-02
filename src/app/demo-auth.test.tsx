@@ -74,12 +74,12 @@ describe("demo authentication surfaces", () => {
     expect(loginHtml).toContain("Job Pilot keeps one private workspace for each account.");
     expect(loginHtml).toContain("No account yet?");
     expect(loginHtml).toContain("Create account");
+    expect(loginHtml).toContain("Forgot password?");
     expect(loginHtml).not.toContain("Demo environment");
 
-    expect(signupHtml).toContain("Create account");
-    expect(signupHtml).toContain("Email");
-    expect(signupHtml).toContain("Password");
-    expect(signupHtml).toContain("Confirm password");
+    expect(signupHtml).toContain("Account creation paused");
+    expect(signupHtml).toContain("Account email is temporarily unavailable");
+    expect(signupHtml).not.toContain("Confirm password");
     expect(signupHtml).not.toContain("Public account creation is closed");
   });
 });

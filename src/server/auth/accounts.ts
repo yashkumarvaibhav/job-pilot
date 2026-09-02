@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 
 import type { AppDatabase } from "../db/client";
 import { createAccountFoundation } from "../db/foundation";
@@ -15,6 +15,8 @@ export type RegisterAccountInput = {
   displayName?: string;
   timezone?: string;
   now?: Date;
+  /** Omit for verified fixtures; public signup passes null until link use. */
+  emailVerifiedAt?: Date | null;
 };
 
 /**
@@ -46,6 +48,7 @@ export async function registerAccount(
       displayName: input.displayName,
       timezone: input.timezone,
       now: input.now,
+      emailVerifiedAt: input.emailVerifiedAt,
     });
 
     return { ok: true, tenant };
@@ -92,6 +95,7 @@ export async function authenticateAccount(
             and(
               eq(userAccount.emailNormalized, emailNormalized),
               eq(userAccount.status, "active"),
+              isNotNull(userAccount.emailVerifiedAt),
             ),
           )
           .get();

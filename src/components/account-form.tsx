@@ -35,6 +35,7 @@ export function AccountForm({ mode }: { mode: Mode }) {
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const isSignup = mode === "signup";
 
@@ -71,6 +72,7 @@ export function AccountForm({ mode }: { mode: Mode }) {
 
     setPending(true);
     setError(null);
+    setNotice(null);
 
     try {
       const response = await fetch(`/api/auth/${mode}`, {
@@ -79,8 +81,8 @@ export function AccountForm({ mode }: { mode: Mode }) {
         body: JSON.stringify({ email, password }),
       });
 
+      const body: unknown = await response.json().catch(() => null);
       if (!response.ok) {
-        const body: unknown = await response.json().catch(() => null);
         const message =
           body &&
           typeof body === "object" &&
@@ -94,6 +96,16 @@ export function AccountForm({ mode }: { mode: Mode }) {
       }
 
       form.reset();
+      if (isSignup) {
+        const message =
+          body &&
+          typeof body === "object" &&
+          typeof (body as { message?: unknown }).message === "string"
+            ? (body as { message: string }).message
+            : REQUEST_FAILED_MESSAGE;
+        setNotice(message);
+        return;
+      }
       router.replace("/");
       router.refresh();
     } catch {
@@ -110,6 +122,12 @@ export function AccountForm({ mode }: { mode: Mode }) {
         <p className="form-alert" role="alert">
           <AlertIcon />
           <span>{error}</span>
+        </p>
+      ) : null}
+      {notice ? (
+        <p className="form-notice" role="status">
+          <StatusIcon />
+          <span>{notice}</span>
         </p>
       ) : null}
 
@@ -160,5 +178,25 @@ export function AccountForm({ mode }: { mode: Mode }) {
         {isSignup ? "Create account" : "Sign in"}
       </button>
     </form>
+  );
+}
+
+function StatusIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="16"
+      viewBox="0 0 24 24"
+      width="16"
+    >
+      <path
+        d="m5 12 4 4L19 6"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
   );
 }

@@ -16,6 +16,7 @@ type FoundationIds = {
 export type CreateAccountFoundationInput = {
   emailNormalized: string;
   passwordHash: string;
+  emailVerifiedAt?: Date | null;
   displayName?: string;
   university?: string;
   timezone?: string;
@@ -29,6 +30,8 @@ export function createAccountFoundation(
 ): { tenant: TenantContext } {
   const timezone = assertIanaTimeZone(input.timezone ?? DEFAULT_TIME_ZONE);
   const now = input.now ?? new Date();
+  const emailVerifiedAt =
+    input.emailVerifiedAt === undefined ? now : input.emailVerifiedAt;
   const ids = input.ids ?? {
     userId: randomUUID(),
     workspaceId: randomUUID(),
@@ -42,6 +45,7 @@ export function createAccountFoundation(
         id: tenant.userId,
         emailNormalized: input.emailNormalized,
         passwordHash: input.passwordHash,
+        emailVerifiedAt,
         createdAt: now,
         updatedAt: now,
       })
