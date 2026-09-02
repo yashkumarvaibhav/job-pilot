@@ -45,6 +45,7 @@ describe("Today domain", () => {
   it("maps Do Now verbs from the JP-0014 source key", () => {
     expect(todayDoNowVerb("contact_next_action")).toBe("Follow up");
     expect(todayDoNowVerb("opportunity_next_action")).toBe("Apply");
+    expect(todayDoNowVerb("interview")).toBe("Interview");
     expect(todayDoNowVerb("task")).toBe("Do");
     expect(
       todayDoNowVerbForKey(dueSourceKey("contact_next_action", "rahul")),

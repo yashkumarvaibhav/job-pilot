@@ -11,6 +11,10 @@ import {
 import { isNetworkingTerminalStatus } from "../../domain/contact";
 import { isReferralTerminalStage } from "../../domain/referral";
 import {
+  interviewDueOn,
+  interviewRoundTitle,
+} from "../../domain/interview";
+import {
   DEFAULT_TASK_PRIORITY,
   DEFAULT_TASK_SOURCE,
   DEFAULT_TASK_STATUS,
@@ -26,15 +30,19 @@ import {
 } from "../../domain/task";
 import { logEvent } from "../db/activity";
 import type { AppDatabase, AppTransaction } from "../db/client";
+import { getWorkspaceSettings } from "../db/foundation";
 import {
   application,
   company,
   contact,
+  interview,
   opportunity,
   referralRequest,
   task,
 } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
+import { DEFAULT_TIME_ZONE } from "../db/timezone";
+import { listPendingInterviewDueRows } from "./interviews";
 
 export type Task = typeof task.$inferSelect;
 
@@ -342,6 +350,8 @@ function derivedKindToLink(
       return "opportunity";
     case "referral_follow_up":
       return "referral";
+    case "interview":
+      return "opportunity";
     case "task":
       return null;
   }
@@ -352,7 +362,7 @@ function loadDerivedSource(
   tenant: TenantContext,
   kind: DueSourceKind,
   entityId: string,
-): { title: string; dueOn: string; entityType: TaskLinkType; entityLabel: string } | undefined {
+): { title: string; dueOn: string; entityType: TaskLinkType; entityId: string; entityLabel: string } | undefined {
   const linkType = derivedKindToLink(kind);
   if (!linkType) {
     return undefined;
@@ -374,7 +384,7 @@ function loadDerivedSource(
     if (!row || title === null || dueOn === null) {
       return undefined;
     }
-    return { title, dueOn, entityType: "company", entityLabel: row.label };
+    return { title, dueOn, entityType: "company", entityId, entityLabel: row.label };
   }
   if (kind === "contact_next_action") {
     const row = transaction
@@ -401,6 +411,7 @@ function loadDerivedSource(
       title: derivedDueItemTitle("contact_next_action", row.title),
       dueOn,
       entityType: "contact",
+      entityId,
       entityLabel: row.label,
     };
   }
@@ -435,6 +446,7 @@ function loadDerivedSource(
       title,
       dueOn,
       entityType: "opportunity",
+      entityId,
       entityLabel: row.label,
     };
   }
@@ -467,6 +479,54 @@ function loadDerivedSource(
       title: derivedDueItemTitle("opportunity_deadline", null),
       dueOn,
       entityType: "opportunity",
+      entityId,
+      entityLabel: row.label,
+    };
+  }
+  if (kind === "interview") {
+    const timeZone =
+      getWorkspaceSettings(transaction, tenant, tenant.workspaceId)?.timezone ??
+      DEFAULT_TIME_ZONE;
+    const row = transaction
+      .select({
+        at: interview.at,
+        result: interview.result,
+        roundIndex: interview.roundIndex,
+        kind: interview.kind,
+        opportunityId: interview.opportunityId,
+        label: sql<string>`trim(${company.name} || ' ' || ${opportunity.role})`,
+      })
+      .from(interview)
+      .innerJoin(
+        opportunity,
+        and(
+          eq(opportunity.workspaceId, interview.workspaceId),
+          eq(opportunity.id, interview.opportunityId),
+        ),
+      )
+      .innerJoin(
+        company,
+        and(
+          eq(company.workspaceId, opportunity.workspaceId),
+          eq(company.id, opportunity.companyId),
+        ),
+      )
+      .where(
+        and(
+          eq(interview.workspaceId, tenant.workspaceId),
+          eq(interview.id, entityId),
+        ),
+      )
+      .get();
+    const dueOn = interviewDueOn(row?.at, timeZone);
+    if (!row || dueOn === null) {
+      return undefined;
+    }
+    return {
+      title: interviewRoundTitle(row.roundIndex, row.kind),
+      dueOn,
+      entityType: "opportunity",
+      entityId: row.opportunityId,
       entityLabel: row.label,
     };
   }
@@ -496,13 +556,14 @@ function loadDerivedSource(
   if (!row || dueOn === null || isReferralTerminalStage(row.stage)) {
     return undefined;
   }
-  return {
-    title: derivedDueItemTitle("referral_follow_up", row.title),
-    dueOn,
-    entityType: "referral",
-    entityLabel: row.label,
-  };
-}
+    return {
+      title: derivedDueItemTitle("referral_follow_up", row.title),
+      dueOn,
+      entityType: "referral",
+      entityId,
+      entityLabel: row.label,
+    };
+  }
 
 function findOpenDerivedTask(
   transaction: AppTransaction,
@@ -756,7 +817,7 @@ export function createTaskFromDerived(
       title: derived.title,
       dueOn: derived.dueOn,
       entityType: derived.entityType,
-      entityId: parsed.entityId,
+      entityId: derived.entityId,
       derivedFromKey: input.sourceKey,
       source: "manual",
       now: input.now,
@@ -954,6 +1015,33 @@ export function listDueItems(
         entityType: "referral",
         entityId: row.id,
         entityLabel: row.label,
+        taskId: null,
+        derivedFromKey: null,
+        priority: null,
+        status: null,
+      });
+    }
+
+    const timeZone =
+      getWorkspaceSettings(transaction, tenant, tenant.workspaceId)?.timezone ??
+      DEFAULT_TIME_ZONE;
+    for (const row of listPendingInterviewDueRows(
+      transaction,
+      tenant,
+      timeZone,
+    )) {
+      const sourceKey = dueSourceKey("interview", row.id);
+      if (suppressed.has(sourceKey)) {
+        continue;
+      }
+      items.push({
+        sourceKey,
+        origin: "derived",
+        title: row.title,
+        dueOn: row.dueOn,
+        entityType: "opportunity",
+        entityId: row.opportunityId,
+        entityLabel: row.entityLabel,
         taskId: null,
         derivedFromKey: null,
         priority: null,

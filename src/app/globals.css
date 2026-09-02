@@ -1425,7 +1425,9 @@ main:focus {
 .referral-form,
 .referral-form-grid,
 .task-form,
-.task-form-grid {
+.task-form-grid,
+.interview-form,
+.interview-form-grid {
   display: grid;
   gap: var(--space-4);
 }
@@ -1433,14 +1435,16 @@ main:focus {
 .opportunity-form-grid,
 .application-form-grid,
 .referral-form-grid,
-.task-form-grid {
+.task-form-grid,
+.interview-form-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .opportunity-form > .btn,
 .application-form > .btn,
 .referral-form > .btn,
-.task-form > .btn {
+.task-form > .btn,
+.interview-form > .btn {
   justify-self: start;
 }
 
@@ -1448,8 +1452,19 @@ main:focus {
   max-width: 64rem;
 }
 
-.task-form-wide {
+.task-form-wide,
+.interview-form-wide {
   grid-column: 1 / -1;
+}
+
+.interview-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.interview-form-actions .btn {
+  min-height: var(--target-min);
 }
 
 .task-complete {
@@ -1550,7 +1565,8 @@ main:focus {
 .opportunity-card-list,
 .application-card-list,
 .referral-card-list,
-.task-card-list {
+.task-card-list,
+.interview-card-list {
   display: none;
   margin: 0;
   padding: 0;
@@ -1966,7 +1982,8 @@ main:focus {
   .opportunity-field-grid,
   .application-form-grid,
   .referral-form-grid,
-  .task-form-grid {
+  .task-form-grid,
+  .interview-form-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -1977,7 +1994,8 @@ main:focus {
   .opportunity-table-wrap,
   .application-table-wrap,
   .referral-table-wrap,
-  .task-table-wrap {
+  .task-table-wrap,
+  .interview-table-wrap {
     display: none;
   }
 
@@ -1989,7 +2007,8 @@ main:focus {
   .opportunity-card-list,
   .application-card-list,
   .referral-card-list,
-  .task-card-list {
+  .task-card-list,
+  .interview-card-list {
     display: grid;
     gap: var(--space-3);
   }
@@ -1997,7 +2016,8 @@ main:focus {
   .opportunity-list-card,
   .application-list-card,
   .referral-list-card,
-  .task-list-card {
+  .task-list-card,
+  .interview-list-card {
     display: grid;
     min-height: var(--target-min);
     gap: var(--space-2);
@@ -2020,7 +2040,8 @@ main:focus {
   .opportunity-list-card__heading,
   .application-list-card__heading,
   .referral-list-card__heading,
-  .task-list-card__heading {
+  .task-list-card__heading,
+  .interview-list-card__heading {
     display: flex;
     min-width: 0;
     align-items: center;

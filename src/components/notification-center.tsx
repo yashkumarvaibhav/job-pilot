@@ -8,6 +8,7 @@ import {
   CalendarClock,
   Handshake,
   ListTodo,
+  MessagesSquare,
   type LucideIcon,
 } from "lucide-react";
 
@@ -41,6 +42,7 @@ const kindVisuals: Record<
   opportunity_next_action: { icon: BriefcaseBusiness, tone: "info" },
   opportunity_deadline: { icon: CalendarClock, tone: "warning" },
   referral_follow_up: { icon: Handshake, tone: "success" },
+  interview: { icon: MessagesSquare, tone: "info" },
   task: { icon: ListTodo, tone: "muted" },
 };
 

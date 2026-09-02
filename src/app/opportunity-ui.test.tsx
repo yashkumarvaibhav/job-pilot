@@ -1,9 +1,13 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { applyToOpportunity, updateApplication } from "../server/repos/applications";
 import { createCompany } from "../server/repos/companies";
 import { createContact } from "../server/repos/contacts";
+import { createInterview } from "../server/repos/interviews";
 import { createOpportunity, linkContactToOpportunity } from "../server/repos/opportunities";
 import { createTenantTestFixture } from "../test/tenant-fixture";
 
@@ -127,6 +131,9 @@ describe("opportunity screens", () => {
     expect(html).toContain("No contacts linked to this opening yet.");
     expect(html).toContain("Every contact is already linked, or none exist yet.");
     expect(html).toContain("Mark applied");
+    expect(html).toContain("Interviews");
+    expect(html).toContain("No interview rounds yet. Add the first one below.");
+    expect(html).toContain("Add interview");
     expect(html).toContain("Pursuit stage");
     expect(html).toContain('id="application"');
     expect(html).toContain("Referral requests");
@@ -229,5 +236,45 @@ describe("opportunity screens", () => {
     expect(html).toContain("Greenhouse");
     expect(html).toContain("Save application");
     expect(html).not.toContain("Mark applied");
+  });
+
+  it("lists ordered interview rounds as a table and stacked cards", async () => {
+    const fixture = newFixture();
+    const company = createCompany(fixture.client.db, fixture.tenantA, {
+      id: "microsoft",
+      name: "Microsoft",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "ms-sde",
+      companyId: company.id,
+      role: "SDE",
+    });
+    createInterview(fixture.client.db, fixture.tenantA, {
+      id: "round-1",
+      opportunityId: "ms-sde",
+      kind: "Coding",
+      interviewer: "Rahul",
+      dateOn: "2026-09-02",
+      time: "11:00",
+    });
+
+    const html = renderToStaticMarkup(
+      await OpportunityDetailPage({
+        params: Promise.resolve({ id: "ms-sde" }),
+      }),
+    );
+    expect(html).toContain("Interviews");
+    expect(html).toContain('class="tbl interview-table"');
+    expect(html).toContain('class="interview-card-list"');
+    expect(html).toContain("Coding");
+    expect(html).toContain("Rahul");
+    expect(html).toContain("Add interview");
+    expect(html).toContain("Save round");
+    expect(html).toContain("Delete round");
+    expect(html).toContain("11:00");
+    const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
+    expect(css).toContain(".interview-table-wrap");
+    expect(css).toContain(".interview-card-list");
+    expect(css).toContain("@media (max-width: 767px)");
   });
 });

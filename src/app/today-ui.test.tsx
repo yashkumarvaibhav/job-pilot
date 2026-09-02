@@ -3,7 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TODAY_EMPTY } from "../domain/today";
 import { calendarDateInZone } from "../domain/referral";
+import { createCompany } from "../server/repos/companies";
 import { createContact, updateContact } from "../server/repos/contacts";
+import { createInterview } from "../server/repos/interviews";
+import { createOpportunity } from "../server/repos/opportunities";
 import { createTenantTestFixture } from "../test/tenant-fixture";
 
 const mocks = vi.hoisted(() => ({
@@ -81,6 +84,34 @@ describe("Today screen", () => {
     expect(html).toContain("Follow up about Microsoft openings");
     expect(html).toContain("Create task");
     expect(html).not.toContain(TODAY_EMPTY);
+  });
+
+  it("names an interview today in Do Now and the Interviews today tile", async () => {
+    const fixture = newFixture();
+    const company = createCompany(fixture.client.db, fixture.tenantA, {
+      id: "microsoft",
+      name: "Microsoft",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "ms-sde",
+      companyId: company.id,
+      role: "SDE",
+    });
+    createInterview(fixture.client.db, fixture.tenantA, {
+      id: "round-1",
+      opportunityId: "ms-sde",
+      kind: "Coding",
+      interviewer: "Rahul",
+      dateOn: calendarDateInZone("Asia/Kolkata"),
+      time: "11:00",
+    });
+
+    const html = renderToStaticMarkup(await Home());
+    expect(html).toContain("Interviews today");
+    expect(html).toContain("Interviews today</span><strong class=\"tnum\">1</strong>");
+    expect(html).toContain("Round 1 · Coding");
+    expect(html).toContain("Interview");
+    expect(html).toContain("Microsoft SDE");
   });
 
   it("designs loading and error states", () => {

@@ -92,6 +92,8 @@ export function todayDoNowVerb(kind: DueSourceKind): string {
       return "Apply";
     case "opportunity_deadline":
       return "Apply";
+    case "interview":
+      return "Interview";
     case "task":
       return "Do";
     default:

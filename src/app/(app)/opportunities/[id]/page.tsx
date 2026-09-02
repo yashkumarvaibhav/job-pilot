@@ -5,6 +5,10 @@ import {
   MarkAppliedForm,
 } from "@/components/application-forms";
 import {
+  InterviewAddForm,
+  InterviewEditForm,
+} from "@/components/interview-forms";
+import {
   RolledUpStageChip,
   stageMachineLabel,
 } from "@/components/application-status";
@@ -24,9 +28,11 @@ import {
   getOpportunity,
   listOpportunityContacts,
 } from "@/server/repos/opportunities";
+import { listInterviews } from "@/server/repos/interviews";
 import { listReferrals } from "@/server/repos/referrals";
 import { listActivity } from "@/server/repos/activity";
 import { listEntityTags, listTags } from "@/server/repos/tags";
+import { formatInterviewWhen } from "@/domain/interview";
 import { calendarDateInZone } from "@/domain/referral";
 
 type Props = { params: Promise<{ id: string }> };
@@ -106,6 +112,7 @@ export default async function OpportunityDetailPage({ params }: Props) {
     entityType: "opportunity",
     entityId: row.id,
   });
+  const interviews = listInterviews(database, tenant, row.id);
   const fields = [
     ["Job ID", row.jobId],
     ["Job URL", row.url],
@@ -266,6 +273,79 @@ export default async function OpportunityDetailPage({ params }: Props) {
             opportunityId={row.id}
           />
         )}
+      </section>
+      <section
+        aria-labelledby="interviews-heading"
+        className="detail-section"
+        id="interviews"
+      >
+        <h2 id="interviews-heading">Interviews</h2>
+        {interviews.length === 0 ? (
+          <p className="section-empty">No interview rounds yet. Add the first one below.</p>
+        ) : (
+          <>
+            <div className="table-scroll interview-table-wrap">
+              <table className="tbl interview-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Round</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">When</th>
+                    <th scope="col">Interviewer</th>
+                    <th scope="col">Result</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {interviews.map((item) => (
+                    <tr key={item.id}>
+                      <td className="tnum">{item.roundIndex}</td>
+                      <td>{item.kind}</td>
+                      <td className="tnum">{item.whenLabel}</td>
+                      <td>{item.interviewer ?? "—"}</td>
+                      <td>{item.result ?? "Pending"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <ul aria-label="Interview rounds" className="interview-card-list">
+              {interviews.map((item) => (
+                <li className="interview-list-card" key={item.id}>
+                  <span className="interview-list-card__heading">
+                    <strong>
+                      Round {item.roundIndex} · {item.kind}
+                    </strong>
+                  </span>
+                  <span className="tnum">{item.whenLabel}</span>
+                  <span>{item.interviewer ?? "No interviewer named"}</span>
+                  <span>{item.result ?? "Pending"}</span>
+                </li>
+              ))}
+            </ul>
+            {interviews.map((item) => {
+              const when = formatInterviewWhen(item.at, timeZone);
+              return (
+                <InterviewEditForm
+                  key={item.id}
+                  round={{
+                    id: item.id,
+                    kind: item.kind,
+                    dateOn: when.dateOn,
+                    time: when.time,
+                    interviewer: item.interviewer,
+                    meetingUrl: item.meetingUrl,
+                    questions: item.questions,
+                    prepNotes: item.prepNotes,
+                    performance: item.performance,
+                    result: item.result,
+                    notes: item.notes,
+                  }}
+                />
+              );
+            })}
+          </>
+        )}
+        <InterviewAddForm defaultDateOn={asOfOn} opportunityId={row.id} />
       </section>
       <section aria-labelledby="opportunity-tags" className="detail-section">
         <h2 id="opportunity-tags">Tags</h2>

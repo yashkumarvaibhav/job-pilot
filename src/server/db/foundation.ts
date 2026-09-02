@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 
 import { logEvent } from "./activity";
-import type { AppDatabase } from "./client";
+import type { AppDatabase, AppTransaction } from "./client";
 import { activityEvent, settings, userAccount, workspace } from "./schema";
 import { createTenantContext, type TenantContext } from "./tenant";
 import { assertIanaTimeZone, DEFAULT_TIME_ZONE } from "./timezone";
@@ -75,7 +75,7 @@ export function createAccountFoundation(
 }
 
 export function getWorkspaceSettings(
-  database: AppDatabase,
+  database: AppDatabase | AppTransaction,
   tenant: TenantContext,
   candidateWorkspaceId: string,
 ) {

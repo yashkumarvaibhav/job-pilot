@@ -702,6 +702,45 @@ export const application = sqliteTable(
   ],
 );
 
+export const interview = sqliteTable(
+  "interview",
+  {
+    ...workspaceOwnedEntityColumns(),
+    opportunityId: text("opportunity_id").notNull(),
+    roundIndex: integer("round_index").notNull(),
+    kind: text("kind").notNull(),
+    at: utcInstant("at"),
+    meetingUrl: text("meeting_url"),
+    interviewer: text("interviewer"),
+    questions: text("questions"),
+    prepNotes: text("prep_notes"),
+    performance: text("performance"),
+    result: text("result"),
+    notes: text("notes"),
+    createdAt: utcInstant("created_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("interview", table),
+    uniqueIndex("interview_workspace_opportunity_round_unique").on(
+      table.workspaceId,
+      table.opportunityId,
+      table.roundIndex,
+    ),
+    index("interview_workspace_opportunity_idx").on(
+      table.workspaceId,
+      table.opportunityId,
+    ),
+    index("interview_workspace_at_idx").on(table.workspaceId, table.at),
+    sameWorkspaceForeignKey(
+      "interview_opportunity_fk",
+      { workspaceId: table.workspaceId, parentId: table.opportunityId },
+      opportunity,
+    ).onDelete("cascade"),
+    check("interview_kind_not_blank", sql`length(trim(${table.kind})) > 0`),
+    check("interview_round_index_positive", sql`${table.roundIndex} >= 1`),
+  ],
+);
+
 export const task = sqliteTable(
   "task",
   {

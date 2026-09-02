@@ -30,6 +30,7 @@ export const NOTIFICATION_KIND_LABELS: Record<DueSourceKind, string> = {
   opportunity_next_action: "Opportunity next action",
   opportunity_deadline: "Application deadline",
   referral_follow_up: "Referral follow-up",
+  interview: "Interview",
   task: "Task",
 };
 

@@ -24,7 +24,12 @@ describe("due-source keys", () => {
     expect(dueSourceKey("referral_follow_up", "referral-rahul")).toBe(
       "referral:referral-rahul:follow_up",
     );
+    expect(dueSourceKey("interview", "round-1")).toBe("interview:round-1");
     expect(dueSourceKey("task", "task-prep")).toBe("task:task-prep");
+    expect(parseDueSourceKey(dueSourceKey("interview", "round-1"))).toEqual({
+      kind: "interview",
+      entityId: "round-1",
+    });
 
     for (const key of [
       dueSourceKey("contact_next_action", "rahul"),
@@ -61,5 +66,6 @@ describe("due-source keys", () => {
     expect(derivedDueItemTitle("opportunity_deadline", null)).toBe(
       "Application deadline",
     );
+    expect(derivedDueItemTitle("interview", null)).toBe("Interview");
   });
 });

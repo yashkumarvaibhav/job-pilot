@@ -4,6 +4,7 @@ import {
   calendarDateInZone,
   isReferralTerminalStage,
 } from "../../domain/referral";
+import { parseDueSourceKey } from "../../domain/due-source";
 import {
   TODAY_ACTIVITY_LIMIT,
   isDueOnOrBefore,
@@ -16,6 +17,7 @@ import { interaction } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
 import { DEFAULT_TIME_ZONE } from "../db/timezone";
 import { listActivity, type ActivityFeedItem } from "./activity";
+import { countInterviewsOn } from "./interviews";
 import { listSnoozedDueKeys } from "./notifications";
 import { listOpportunities } from "./opportunities";
 import { listReferrals } from "./referrals";
@@ -133,10 +135,14 @@ export function getTodaySnapshot(
     asOfOn,
     timeZone,
     stats: {
-      followUps: doNow.filter((item) => item.origin === "derived").length,
+      followUps: doNow.filter(
+        (item) =>
+          item.origin === "derived" &&
+          parseDueSourceKey(item.sourceKey)?.kind !== "interview",
+      ).length,
       needReply,
       deadlines,
-      interviewsToday: 0,
+      interviewsToday: countInterviewsOn(database, tenant, asOfOn, timeZone),
     },
     doNow,
     pipeline,

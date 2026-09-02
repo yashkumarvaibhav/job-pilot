@@ -26,7 +26,8 @@ type FoundationTable =
   | "task"
   | "tag"
   | "entity_tag"
-  | "notification";
+  | "notification"
+  | "interview";
 
 type BaseTenantTestFixture = {
   client: DatabaseClient;

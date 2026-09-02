@@ -52,13 +52,14 @@ describe("migrateDatabase", () => {
           "user_account",
           "workspace",
           "notification",
+          "interview",
         ]),
       );
       expect(
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 12 });
+      ).toEqual({ count: 13 });
 
       for (const indexName of [
         "company_workspace_id_id_unique",
@@ -123,6 +124,10 @@ describe("migrateDatabase", () => {
         "notification_workspace_group_key_idx",
         "notification_workspace_kind_idx",
         "notification_workspace_snoozed_idx",
+        "interview_workspace_id_id_unique",
+        "interview_workspace_opportunity_round_unique",
+        "interview_workspace_opportunity_idx",
+        "interview_workspace_at_idx",
       ]) {
         const columns = client.sqlite
           .prepare(
@@ -460,6 +465,49 @@ describe("migrateDatabase", () => {
         )
         .all();
       expect(applicationOpportunityForeignKeys).toEqual([
+        { table: "opportunity", from: "workspace_id", to: "workspace_id" },
+        { table: "opportunity", from: "opportunity_id", to: "id" },
+      ]);
+
+      const interviewColumns = client.sqlite
+        .prepare(
+          "select name, \"notnull\", dflt_value from pragma_table_info('interview') order by cid",
+        )
+        .all() as {
+        name: string;
+        notnull: number;
+        dflt_value: string | null;
+      }[];
+      expect(interviewColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "opportunity_id",
+        "round_index",
+        "kind",
+        "at",
+        "meeting_url",
+        "interviewer",
+        "questions",
+        "prep_notes",
+        "performance",
+        "result",
+        "notes",
+        "created_at",
+      ]);
+      expect(
+        interviewColumns.find((column) => column.name === "at")?.notnull,
+      ).toBe(0);
+      expect(
+        interviewColumns.find((column) => column.name === "round_index")
+          ?.notnull,
+      ).toBe(1);
+
+      const interviewOpportunityForeignKeys = client.sqlite
+        .prepare(
+          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('interview') where \"table\" = 'opportunity' order by seq",
+        )
+        .all();
+      expect(interviewOpportunityForeignKeys).toEqual([
         { table: "opportunity", from: "workspace_id", to: "workspace_id" },
         { table: "opportunity", from: "opportunity_id", to: "id" },
       ]);

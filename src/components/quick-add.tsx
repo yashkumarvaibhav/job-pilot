@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 
 import { CONTACT_RELATIONSHIPS } from "@/domain/contact";
+import { INTERVIEW_KIND_SUGGESTIONS } from "@/domain/interview";
 import { INTERACTION_CHANNELS } from "@/domain/interaction";
 import { QuickAddDialog } from "./quick-add-dialog";
 
@@ -24,12 +25,7 @@ export const QUICK_ADD_ACTIONS = [
   { key: "contact", label: "Add contact", shortcut: "p" },
   { key: "interaction", label: "Log interaction", shortcut: "l" },
   { key: "application", label: "Add application", shortcut: "a" },
-  {
-    key: "interview",
-    label: "Add interview",
-    shortcut: "i",
-    disabled: "Available after interview tracking lands.",
-  },
+  { key: "interview", label: "Add interview", shortcut: "i" },
   { key: "task", label: "Add task", shortcut: "t" },
   {
     key: "compose",
@@ -138,7 +134,7 @@ export function QuickAddForm({
   data,
   onSaved,
 }: {
-  action: Exclude<QuickAddAction, "interview" | "compose">;
+  action: Exclude<QuickAddAction, "compose">;
   data: QuickAddReferenceData;
   onSaved: (path: string) => void;
 }) {
@@ -241,6 +237,25 @@ export function QuickAddForm({
         return;
       }
 
+      if (action === "interview") {
+        const opportunityId = String(form.get("opportunityId") ?? "");
+        const dateOn = String(form.get("dateOn") ?? "");
+        const time = String(form.get("time") ?? "");
+        await postJson(
+          "/api/interviews",
+          {
+            opportunityId,
+            kind: String(form.get("kind") ?? ""),
+            dateOn: time ? dateOn : "",
+            time,
+            interviewer: String(form.get("interviewer") ?? ""),
+          },
+          "Could not save the interview.",
+        );
+        onSaved(`/opportunities/${opportunityId}`);
+        return;
+      }
+
       await postJson(
         "/api/tasks",
         {
@@ -259,7 +274,9 @@ export function QuickAddForm({
   }
 
   const noContacts = action === "interaction" && data.contacts.length === 0;
-  const noOpportunities = action === "application" && data.opportunities.length === 0;
+  const noOpportunities =
+    (action === "application" || action === "interview") &&
+    data.opportunities.length === 0;
 
   return (
     <form
@@ -393,6 +410,42 @@ export function QuickAddForm({
             <div className="field">
               <label htmlFor={`${formId}-application-date`}>Applied date</label>
               <input className="tnum" defaultValue={data.today} id={`${formId}-application-date`} name="appliedOn" required type="date" />
+            </div>
+          </>
+        ) : null}
+
+        {action === "interview" ? (
+          <>
+            {noOpportunities ? <p className="quick-add-empty">Add a job before adding an interview.</p> : null}
+            <div className="field quick-add-wide">
+              <label htmlFor={`${formId}-interview-opportunity`}>Job</label>
+              <select autoFocus id={`${formId}-interview-opportunity`} name="opportunityId" required>
+                <option disabled value="">Choose a job</option>
+                {data.opportunities.map((opportunity) => (
+                  <option key={opportunity.id} value={opportunity.id}>{opportunity.companyName} — {opportunity.role}</option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor={`${formId}-interview-kind`}>Round type</label>
+              <input id={`${formId}-interview-kind`} list={`${formId}-interview-kinds`} name="kind" required />
+              <datalist id={`${formId}-interview-kinds`}>
+                {INTERVIEW_KIND_SUGGESTIONS.map((kind) => (
+                  <option key={kind} value={kind} />
+                ))}
+              </datalist>
+            </div>
+            <div className="field">
+              <label htmlFor={`${formId}-interview-interviewer`}>Interviewer</label>
+              <input id={`${formId}-interview-interviewer`} name="interviewer" />
+            </div>
+            <div className="field">
+              <label htmlFor={`${formId}-interview-date`}>Date</label>
+              <input className="tnum" defaultValue={data.today} id={`${formId}-interview-date`} name="dateOn" type="date" />
+            </div>
+            <div className="field">
+              <label htmlFor={`${formId}-interview-time`}>Time</label>
+              <input className="tnum" id={`${formId}-interview-time`} name="time" type="time" />
             </div>
           </>
         ) : null}

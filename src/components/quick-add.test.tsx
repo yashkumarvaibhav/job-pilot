@@ -48,7 +48,7 @@ describe("global quick add", () => {
     expect(html).toContain('class="tnum">2</span>');
   });
 
-  it("lists all nine actions and explains both disabled actions", () => {
+  it("lists all nine actions and explains the remaining disabled action", () => {
     const html = renderToStaticMarkup(
       <QuickAdd data={data} onClose={() => undefined} returnFocusTo={null} />,
     );
@@ -64,9 +64,27 @@ describe("global quick add", () => {
       "Compose email",
       "Create reminder",
     ]) expect(html).toContain(label);
-    expect(html).toContain("Available after interview tracking lands.");
     expect(html).toContain("Connect Gmail in Settings to compose email.");
-    expect(html.match(/disabled=""/g)).toHaveLength(2);
+    expect(html.match(/disabled=""/g)).toHaveLength(1);
+    expect(html).not.toContain("Available after interview tracking lands.");
+  });
+
+  it("renders the interview capture with a job, round type, and time", () => {
+    const html = renderToStaticMarkup(
+      <QuickAdd
+        data={data}
+        initialAction="interview"
+        onClose={() => undefined}
+        returnFocusTo={null}
+      />,
+    );
+
+    expect(html).toContain("Amazon — SDE");
+    expect(html).toContain("Round type");
+    expect(html).toContain('name="kind"');
+    expect(html).toContain('name="time"');
+    expect(html).toContain("Interviewer");
+    expect(html).not.toContain("Available after interview tracking lands.");
   });
 
   it("renders the four-field phone interaction capture and direct Save", () => {

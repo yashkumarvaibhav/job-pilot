@@ -21,6 +21,7 @@ import { POST as addApplication } from "./applications/route";
 import { POST as addCompany } from "./companies/route";
 import { POST as addContact } from "./contacts/route";
 import { POST as logInteraction } from "./contacts/[id]/interactions/route";
+import { POST as addInterview } from "./interviews/route";
 import { POST as addOpportunity } from "./opportunities/route";
 import { POST as addTask } from "./tasks/route";
 
@@ -76,6 +77,7 @@ describe("quick-add route boundaries", () => {
       addContact(jsonRequest("http://localhost/api/contacts", { name: "Injected", workspaceId })),
       addOpportunity(jsonRequest("http://localhost/api/opportunities", { companyId: company.id, role: "Injected", workspaceId })),
       addApplication(jsonRequest("http://localhost/api/applications", { opportunityId: opportunity.id, portal: "Workday", appliedOn: "2026-09-01", workspaceId })),
+      addInterview(jsonRequest("http://localhost/api/interviews", { opportunityId: opportunity.id, kind: "Coding", workspaceId })),
       addTask(jsonRequest("http://localhost/api/tasks", { title: "Injected", workspaceId })),
       logInteraction(
         jsonRequest(`http://localhost/api/contacts/${contact.id}/interactions`, {
@@ -88,7 +90,7 @@ describe("quick-add route boundaries", () => {
       ),
     ]);
 
-    expect(responses.map((response) => response.status)).toEqual([400, 400, 400, 400, 400, 400]);
+    expect(responses.map((response) => response.status)).toEqual([400, 400, 400, 400, 400, 400, 400]);
     expect(fixture.rowCount("activity_event")).toBe(before);
   });
 
@@ -137,6 +139,12 @@ describe("quick-add route boundaries", () => {
       }),
       { params: Promise.resolve({ id: foreignContact.id }) },
     );
+    const interview = await addInterview(
+      jsonRequest("http://localhost/api/interviews", {
+        opportunityId: foreignOpportunity.id,
+        kind: "Coding",
+      }),
+    );
     const task = await addTask(
       jsonRequest("http://localhost/api/tasks", {
         title: "Cross tenant",
@@ -145,7 +153,7 @@ describe("quick-add route boundaries", () => {
       }),
     );
 
-    expect([contact.status, opportunity.status, application.status, interaction.status, task.status]).toEqual([400, 400, 404, 404, 400]);
+    expect([contact.status, opportunity.status, application.status, interaction.status, interview.status, task.status]).toEqual([400, 400, 404, 404, 404, 400]);
     expect(fixture.rowCount("activity_event")).toBe(before);
   });
 });
