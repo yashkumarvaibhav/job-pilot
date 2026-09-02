@@ -377,4 +377,32 @@ describe("opportunity screens", () => {
     expect(css).toContain(".assessment-table-wrap");
     expect(css).toContain(".assessment-card-list");
   });
+
+  it("names why an opportunity is stale", async () => {
+    const fixture = newFixture();
+    const createdAt = new Date("2026-08-26T04:30:00.000Z");
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "microsoft",
+      name: "Microsoft",
+      now: createdAt,
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "silent",
+      companyId: "microsoft",
+      role: "SDE",
+      bucket: "active",
+      deadlineOn: "2026-09-04",
+      now: createdAt,
+    });
+
+    const html = renderToStaticMarkup(
+      await OpportunityDetailPage({
+        params: Promise.resolve({ id: "silent" }),
+      }),
+    );
+    expect(html).toContain("Stale");
+    expect(html).toContain("No activity for");
+    expect(html).toContain("Job deadline 2026-09-04");
+    expect(html).toContain("aria-hidden=\"true\"");
+  });
 });

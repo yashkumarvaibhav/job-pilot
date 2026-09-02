@@ -25,6 +25,7 @@ import {
 } from "@/server/repos/referrals";
 import { savedSearchResponse } from "@/server/repos/saved-search-http";
 import { listSavedSearches } from "@/server/repos/saved-searches";
+import { listStaleIndex } from "@/server/repos/rules";
 
 type Props = {
   searchParams: Promise<PageSearchParams>;
@@ -43,6 +44,7 @@ export default async function ReferralsPage({ searchParams }: Props) {
   const searches = listSavedSearches(database, tenant, "referrals").map(
     savedSearchResponse,
   );
+  const stale = listStaleIndex(database, tenant, asOfOn);
   const companies = listCompanies(database, tenant);
   const contacts = listContacts(database, tenant).map(({ id, name }) => ({
     id,
@@ -171,6 +173,7 @@ export default async function ReferralsPage({ searchParams }: Props) {
         <ReferralCollection
           empty="No referral requests. Open an opportunity and ask someone."
           rows={referrals}
+          staleById={stale.referral}
         />
       )}
       {contacts.length === 0 ? (

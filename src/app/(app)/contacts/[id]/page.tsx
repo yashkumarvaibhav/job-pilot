@@ -19,6 +19,7 @@ import { FromConversationPanel } from "@/components/opportunity-contact-forms";
 import { ReferralCreateForm } from "@/components/referral-forms";
 import { ReferralCollection } from "@/components/referral-list";
 import { TagPicker } from "@/components/tag-picker";
+import { StaleFlag } from "@/components/stale-chip";
 import { RolledUpStageChip } from "@/components/application-status";
 import {
   formatInteractionOccurredAt,
@@ -36,6 +37,7 @@ import { listReferrals } from "@/server/repos/referrals";
 import { listEntityTags, listTags } from "@/server/repos/tags";
 import { listActivity } from "@/server/repos/activity";
 import { calendarDateInZone } from "@/domain/referral";
+import { listStaleIndex } from "@/server/repos/rules";
 
 type ContactDetailPageProps = { params: Promise<{ id: string }> };
 
@@ -82,6 +84,7 @@ export default async function ContactDetailPage({
     getWorkspaceSettings(database, tenant, tenant.workspaceId)?.timezone ??
     DEFAULT_TIME_ZONE;
   const asOfOn = calendarDateInZone(timeZone);
+  const stale = listStaleIndex(database, tenant, asOfOn);
   const referrals = listReferrals(database, tenant, {
     asOfOn,
     contactId: contact.id,
@@ -112,6 +115,7 @@ export default async function ContactDetailPage({
           <h1>{contact.name}</h1>
         </div>
         <ContactStatusChip status={contact.networkingStatus} />
+        <StaleFlag reasons={stale.contact.get(contact.id) ?? []} />
       </header>
 
       <section aria-labelledby="contact-identity" className="detail-section">
@@ -342,6 +346,7 @@ export default async function ContactDetailPage({
           empty="No referral requests for this person yet."
           labelledBy="contact-referrals"
           rows={referrals}
+          staleById={stale.referral}
         />
         <ReferralCreateForm
           contacts={[{ id: contact.id, name: contact.name }]}

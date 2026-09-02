@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ContactCreatePanel } from "@/components/contact-form";
 import { SavedSearchPanel } from "@/components/saved-search-panel";
+import { StaleFlag } from "@/components/stale-chip";
 import {
   ContactStatusChip,
   relationshipLabel,
@@ -14,8 +15,11 @@ import {
   pageSearchParams,
   type PageSearchParams,
 } from "@/domain/list-filter";
+import { calendarDateInZone } from "@/domain/referral";
 import { requireTenant } from "@/server/auth/current-session";
+import { getWorkspaceSettings } from "@/server/db/foundation";
 import { getDatabase } from "@/server/db/runtime";
+import { DEFAULT_TIME_ZONE } from "@/server/db/timezone";
 import { listCompanies } from "@/server/repos/companies";
 import {
   listContacts,
@@ -23,6 +27,7 @@ import {
 } from "@/server/repos/contacts";
 import { savedSearchResponse } from "@/server/repos/saved-search-http";
 import { listSavedSearches } from "@/server/repos/saved-searches";
+import { listStaleIndex } from "@/server/repos/rules";
 
 type Props = { searchParams?: Promise<PageSearchParams> };
 
@@ -35,6 +40,14 @@ export default async function ContactsPage({ searchParams }: Props = {}) {
   const companies = listCompanies(database, tenant);
   const searches = listSavedSearches(database, tenant, "contacts").map(
     savedSearchResponse,
+  );
+  const timeZone =
+    getWorkspaceSettings(database, tenant, tenant.workspaceId)?.timezone ??
+    DEFAULT_TIME_ZONE;
+  const stale = listStaleIndex(
+    database,
+    tenant,
+    calendarDateInZone(timeZone),
   );
   const hasFilters = Object.keys(filter).length > 0;
 
@@ -167,6 +180,7 @@ export default async function ContactsPage({ searchParams }: Props = {}) {
                     <td>{relationshipLabel(contact.relationship)}</td>
                     <td>
                       <ContactStatusChip status={contact.networkingStatus} />
+                      <StaleFlag reasons={stale.contact.get(contact.id) ?? []} />
                     </td>
                     <td className="tnum">
                       {contact.lastInteractionAt?.toISOString().slice(0, 10) ?? "—"}
@@ -187,6 +201,7 @@ export default async function ContactsPage({ searchParams }: Props = {}) {
                     <strong>{contact.name}</strong>
                     <ContactStatusChip status={contact.networkingStatus} />
                   </span>
+                  <StaleFlag reasons={stale.contact.get(contact.id) ?? []} />
                   <span>
                     {contact.companyName ?? "No company"}
                     {contact.designation ? ` · ${contact.designation}` : ""}

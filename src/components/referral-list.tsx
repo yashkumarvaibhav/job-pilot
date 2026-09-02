@@ -1,16 +1,20 @@
 import Link from "next/link";
 
 import { ReferralStageChip } from "@/components/referral-status";
+import { StaleFlag } from "@/components/stale-chip";
+import type { StaleMark } from "@/domain/rules";
 import type { ReferralListItem } from "@/server/repos/referrals";
 
 export function ReferralCollection({
   empty,
   labelledBy,
   rows,
+  staleById,
 }: {
   empty: string;
   labelledBy?: string;
   rows: ReferralListItem[];
+  staleById?: Map<string, StaleMark[]>;
 }) {
   if (rows.length === 0) {
     return <p className="section-empty">{empty}</p>;
@@ -43,6 +47,7 @@ export function ReferralCollection({
                 <td>{row.role ?? "—"}</td>
                 <td>
                   <ReferralStageChip stage={row.stage} />
+                  <StaleFlag reasons={staleById?.get(row.id) ?? []} />
                 </td>
                 <td className="tnum">{row.requestedOn ?? "—"}</td>
                 <td className="tnum">{row.followUpOn ?? "—"}</td>
@@ -63,6 +68,7 @@ export function ReferralCollection({
                 <strong>{row.contactName}</strong>
                 <ReferralStageChip stage={row.stage} />
               </span>
+              <StaleFlag reasons={staleById?.get(row.id) ?? []} />
               <span>
                 {row.companyName ?? "No company"}
                 {row.role ? ` · ${row.role}` : ""}

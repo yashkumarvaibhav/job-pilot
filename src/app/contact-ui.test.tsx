@@ -366,4 +366,20 @@ describe("contact screens", () => {
       expect(html).not.toContain("Private Person");
     }
   });
+
+  it("shows a check-later stale reason on the contact", async () => {
+    const fixture = newFixture();
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "asha",
+      name: "Asha",
+      networkingStatus: "follow_up_later",
+      followUpOn: "2026-09-01",
+    });
+
+    const html = renderToStaticMarkup(
+      await ContactDetailPage({ params: Promise.resolve({ id: "asha" }) }),
+    );
+    expect(html).toContain("Stale");
+    expect(html).toContain("Check later date 2026-09-01 has passed");
+  });
 });

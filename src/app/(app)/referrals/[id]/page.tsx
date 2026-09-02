@@ -3,6 +3,7 @@ import Link from "next/link";
 import { InteractionChannelMark } from "@/components/interaction-channel";
 import { ReferralEditForm } from "@/components/referral-forms";
 import { ReferralStageChip } from "@/components/referral-status";
+import { StaleFlag } from "@/components/stale-chip";
 import { ActivityTimeline } from "@/components/activity-timeline";
 import {
   formatInteractionOccurredAt,
@@ -19,6 +20,7 @@ import { listInteractions } from "@/server/repos/interactions";
 import { listOpportunities } from "@/server/repos/opportunities";
 import { getReferral } from "@/server/repos/referrals";
 import { listActivity } from "@/server/repos/activity";
+import { listStaleIndex } from "@/server/repos/rules";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -43,6 +45,12 @@ export default async function ReferralDetailPage({ params }: Props) {
   const timeZone =
     getWorkspaceSettings(database, tenant, tenant.workspaceId)?.timezone ??
     DEFAULT_TIME_ZONE;
+  const staleReasons =
+    listStaleIndex(
+      database,
+      tenant,
+      calendarDateInZone(timeZone),
+    ).referral.get(row.id) ?? [];
   const contacts = listContacts(database, tenant).map(({ id: contactId, name }) => ({
     id: contactId,
     name,
@@ -94,6 +102,7 @@ export default async function ReferralDetailPage({ params }: Props) {
           </p>
         </div>
         <ReferralStageChip stage={row.stage} />
+        <StaleFlag reasons={staleReasons} />
       </header>
       <section aria-labelledby="referral-interactions" className="detail-section">
         <h2 id="referral-interactions">Interactions</h2>

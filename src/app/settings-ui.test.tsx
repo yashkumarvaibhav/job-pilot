@@ -17,6 +17,10 @@ import {
   TIMEZONE_HELP,
 } from "../domain/settings";
 import {
+  AUTOMATION_RULES_HELP,
+  AUTOMATION_RULES_TITLE,
+} from "../domain/rules";
+import {
   EXPORT_CONTACTS_CSV_LABEL,
   EXPORT_JSON_LABEL,
 } from "../domain/export";
@@ -86,6 +90,9 @@ describe("settings screen", () => {
     expect(html).toContain('value="08:00"');
     expect(html).toContain(TIMEZONE_HELP);
     expect(html).toContain(QUIET_HOURS_HELP);
+    expect(html).toContain(AUTOMATION_RULES_TITLE);
+    expect(html).toContain(AUTOMATION_RULES_HELP);
+    expect(html).toContain("No activity");
     // The saved zone, not the server zone, decides whether now is quiet.
     expect(html).toContain("in Asia/Kolkata,");
     expect(

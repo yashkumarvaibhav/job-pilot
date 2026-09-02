@@ -3,6 +3,7 @@ import Link from "next/link";
 import { RolledUpStageChip } from "@/components/application-status";
 import { OpportunityCreatePanel } from "@/components/opportunity-form";
 import { SavedSearchPanel } from "@/components/saved-search-panel";
+import { StaleFlag } from "@/components/stale-chip";
 import {
   pageSearchParams,
   type PageSearchParams,
@@ -19,6 +20,7 @@ import {
 } from "@/server/repos/opportunities";
 import { savedSearchResponse } from "@/server/repos/saved-search-http";
 import { listSavedSearches } from "@/server/repos/saved-searches";
+import { listStaleIndex } from "@/server/repos/rules";
 
 type Props = { searchParams: Promise<PageSearchParams> };
 
@@ -40,10 +42,8 @@ export default async function OpportunitiesPage({ searchParams }: Props) {
   const timeZone =
     getWorkspaceSettings(database, tenant, tenant.workspaceId)?.timezone ??
     DEFAULT_TIME_ZONE;
-  const filter = parseOpportunityListFilter(
-    query,
-    calendarDateInZone(timeZone),
-  );
+  const asOfOn = calendarDateInZone(timeZone);
+  const filter = parseOpportunityListFilter(query, asOfOn);
   const opportunities = listOpportunities(database, tenant, filter);
   const allOpportunities = listOpportunities(database, tenant, "all");
   const companies = listCompanies(database, tenant).map(({ id, name }) => ({
@@ -53,6 +53,7 @@ export default async function OpportunitiesPage({ searchParams }: Props) {
   const searches = listSavedSearches(database, tenant, "opportunities").map(
     savedSearchResponse,
   );
+  const stale = listStaleIndex(database, tenant, asOfOn);
   const priorities = [
     ...new Set(
       allOpportunities
@@ -151,12 +152,12 @@ export default async function OpportunitiesPage({ searchParams }: Props) {
         <>
           <div className="table-scroll opportunity-table-wrap">
             <table className="tbl opportunity-table">
-              <thead><tr><th scope="col">Company</th><th scope="col">Role</th><th scope="col">Job ID</th><th scope="col">Bucket</th><th scope="col">Stage</th><th scope="col">Priority</th><th scope="col">Deadline</th><th scope="col">Next action</th></tr></thead>
-              <tbody>{opportunities.map((row) => <tr key={row.id}><td>{row.companyName}</td><td><Link className="table-link" href={`/opportunities/${row.id}`}>{row.role}</Link></td><td className="tnum mono-value">{row.jobId ?? "—"}</td><td>{row.bucket === "saved" ? "Saved" : "Active"}</td><td><RolledUpStageChip applicationStage={row.application?.stage} opportunityStage={row.stage} /></td><td>{row.priority ?? "—"}</td><td className="tnum">{row.deadlineOn ?? "—"}</td><td>{row.nextAction ?? "—"}</td></tr>)}</tbody>
+              <thead><tr><th scope="col">Company</th><th scope="col">Role</th><th scope="col">Job ID</th><th scope="col">Bucket</th><th scope="col">Stage</th><th scope="col">Health</th><th scope="col">Priority</th><th scope="col">Deadline</th><th scope="col">Next action</th></tr></thead>
+              <tbody>{opportunities.map((row) => <tr key={row.id}><td>{row.companyName}</td><td><Link className="table-link" href={`/opportunities/${row.id}`}>{row.role}</Link></td><td className="tnum mono-value">{row.jobId ?? "—"}</td><td>{row.bucket === "saved" ? "Saved" : "Active"}</td><td><RolledUpStageChip applicationStage={row.application?.stage} opportunityStage={row.stage} /></td><td><StaleFlag reasons={stale.opportunity.get(row.id) ?? []} /></td><td>{row.priority ?? "—"}</td><td className="tnum">{row.deadlineOn ?? "—"}</td><td>{row.nextAction ?? "—"}</td></tr>)}</tbody>
             </table>
           </div>
           <ul aria-label="Opportunities" className="opportunity-card-list">
-            {opportunities.map((row) => <li key={row.id}><Link className="opportunity-list-card" href={`/opportunities/${row.id}`}><span className="opportunity-list-card__heading"><strong>{row.role}</strong><span>{row.bucket === "saved" ? "Saved" : "Active"}</span></span><span>{row.companyName}{row.jobId ? ` · ${row.jobId}` : ""}</span><RolledUpStageChip applicationStage={row.application?.stage} opportunityStage={row.stage} /><span className="tnum">{row.deadlineOn ? `Deadline ${row.deadlineOn}` : "No deadline"}</span></Link></li>)}
+            {opportunities.map((row) => <li key={row.id}><Link className="opportunity-list-card" href={`/opportunities/${row.id}`}><span className="opportunity-list-card__heading"><strong>{row.role}</strong><span>{row.bucket === "saved" ? "Saved" : "Active"}</span></span><span>{row.companyName}{row.jobId ? ` · ${row.jobId}` : ""}</span><RolledUpStageChip applicationStage={row.application?.stage} opportunityStage={row.stage} /><StaleFlag reasons={stale.opportunity.get(row.id) ?? []} /><span className="tnum">{row.deadlineOn ? `Deadline ${row.deadlineOn}` : "No deadline"}</span></Link></li>)}
           </ul>
         </>
       )}

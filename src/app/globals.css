@@ -2831,3 +2831,80 @@ main:focus {
     justify-content: center;
   }
 }
+
+.stale-flag {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.stale-flag__reasons {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.stale-flag__reasons li {
+  margin: 0;
+}
+
+.automation-rule-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.automation-rule-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--target-min);
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--raised);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.automation-rule-toggle:hover {
+  background: var(--hover);
+}
+
+.automation-rule-toggle:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.automation-rule-toggle input {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex: none;
+  accent-color: var(--accent);
+}
+
+.automation-rule-toggle > span {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.automation-rule-toggle__label {
+  font-weight: 500;
+}
+
+.automation-rule-toggle__kind {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .automation-rule-toggle {
+    transition: none;
+  }
+}

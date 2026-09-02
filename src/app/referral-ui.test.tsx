@@ -223,4 +223,39 @@ describe("referral screens", () => {
       expect(html).not.toContain("Hidden Person");
     }
   });
+
+  it("shows the promised-not-received stale reason on the row", async () => {
+    const fixture = newFixture();
+    const promisedOn = "2026-08-28";
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "microsoft",
+      name: "Microsoft",
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "rahul",
+      companyId: "microsoft",
+      name: "Rahul Sharma",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "ms-sde",
+      companyId: "microsoft",
+      role: "SDE",
+    });
+    createReferral(fixture.client.db, fixture.tenantA, {
+      id: "promised",
+      contactId: "rahul",
+      opportunityId: "ms-sde",
+      channel: "email",
+      stage: "referral_promised",
+      requestedOn: promisedOn,
+      now: new Date("2026-08-28T10:00:00.000Z"),
+    });
+
+    const html = renderToStaticMarkup(
+      await ReferralsPage({ searchParams: Promise.resolve({}) }),
+    );
+    expect(html).toContain("Stale");
+    expect(html).toContain("Referral promised");
+    expect(html).toContain("not received");
+  });
 });

@@ -129,6 +129,7 @@ const TENANT_ROUTE_FILES = [
   "applications/route.ts",
   "assessments/[id]/route.ts",
   "assessments/route.ts",
+  "automation-rules/route.ts",
   "companies/[id]/route.ts",
   "companies/route.ts",
   "contacts/[id]/interactions/[interactionId]/mark-replied/route.ts",

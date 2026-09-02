@@ -9,6 +9,7 @@ import { createCompany } from "../server/repos/companies";
 import { createContact, updateContact } from "../server/repos/contacts";
 import { createInterview } from "../server/repos/interviews";
 import { createOpportunity } from "../server/repos/opportunities";
+import { createReferral } from "../server/repos/referrals";
 import { createTenantTestFixture } from "../test/tenant-fixture";
 
 const mocks = vi.hoisted(() => ({
@@ -154,6 +155,36 @@ describe("Today screen", () => {
     expect(html).toContain("Overdue");
     expect(html).toContain("aria-hidden=\"true\"");
     expect(html).toContain("Deadlines");
+  });
+
+  it("lists a rule-created referral follow-up on Today", async () => {
+    const fixture = newFixture();
+    const asOfOn = calendarDateInZone("Asia/Kolkata");
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "microsoft",
+      name: "Microsoft",
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "rahul",
+      name: "Rahul Sharma",
+      companyId: "microsoft",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "ms-sde",
+      companyId: "microsoft",
+      role: "SDE",
+    });
+    createReferral(fixture.client.db, fixture.tenantA, {
+      id: "ref-1",
+      contactId: "rahul",
+      opportunityId: "ms-sde",
+      channel: "email",
+      stage: "requested",
+      requestedOn: shiftCalendarDate(asOfOn, -6),
+    });
+
+    const html = renderToStaticMarkup(await Home());
+    expect(html).toContain("Follow up on referral");
   });
 
   it("designs loading and error states", () => {

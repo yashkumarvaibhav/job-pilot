@@ -1,5 +1,7 @@
+import { AutomationRulesPanel } from "@/components/automation-rules-panel";
 import { ExportPanel } from "@/components/export-panel";
 import { SettingsForm } from "@/components/settings-form";
+import { AUTOMATION_RULES_TITLE } from "@/domain/rules";
 import {
   formatClockMinutes,
   GMAIL_NOT_CONNECTED_HELP,
@@ -12,10 +14,12 @@ import {
 import { requireTenant } from "@/server/auth/current-session";
 import { getDatabase } from "@/server/db/runtime";
 import { readWorkspaceSettings } from "@/server/repos/settings";
+import { listAutomationRules } from "@/server/repos/rules";
 
 export default async function SettingsPage() {
   const tenant = await requireTenant();
-  const view = readWorkspaceSettings(getDatabase(), tenant);
+  const database = getDatabase();
+  const view = readWorkspaceSettings(database, tenant);
   const quietState = quietHoursStateLine(
     view.timezone,
     new Date(),
@@ -49,6 +53,14 @@ export default async function SettingsPage() {
             view.quietEnd == null ? "" : formatClockMinutes(view.quietEnd),
         }}
       />
+
+      <section
+        aria-labelledby="settings-rules"
+        className="settings-section"
+      >
+        <h2 id="settings-rules">{AUTOMATION_RULES_TITLE}</h2>
+        <AutomationRulesPanel rules={listAutomationRules(database, tenant)} />
+      </section>
 
       <section
         aria-labelledby="settings-gmail"

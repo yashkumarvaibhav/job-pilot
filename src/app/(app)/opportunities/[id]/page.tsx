@@ -23,6 +23,7 @@ import { OpportunityEditForm } from "@/components/opportunity-form";
 import { ReferralCreateForm } from "@/components/referral-forms";
 import { ReferralCollection } from "@/components/referral-list";
 import { TagPicker } from "@/components/tag-picker";
+import { StaleFlag } from "@/components/stale-chip";
 import { requireTenant } from "@/server/auth/current-session";
 import { getWorkspaceSettings } from "@/server/db/foundation";
 import { getDatabase } from "@/server/db/runtime";
@@ -45,6 +46,7 @@ import { listEntityTags, listTags } from "@/server/repos/tags";
 import { formatInterviewWhen } from "@/domain/interview";
 import { isAssessmentStatus } from "@/domain/assessment";
 import { calendarDateInZone } from "@/domain/referral";
+import { listStaleIndex } from "@/server/repos/rules";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -114,6 +116,8 @@ export default async function OpportunityDetailPage({ params }: Props) {
       companyName: item.companyName,
     }));
   const asOfOn = calendarDateInZone(timeZone);
+  const stale = listStaleIndex(database, tenant, asOfOn);
+  const staleReasons = stale.opportunity.get(row.id) ?? [];
   const referrals = listReferrals(database, tenant, {
     asOfOn,
     opportunityId: row.id,
@@ -179,6 +183,7 @@ export default async function OpportunityDetailPage({ params }: Props) {
             applicationStage={row.application?.stage}
             opportunityStage={row.stage}
           />
+          <StaleFlag reasons={staleReasons} />
           <p className="stage-machine">
             {stageMachineLabel(row.application?.stage)}
           </p>
@@ -257,6 +262,7 @@ export default async function OpportunityDetailPage({ params }: Props) {
           empty="No referral requests for this opening yet."
           labelledBy="opportunity-referrals"
           rows={referrals}
+          staleById={stale.referral}
         />
         {allContacts.length === 0 ? (
           <p className="section-empty">
