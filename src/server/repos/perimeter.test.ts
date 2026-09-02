@@ -4,6 +4,7 @@ import { join, relative } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { dueSourceKey } from "../../domain/due-source";
+import { parseExportQuery } from "../../domain/export";
 import { createTenantTestFixture } from "../../test/tenant-fixture";
 import { listActivity } from "./activity";
 import {
@@ -41,6 +42,7 @@ import {
   versionDisplayNames,
   workspaceStoredBytes,
 } from "./documents";
+import { buildWorkspaceExport } from "./export";
 import { getImportMapping, saveImportMapping } from "./import-mappings";
 import {
   InteractionInputError,
@@ -121,6 +123,7 @@ const TENANT_ROUTE_FILES = [
   "document-versions/[versionId]/route.ts",
   "documents/[id]/versions/route.ts",
   "documents/route.ts",
+  "export/route.ts",
   "import/route.ts",
   "interviews/[id]/route.ts",
   "interviews/route.ts",
@@ -511,6 +514,11 @@ describe("registered tenant perimeter", () => {
       today: getTodaySnapshot(database, a, { now }),
       importMapping: getImportMapping(database, a, "companies"),
       storedBytes: workspaceStoredBytes(database, a),
+      exportJson: buildWorkspaceExport(
+        database,
+        a,
+        parseExportQuery(new URLSearchParams("format=json&set=all")),
+      ).body,
     };
 
     expect(JSON.stringify(visibleToA)).not.toContain("Private Boundary");

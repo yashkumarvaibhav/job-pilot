@@ -1,3 +1,4 @@
+import { ExportPanel } from "@/components/export-panel";
 import { SettingsForm } from "@/components/settings-form";
 import {
   formatClockMinutes,
@@ -99,6 +100,8 @@ export default async function SettingsPage() {
           <p>{SCORING_EMPTY_HELP}</p>
         </div>
       </section>
+
+      <ExportPanel />
     </section>
   );
 }

@@ -2424,6 +2424,16 @@ main:focus {
   min-height: var(--target-min);
 }
 
+.settings-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.settings-export-actions .btn {
+  min-height: var(--target-min);
+}
+
 .settings-saved {
   margin: 0;
   color: var(--success);
@@ -2436,9 +2446,15 @@ main:focus {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .settings-actions .btn {
+  .settings-actions .btn,
+  .settings-export-actions .btn {
     width: 100%;
     justify-content: center;
+  }
+
+  .settings-export-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

@@ -16,6 +16,10 @@ import {
   SETTINGS_LOADING,
   TIMEZONE_HELP,
 } from "../domain/settings";
+import {
+  EXPORT_CONTACTS_CSV_LABEL,
+  EXPORT_JSON_LABEL,
+} from "../domain/export";
 import { updateWorkspaceSettings } from "../server/repos/settings";
 import { createTenantTestFixture } from "../test/tenant-fixture";
 
@@ -130,6 +134,20 @@ describe("settings screen", () => {
     expect(html).not.toContain('href="/api/gmail');
   });
 
+  it("offers Export JSON and Export contacts CSV as same-origin downloads", async () => {
+    newFixture();
+
+    const html = renderToStaticMarkup(await SettingsPage());
+
+    expect(html).toContain(EXPORT_JSON_LABEL);
+    expect(html).toContain(EXPORT_CONTACTS_CSV_LABEL);
+    expect(html).toContain("Password hashes and account tokens are not included.");
+    expect(html).toContain('href="/api/export?format=json&amp;set=all"');
+    expect(html).toContain('href="/api/export?format=csv&amp;set=contacts"');
+    expect(html).toContain('download="job-pilot.json"');
+    expect(html).toContain('download="job-pilot-contacts.csv"');
+  });
+
   it("designs its loading and error states", () => {
     expect(renderToStaticMarkup(<SettingsLoading />)).toContain(
       SETTINGS_LOADING,
@@ -162,6 +180,7 @@ describe("settings screen", () => {
     const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
 
     expect(css).toContain(".settings-section");
+    expect(css).toContain(".settings-export-actions");
     expect(css).toContain("min-height: var(--target-min)");
     expect(css).toContain("@media (max-width: 767px)");
     expect(/\.settings-[a-z-]*\s*\{[^}]*#[0-9a-fA-F]{3}/.test(css)).toBe(false);
