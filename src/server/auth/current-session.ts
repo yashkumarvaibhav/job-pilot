@@ -6,6 +6,7 @@ import type { TenantContext } from "../db/tenant";
 import {
   resolveSessionTenant,
   revokeSession,
+  touchSession,
   SESSION_COOKIE_NAME,
   sessionCookieAttributes,
   sessionCookieIsSecure,
@@ -20,7 +21,17 @@ export async function readSessionToken(): Promise<string | undefined> {
 
 /** The single place a request turns into workspace authority (D-035). */
 export async function currentTenant(): Promise<TenantContext | null> {
-  return resolveSessionTenant(getDatabase(), await readSessionToken());
+  const database = getDatabase();
+  const token = await readSessionToken();
+  const tenant = resolveSessionTenant(database, token);
+
+  if (tenant) {
+    // Keeps an in-use session from idling out mid-session; writes at most once
+    // an hour and never past the absolute lifetime.
+    touchSession(database, token);
+  }
+
+  return tenant;
 }
 
 export async function requireTenant(): Promise<TenantContext> {
