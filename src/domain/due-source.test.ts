@@ -18,6 +18,9 @@ describe("due-source keys", () => {
     expect(dueSourceKey("opportunity_next_action", "ms-sde")).toBe(
       "opportunity:ms-sde:next_action",
     );
+    expect(dueSourceKey("opportunity_deadline", "ms-sde")).toBe(
+      "opportunity:ms-sde:deadline",
+    );
     expect(dueSourceKey("referral_follow_up", "referral-rahul")).toBe(
       "referral:referral-rahul:follow_up",
     );
@@ -41,6 +44,10 @@ describe("due-source keys", () => {
       entityId: "rahul",
     });
     expect(parseDueSourceKey("not-a-key")).toBeNull();
+    expect(parseDueSourceKey(dueSourceKey("opportunity_deadline", "ms-sde"))).toEqual({
+      kind: "opportunity_deadline",
+      entityId: "ms-sde",
+    });
   });
 
   it("titles a derived due item from the next-action string or a stable default", () => {
@@ -50,6 +57,9 @@ describe("due-source keys", () => {
     expect(derivedDueItemTitle("contact_next_action", "")).toBe("Follow up");
     expect(derivedDueItemTitle("referral_follow_up", null)).toBe(
       "Check referral",
+    );
+    expect(derivedDueItemTitle("opportunity_deadline", null)).toBe(
+      "Application deadline",
     );
   });
 });

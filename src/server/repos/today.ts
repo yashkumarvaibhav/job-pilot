@@ -16,6 +16,7 @@ import { interaction } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
 import { DEFAULT_TIME_ZONE } from "../db/timezone";
 import { listActivity, type ActivityFeedItem } from "./activity";
+import { listSnoozedDueKeys } from "./notifications";
 import { listOpportunities } from "./opportunities";
 import { listReferrals } from "./referrals";
 import { listDueItems, type DueItem } from "./tasks";
@@ -51,9 +52,12 @@ export function listTodayDueItems(
   database: AppDatabase,
   tenant: TenantContext,
   asOfOn: string,
+  now: Date = new Date(),
 ): DueItem[] {
-  return listDueItems(database, tenant).filter((item) =>
-    isDueOnOrBefore(item.dueOn, asOfOn),
+  const snoozed = listSnoozedDueKeys(database, tenant, now);
+  return listDueItems(database, tenant).filter(
+    (item) =>
+      isDueOnOrBefore(item.dueOn, asOfOn) && !snoozed.has(item.sourceKey),
   );
 }
 
@@ -76,12 +80,15 @@ export function getTodaySnapshot(
   const timeZone =
     getWorkspaceSettings(database, tenant, tenant.workspaceId)?.timezone ??
     DEFAULT_TIME_ZONE;
-  const asOfOn = calendarDateInZone(timeZone, options.now);
+  const now = options.now ?? new Date();
+  const asOfOn = calendarDateInZone(timeZone, now);
 
-  const doNow = listTodayDueItems(database, tenant, asOfOn).map((item) => ({
-    ...item,
-    verb: todayDoNowVerbForKey(item.sourceKey),
-  }));
+  const doNow = listTodayDueItems(database, tenant, asOfOn, now).map(
+    (item) => ({
+      ...item,
+      verb: todayDoNowVerbForKey(item.sourceKey),
+    }),
+  );
 
   const pipeline = emptyPipeline();
   let deadlines = 0;

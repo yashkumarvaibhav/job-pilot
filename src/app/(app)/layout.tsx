@@ -8,6 +8,7 @@ import { getDatabase } from "@/server/db/runtime";
 import { DEFAULT_TIME_ZONE } from "@/server/db/timezone";
 import { listCompanies } from "@/server/repos/companies";
 import { listContacts } from "@/server/repos/contacts";
+import { countUnreadNotifications } from "@/server/repos/notifications";
 import { listOpportunities } from "@/server/repos/opportunities";
 
 /**
@@ -39,5 +40,12 @@ export default async function WorkspaceLayout({
     today: calendarDateInZone(timezone),
   };
 
-  return <AppShell quickAddData={quickAddData}>{children}</AppShell>;
+  return (
+    <AppShell
+      quickAddData={quickAddData}
+      unreadCount={countUnreadNotifications(database, tenant)}
+    >
+      {children}
+    </AppShell>
+  );
 }

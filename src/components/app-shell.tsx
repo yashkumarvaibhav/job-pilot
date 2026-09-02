@@ -60,9 +60,11 @@ function MobileIcon({ icon }: { icon: (typeof mobileItems)[number]["icon"] }) {
 export function AppShell({
   children,
   quickAddData,
+  unreadCount = 0,
 }: {
   children: ReactNode;
   quickAddData: QuickAddReferenceData;
+  unreadCount?: number;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -136,14 +138,14 @@ export function AppShell({
             Add
           </button>
           <Link
-            aria-label="Notifications, 0 unread"
+            aria-label={`Notifications, ${unreadCount} unread`}
             className="notification-link"
             href="/notifications"
           >
             <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
               <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
             </svg>
-            <span className="tnum">0</span>
+            <span className="tnum">{unreadCount}</span>
           </Link>
           <ThemeToggle />
           <SignOutButton className="btn btn--ghost topbar-sign-out" />

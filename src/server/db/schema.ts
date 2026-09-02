@@ -121,6 +121,12 @@ export const settings = sqliteTable(
       .$type<Record<string, number>>()
       .notNull()
       .default(sql`'{}'`),
+    mutedNotificationKindsJson: text("muted_notification_kinds_json", {
+      mode: "json",
+    })
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'`),
     quietStart: integer("quiet_start"),
     quietEnd: integer("quiet_end"),
     digestHour: integer("digest_hour"),
@@ -823,4 +829,63 @@ export const entityTag = sqliteTable(
     ),
   ],
 );
+
+export const notification = sqliteTable(
+  "notification",
+  {
+    ...workspaceOwnedEntityColumns(),
+    kind: text("kind").notNull(),
+    entityType: text("entity_type"),
+    entityId: text("entity_id"),
+    title: text("title").notNull(),
+    body: text("body"),
+    dueOn: text("due_on").notNull(),
+    dueAt: utcInstant("due_at").notNull(),
+    dueKey: text("due_key").notNull(),
+    groupKey: text("group_key"),
+    readAt: utcInstant("read_at"),
+    snoozedUntil: utcInstant("snoozed_until"),
+    dismissedAt: utcInstant("dismissed_at"),
+    completedAt: utcInstant("completed_at"),
+    createdAt: utcInstant("created_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("notification", table),
+    uniqueIndex("notification_workspace_due_key_unique").on(
+      table.workspaceId,
+      table.dueKey,
+    ),
+    index("notification_workspace_due_on_idx").on(
+      table.workspaceId,
+      table.dueOn,
+    ),
+    index("notification_workspace_group_key_idx").on(
+      table.workspaceId,
+      table.groupKey,
+    ),
+    index("notification_workspace_kind_idx").on(table.workspaceId, table.kind),
+    index("notification_workspace_snoozed_idx").on(
+      table.workspaceId,
+      table.snoozedUntil,
+    ),
+    check("notification_title_not_blank", sql`length(trim(${table.title})) > 0`),
+    check(
+      "notification_due_key_not_blank",
+      sql`length(trim(${table.dueKey})) > 0`,
+    ),
+    check(
+      "notification_due_on_format",
+      sql`${table.dueOn} glob '????-??-??'`,
+    ),
+    check(
+      "notification_link_pair",
+      sql`(${table.entityType} is null and ${table.entityId} is null) or (${table.entityType} is not null and ${table.entityId} is not null)`,
+    ),
+    check(
+      "notification_entity_type_valid",
+      sql`${table.entityType} is null or ${table.entityType} in ('company', 'contact', 'opportunity', 'application', 'referral', 'task')`,
+    ),
+  ],
+);
+
 

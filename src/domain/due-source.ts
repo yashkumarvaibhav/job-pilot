@@ -2,6 +2,7 @@ export const DUE_SOURCE_KINDS = [
   "company_next_action",
   "contact_next_action",
   "opportunity_next_action",
+  "opportunity_deadline",
   "referral_follow_up",
   "task",
 ] as const;
@@ -35,6 +36,8 @@ export function dueSourceKey(kind: DueSourceKind, entityId: string): string {
       return `contact:${id}:next_action`;
     case "opportunity_next_action":
       return `opportunity:${id}:next_action`;
+    case "opportunity_deadline":
+      return `opportunity:${id}:deadline`;
     case "referral_follow_up":
       return `referral:${id}:follow_up`;
     case "task":
@@ -45,6 +48,11 @@ export function dueSourceKey(kind: DueSourceKind, entityId: string): string {
 export function parseDueSourceKey(
   key: string,
 ): { kind: DueSourceKind; entityId: string } | null {
+  const deadline = key.match(/^opportunity:(.+):deadline$/);
+  if (deadline) {
+    return { kind: "opportunity_deadline", entityId: deadline[1] };
+  }
+
   const nextAction = key.match(
     /^(company|contact|opportunity):(.+):next_action$/,
   );
@@ -94,6 +102,8 @@ export function derivedDueItemTitle(
       return DERIVED_REFERRAL_CHECK_TITLE;
     case "opportunity_next_action":
       return "Apply";
+    case "opportunity_deadline":
+      return "Application deadline";
     case "task":
       return "Do";
     default:

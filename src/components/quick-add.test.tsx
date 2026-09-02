@@ -35,6 +35,17 @@ describe("global quick add", () => {
     expect(html).toContain('class="btn quick-add-trigger"');
     expect(html.match(/aria-haspopup="dialog"/g)).toHaveLength(2);
     expect(html).toContain('class="mobile-link"');
+    expect(html).toContain("Notifications, 0 unread");
+  });
+
+  it("shows the unread bell count in accent tabular numerals", () => {
+    const html = renderToStaticMarkup(
+      <AppShell quickAddData={data} unreadCount={2}>
+        <p>Workspace</p>
+      </AppShell>,
+    );
+    expect(html).toContain("Notifications, 2 unread");
+    expect(html).toContain('class="tnum">2</span>');
   });
 
   it("lists all nine actions and explains both disabled actions", () => {

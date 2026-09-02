@@ -51,13 +51,14 @@ describe("migrateDatabase", () => {
           "task",
           "user_account",
           "workspace",
+          "notification",
         ]),
       );
       expect(
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 11 });
+      ).toEqual({ count: 12 });
 
       for (const indexName of [
         "company_workspace_id_id_unique",
@@ -116,6 +117,12 @@ describe("migrateDatabase", () => {
         "entity_tag_workspace_link_unique",
         "entity_tag_workspace_entity_idx",
         "entity_tag_workspace_tag_idx",
+        "notification_workspace_id_id_unique",
+        "notification_workspace_due_key_unique",
+        "notification_workspace_due_on_idx",
+        "notification_workspace_group_key_idx",
+        "notification_workspace_kind_idx",
+        "notification_workspace_snoozed_idx",
       ]) {
         const columns = client.sqlite
           .prepare(
@@ -611,6 +618,57 @@ describe("migrateDatabase", () => {
         { table: "tag", from: "workspace_id", to: "workspace_id" },
         { table: "tag", from: "tag_id", to: "id" },
       ]);
+
+      const settingsColumns = client.sqlite
+        .prepare(
+          "select name from pragma_table_info('settings') order by cid",
+        )
+        .all() as { name: string }[];
+      expect(settingsColumns.map((column) => column.name)).toContain(
+        "muted_notification_kinds_json",
+      );
+
+      const notificationColumns = client.sqlite
+        .prepare(
+          "select name, \"notnull\" from pragma_table_info('notification') order by cid",
+        )
+        .all() as { name: string; notnull: number }[];
+      expect(notificationColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "kind",
+        "entity_type",
+        "entity_id",
+        "title",
+        "body",
+        "due_on",
+        "due_at",
+        "due_key",
+        "group_key",
+        "read_at",
+        "snoozed_until",
+        "dismissed_at",
+        "completed_at",
+        "created_at",
+      ]);
+      expect(
+        notificationColumns.find((column) => column.name === "due_key")
+          ?.notnull,
+      ).toBe(1);
+      expect(
+        notificationColumns.find((column) => column.name === "snoozed_until")
+          ?.notnull,
+      ).toBe(0);
+      const notificationForeignKeys = client.sqlite
+        .prepare(
+          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('notification')",
+        )
+        .all();
+      expect(notificationForeignKeys).toContainEqual({
+        table: "workspace",
+        from: "workspace_id",
+        to: "id",
+      });
     } finally {
       client.close();
     }

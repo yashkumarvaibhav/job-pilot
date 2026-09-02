@@ -338,6 +338,7 @@ function derivedKindToLink(
     case "contact_next_action":
       return "contact";
     case "opportunity_next_action":
+    case "opportunity_deadline":
       return "opportunity";
     case "referral_follow_up":
       return "referral";
@@ -432,6 +433,38 @@ function loadDerivedSource(
     }
     return {
       title,
+      dueOn,
+      entityType: "opportunity",
+      entityLabel: row.label,
+    };
+  }
+  if (kind === "opportunity_deadline") {
+    const row = transaction
+      .select({
+        dueOn: opportunity.deadlineOn,
+        label: sql<string>`trim(${company.name} || ' ' || ${opportunity.role})`,
+      })
+      .from(opportunity)
+      .innerJoin(
+        company,
+        and(
+          eq(company.workspaceId, opportunity.workspaceId),
+          eq(company.id, opportunity.companyId),
+        ),
+      )
+      .where(
+        and(
+          eq(opportunity.workspaceId, tenant.workspaceId),
+          eq(opportunity.id, entityId),
+        ),
+      )
+      .get();
+    const dueOn = optionalText(row?.dueOn);
+    if (!row || dueOn === null) {
+      return undefined;
+    }
+    return {
+      title: derivedDueItemTitle("opportunity_deadline", null),
       dueOn,
       entityType: "opportunity",
       entityLabel: row.label,

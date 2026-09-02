@@ -25,7 +25,8 @@ type FoundationTable =
   | "referral_request"
   | "task"
   | "tag"
-  | "entity_tag";
+  | "entity_tag"
+  | "notification";
 
 type BaseTenantTestFixture = {
   client: DatabaseClient;

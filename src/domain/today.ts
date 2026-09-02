@@ -90,6 +90,8 @@ export function todayDoNowVerb(kind: DueSourceKind): string {
   switch (kind) {
     case "opportunity_next_action":
       return "Apply";
+    case "opportunity_deadline":
+      return "Apply";
     case "task":
       return "Do";
     default:
