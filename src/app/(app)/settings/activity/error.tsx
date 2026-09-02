@@ -6,7 +6,7 @@ export default function ActivityError({
   reset: () => void;
 }) {
   return (
-    <section className="data-state data-state--error">
+    <section className="data-state data-state--error" role="alert">
       <p className="eyebrow">Could not load</p>
       <h1>Activity is unavailable</h1>
       <p>Job Pilot could not read this workspace. Retry the request.</p>

@@ -36,6 +36,7 @@
     "test:export": "vitest run src/domain/export.test.ts src/server/repos/export.test.ts src/app/api/export/export-routes.test.ts src/app/settings-ui.test.tsx",
     "test:filters": "vitest run src/server/repos/filters.test.ts src/app/contact-ui.test.tsx src/app/opportunity-ui.test.tsx src/app/referral-ui.test.tsx",
     "test:assessment": "vitest run src/domain/assessment.test.ts src/domain/due-source.test.ts src/domain/today.test.ts src/domain/application.test.ts src/domain/activity.test.ts src/server/db/migrate.test.ts src/server/repos/assessments.test.ts src/server/repos/today.test.ts src/app/api/assessments/assessment-routes.test.ts src/app/opportunity-ui.test.tsx src/app/today-ui.test.tsx src/app/application-ui.test.tsx src/server/repos/perimeter.test.ts",
+    "test:responsive": "playwright test",
     "test:import": "vitest run src/domain/csv-import.test.ts src/server/imports/import-service.test.ts src/app/api/import/import-routes.test.ts src/app/import-ui.test.tsx",
     "test:walkthrough": "vitest run src/server/repos/p01-walkthrough.test.ts scripts/walkthrough/reset.test.mts",
     "test:watch": "vitest"
@@ -49,6 +50,7 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

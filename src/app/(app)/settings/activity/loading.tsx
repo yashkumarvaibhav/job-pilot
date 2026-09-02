@@ -1,6 +1,6 @@
 export default function ActivityLoading() {
   return (
-    <section aria-label="Loading activity" className="activity-page">
+    <section aria-busy="true" aria-label="Loading activity" className="activity-page">
       <div className="skeleton skeleton-heading" />
       <div className="skeleton-table">
         {Array.from({ length: 4 }, (_, index) => (

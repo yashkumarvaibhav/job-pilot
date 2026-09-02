@@ -1,4 +1,13 @@
-import { ArrowDown, ArrowUp, CheckCircle2, Circle, Minus, type LucideIcon } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  CheckCircle2,
+  Circle,
+  Minus,
+  PenLine,
+  Workflow,
+  type LucideIcon,
+} from "lucide-react";
 
 import {
   taskPriorityLabel,
@@ -41,8 +50,10 @@ export function TaskPriorityChip({ priority }: { priority: TaskPriority }) {
 }
 
 export function TaskSourceChip({ source }: { source: TaskSource }) {
+  const Icon = source === "manual" ? PenLine : Workflow;
   return (
     <span className="chip contact-status-chip" data-tone="muted">
+      <Icon aria-hidden="true" />
       {taskSourceLabel(source)}
     </span>
   );

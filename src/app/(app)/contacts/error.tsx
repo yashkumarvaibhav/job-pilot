@@ -2,7 +2,7 @@
 
 export default function ContactsError({ reset }: { reset: () => void }) {
   return (
-    <section className="data-state data-state--error">
+    <section className="data-state data-state--error" role="alert">
       <p className="eyebrow">Could not load contacts</p>
       <h1>Contacts are unavailable</h1>
       <p>Retry the local database request. No contact data was changed.</p>

@@ -1,6 +1,7 @@
 export default function ApplicationsLoading() {
   return (
     <section
+      aria-busy="true"
       aria-label="Loading applications"
       className="application-page"
     >

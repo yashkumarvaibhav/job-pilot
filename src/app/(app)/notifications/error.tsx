@@ -6,7 +6,7 @@ export default function NotificationsError({
   reset: () => void;
 }) {
   return (
-    <section className="data-state data-state--error">
+    <section className="data-state data-state--error" role="alert">
       <p className="eyebrow">Could not load</p>
       <h1>Notifications are unavailable</h1>
       <p>Could not load notifications</p>

@@ -1,6 +1,6 @@
 export default function ContactsLoading() {
   return (
-    <section aria-label="Loading contacts" className="contact-page">
+    <section aria-busy="true" aria-label="Loading contacts" className="contact-page">
       <div className="skeleton skeleton-heading" />
       <div className="skeleton-table">
         {Array.from({ length: 5 }, (_, index) => (

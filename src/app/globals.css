@@ -158,6 +158,10 @@ body {
 }
 
 .detail-link {
+  display: inline-flex;
+  min-width: var(--target-min);
+  min-height: var(--target-min);
+  align-items: center;
   color: var(--accent);
   font-weight: 700;
   text-decoration: underline;
@@ -1231,6 +1235,7 @@ main:focus {
 
 .table-link {
   display: inline-flex;
+  min-width: var(--target-min);
   min-height: var(--target-min);
   align-items: center;
   color: var(--accent);
@@ -1708,6 +1713,10 @@ main:focus {
 }
 
 .inline-link {
+  display: inline-flex;
+  min-width: var(--target-min);
+  min-height: var(--target-min);
+  align-items: center;
   color: var(--accent);
   font-weight: 700;
   text-underline-offset: 3px;
