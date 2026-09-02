@@ -58,13 +58,15 @@ describe("migrateDatabase", () => {
           "document_version",
           "document_usage",
           "saved_search",
+          "automation_rule",
+          "automation_execution",
         ]),
       );
       expect(
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 18 });
+      ).toEqual({ count: 19 });
 
       for (const indexName of [
         "company_workspace_id_id_unique",
@@ -151,6 +153,11 @@ describe("migrateDatabase", () => {
         "saved_search_workspace_id_id_unique",
         "saved_search_workspace_name_unique",
         "saved_search_workspace_entity_idx",
+        "automation_rule_workspace_id_id_unique",
+        "automation_rule_workspace_slug_unique",
+        "automation_execution_workspace_id_id_unique",
+        "automation_execution_workspace_rule_idx",
+        "automation_execution_workspace_at_idx",
       ]) {
         const columns = client.sqlite
           .prepare(
@@ -824,6 +831,58 @@ describe("migrateDatabase", () => {
         from: "workspace_id",
         to: "id",
       });
+
+      const automationRuleColumns = client.sqlite
+        .prepare(
+          "select name, \"notnull\", dflt_value from pragma_table_info('automation_rule') order by cid",
+        )
+        .all() as {
+        name: string;
+        notnull: number;
+        dflt_value: string | null;
+      }[];
+      expect(automationRuleColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "slug",
+        "enabled",
+        "spec_json",
+        "created_at",
+      ]);
+      expect(
+        automationRuleColumns.find((column) => column.name === "enabled")
+          ?.dflt_value,
+      ).toBe("true");
+      expect(
+        automationRuleColumns.find((column) => column.name === "slug")?.notnull,
+      ).toBe(1);
+
+      const automationExecutionColumns = client.sqlite
+        .prepare(
+          "select name from pragma_table_info('automation_execution') order by cid",
+        )
+        .all() as { name: string }[];
+      expect(automationExecutionColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "rule_id",
+        "at",
+        "input_json",
+        "result_json",
+      ]);
+      const automationExecutionRuleForeignKeys = client.sqlite
+        .prepare(
+          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('automation_execution') where \"table\" = 'automation_rule' order by seq",
+        )
+        .all();
+      expect(automationExecutionRuleForeignKeys).toEqual([
+        {
+          table: "automation_rule",
+          from: "workspace_id",
+          to: "workspace_id",
+        },
+        { table: "automation_rule", from: "rule_id", to: "id" },
+      ]);
     } finally {
       client.close();
     }

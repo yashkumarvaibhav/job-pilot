@@ -55,6 +55,12 @@ describe("activity copy", () => {
         payload: { label: "Dream Company" },
       }),
     ).toBe("Tagged Dream Company → Microsoft");
+    expect(
+      formatActivityHeadline({
+        kind: "RULE_EXECUTED",
+        entityLabel: "Rahul Sharma",
+      }),
+    ).toBe("Automation ran → Rahul Sharma");
   });
 
   it("formats clock time and calendar days in the workspace zone", () => {

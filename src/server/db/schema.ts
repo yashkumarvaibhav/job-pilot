@@ -53,6 +53,7 @@ import {
   type TaskSource,
   type TaskStatus,
 } from "../../domain/task";
+import type { AutomationRuleSlug } from "../../domain/rules";
 import type { SavedSearchEntityType } from "../../domain/saved-search";
 import { DEFAULT_TIME_ZONE } from "./timezone";
 
@@ -1145,5 +1146,57 @@ export const savedSearch = sqliteTable(
       "saved_search_entity_type_valid",
       sql`${table.entityType} in ('contacts', 'opportunities', 'referrals')`,
     ),
+  ],
+);
+
+export const automationRule = sqliteTable(
+  "automation_rule",
+  {
+    ...workspaceOwnedEntityColumns(),
+    slug: text("slug").$type<AutomationRuleSlug>().notNull(),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+    specJson: text("spec_json", { mode: "json" })
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'`),
+    createdAt: utcInstant("created_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("automation_rule", table),
+    uniqueIndex("automation_rule_workspace_slug_unique").on(
+      table.workspaceId,
+      table.slug,
+    ),
+    check("automation_rule_slug_not_blank", sql`length(trim(${table.slug})) > 0`),
+  ],
+);
+
+export const automationExecution = sqliteTable(
+  "automation_execution",
+  {
+    ...workspaceOwnedEntityColumns(),
+    ruleId: text("rule_id").notNull(),
+    at: utcInstant("at").notNull(),
+    inputJson: text("input_json", { mode: "json" })
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'`),
+    resultJson: text("result_json", { mode: "json" })
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'`),
+  },
+  (table) => [
+    workspaceEntityKey("automation_execution", table),
+    index("automation_execution_workspace_rule_idx").on(
+      table.workspaceId,
+      table.ruleId,
+    ),
+    index("automation_execution_workspace_at_idx").on(table.workspaceId, table.at),
+    sameWorkspaceForeignKey(
+      "automation_execution_rule_fk",
+      { workspaceId: table.workspaceId, parentId: table.ruleId },
+      automationRule,
+    ).onDelete("cascade"),
   ],
 );

@@ -21,6 +21,7 @@ import {
   opportunity,
 } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
+import { afterApplicationSubmitted } from "./rules";
 
 export type Application = typeof application.$inferSelect;
 export type ApplicationListItem = Application & {
@@ -338,6 +339,11 @@ export function applyToOpportunity(
       entityType: "application",
       entityId: id,
       payload: { opportunityId: input.opportunityId },
+    });
+    afterApplicationSubmitted(transaction, tenant, {
+      opportunityId: input.opportunityId,
+      applicationId: id,
+      now,
     });
 
     return selectApplication(transaction, tenant, id)!;

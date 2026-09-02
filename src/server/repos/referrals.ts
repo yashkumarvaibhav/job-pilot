@@ -32,6 +32,7 @@ import {
   referralRequest,
 } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
+import { afterReferralWrite } from "./rules";
 
 export type Referral = typeof referralRequest.$inferSelect;
 export type ReferralListItem = Referral & {
@@ -378,6 +379,12 @@ export function createReferral(
         stage: values.stage,
       },
     });
+    const created = selectReferral(transaction, tenant, values.id)!;
+    afterReferralWrite(transaction, tenant, {
+      previousStage: null,
+      referral: created,
+      now,
+    });
     return selectReferral(transaction, tenant, values.id)!;
   });
 }
@@ -512,6 +519,12 @@ export function updateReferral(
       entityType: "referral_request",
       entityId: id,
       payload: { fields: Object.keys(values).sort() },
+    });
+    const updated = selectReferral(transaction, tenant, id)!;
+    afterReferralWrite(transaction, tenant, {
+      previousStage: current.stage,
+      referral: updated,
+      now,
     });
     return selectReferral(transaction, tenant, id)!;
   });

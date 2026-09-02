@@ -30,6 +30,7 @@ describe("account tenancy foundation", () => {
       expect(fixture.rowCount("user_account")).toBe(1);
       expect(fixture.rowCount("workspace")).toBe(1);
       expect(fixture.rowCount("settings")).toBe(1);
+      expect(fixture.rowCount("automation_rule")).toBe(11);
       expect(fixture.rowCount("activity_event")).toBe(1);
 
       const storedSettings = getWorkspaceSettings(
@@ -64,6 +65,7 @@ describe("account tenancy foundation", () => {
       expect(fixture.rowCount("user_account")).toBe(1);
       expect(fixture.rowCount("workspace")).toBe(1);
       expect(fixture.rowCount("settings")).toBe(1);
+      expect(fixture.rowCount("automation_rule")).toBe(11);
       expect(fixture.rowCount("activity_event")).toBe(1);
     } finally {
       fixture.dispose();

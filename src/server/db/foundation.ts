@@ -2,9 +2,13 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq } from "drizzle-orm";
 
+import {
+  AUTOMATION_RULES,
+  automationRuleRowId,
+} from "../../domain/rules";
 import { logEvent } from "./activity";
 import type { AppDatabase, AppTransaction } from "./client";
-import { activityEvent, settings, userAccount, workspace } from "./schema";
+import { activityEvent, automationRule, settings, userAccount, workspace } from "./schema";
 import { createTenantContext, type TenantContext } from "./tenant";
 import { assertIanaTimeZone, DEFAULT_TIME_ZONE } from "./timezone";
 
@@ -67,6 +71,19 @@ export function createAccountFoundation(
         timezone,
       })
       .run();
+    for (const rule of AUTOMATION_RULES) {
+      transaction
+        .insert(automationRule)
+        .values({
+          id: automationRuleRowId(tenant.workspaceId, rule.slug),
+          workspaceId: tenant.workspaceId,
+          slug: rule.slug,
+          enabled: true,
+          specJson: {},
+          createdAt: now,
+        })
+        .run();
+    }
     logEvent(transaction, tenant, {
       at: now,
       kind: "ACCOUNT_FOUNDATION_CREATED",

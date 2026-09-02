@@ -32,7 +32,9 @@ type FoundationTable =
   | "document"
   | "document_version"
   | "document_usage"
-  | "saved_search";
+  | "saved_search"
+  | "automation_rule"
+  | "automation_execution";
 
 type BaseTenantTestFixture = {
   client: DatabaseClient;
