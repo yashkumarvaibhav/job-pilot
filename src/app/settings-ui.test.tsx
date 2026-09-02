@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   GMAIL_NOT_CONNECTED_HELP,
   GMAIL_NOT_CONNECTED_TITLE,
+  QUIET_HOURS_ACTIVE_LABEL,
+  QUIET_HOURS_AWAKE_LABEL,
   QUIET_HOURS_HELP,
   SCORING_EMPTY_HELP,
   SCORING_EMPTY_TITLE,
@@ -80,6 +82,12 @@ describe("settings screen", () => {
     expect(html).toContain('value="08:00"');
     expect(html).toContain(TIMEZONE_HELP);
     expect(html).toContain(QUIET_HOURS_HELP);
+    // The saved zone, not the server zone, decides whether now is quiet.
+    expect(html).toContain("in Asia/Kolkata,");
+    expect(
+      html.includes(QUIET_HOURS_ACTIVE_LABEL) ||
+        html.includes(QUIET_HOURS_AWAKE_LABEL),
+    ).toBe(true);
     // Rendering settings writes nothing.
     expect(fixture.rowCount("notification")).toBe(0);
   });

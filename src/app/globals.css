@@ -2366,3 +2366,8 @@ main:focus {
     justify-content: center;
   }
 }
+
+.settings-chip--quiet {
+  border-color: color-mix(in srgb, var(--info) 40%, transparent);
+  color: var(--info);
+}

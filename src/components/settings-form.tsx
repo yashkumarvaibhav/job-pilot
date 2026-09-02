@@ -27,9 +27,11 @@ export type SettingsFormValues = {
 };
 
 export function SettingsForm({
+  quietState,
   timeZones,
   values,
 }: {
+  quietState: { active: boolean; label: string; sentence: string };
   timeZones: readonly string[];
   values: SettingsFormValues;
 }) {
@@ -167,8 +169,36 @@ export function SettingsForm({
             />
           </div>
         </div>
+        <p
+          className={`chip settings-chip${
+            quietState.active ? " settings-chip--quiet" : ""
+          }`}
+        >
+          <svg aria-hidden="true" height="16" viewBox="0 0 24 24" width="16">
+            {quietState.active ? (
+              <path
+                d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1Z"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+              />
+            ) : (
+              <path
+                d="M12 4v2m0 12v2m8-8h-2M6 12H4m13.7-5.7-1.4 1.4M7.7 16.3l-1.4 1.4m11.4 0-1.4-1.4M7.7 7.7 6.3 6.3M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+              />
+            )}
+          </svg>
+          {quietState.label}
+        </p>
         <p className="settings-hint">
-          Clear both fields to turn quiet hours off.
+          {quietState.sentence} Clear both fields to turn quiet hours off.
         </p>
       </section>
 

@@ -16,6 +16,10 @@ export const SETTINGS_ERROR = "Could not load settings";
 export const TIMEZONE_HELP =
   "Today, quiet hours, digests and scheduling use this zone. Saving a new zone does not move any timestamp already stored.";
 
+export const QUIET_HOURS_ACTIVE_LABEL = "Quiet right now";
+
+export const QUIET_HOURS_AWAKE_LABEL = "Not quiet right now";
+
 export const QUIET_HOURS_HELP =
   "The notification center still lists everything during quiet hours. A future morning digest is what will wait for them to end.";
 
@@ -148,6 +152,31 @@ export function isQuietHourInZone(
     quietStart,
     quietEnd,
   );
+}
+
+/** The sentence the settings screen shows under the window, read in the saved zone. */
+export function quietHoursStateLine(
+  timeZone: string,
+  at: Date,
+  quietStart: number | null,
+  quietEnd: number | null,
+): { active: boolean; label: string; sentence: string } {
+  const localTime = formatClockMinutes(minutesOfDayInZone(timeZone, at));
+  if (quietStart == null || quietEnd == null) {
+    return {
+      active: false,
+      label: QUIET_HOURS_AWAKE_LABEL,
+      sentence: `Quiet hours are off. It is ${localTime} in ${timeZone}.`,
+    };
+  }
+  const active = isQuietHourInZone(timeZone, at, quietStart, quietEnd);
+  return {
+    active,
+    label: active ? QUIET_HOURS_ACTIVE_LABEL : QUIET_HOURS_AWAKE_LABEL,
+    sentence: `It is ${localTime} in ${timeZone}, ${
+      active ? "inside" : "outside"
+    } ${quietHoursLabel(quietStart, quietEnd)}.`,
+  };
 }
 
 export function normalizeProfileText(

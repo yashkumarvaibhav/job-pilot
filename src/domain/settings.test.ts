@@ -8,7 +8,10 @@ import {
   normalizeProfileText,
   parseClockMinutes,
   parseQuietHours,
+  QUIET_HOURS_ACTIVE_LABEL,
+  QUIET_HOURS_AWAKE_LABEL,
   QuietHoursError,
+  quietHoursStateLine,
   quietHoursLabel,
   QUIET_HOURS_OFF_LABEL,
   selectableTimeZones,
@@ -104,6 +107,28 @@ describe("settings domain", () => {
     const morning = new Date("2026-09-02T06:00:00.000Z");
     expect(isQuietHourInZone("Asia/Kolkata", morning, start, end)).toBe(false);
     expect(isQuietHourInZone("America/New_York", morning, start, end)).toBe(true);
+  });
+
+  it("says whether right now is inside the window, read in the saved zone", () => {
+    const night = new Date("2026-09-02T18:45:00.000Z");
+
+    const kolkata = quietHoursStateLine("Asia/Kolkata", night, 1410, 480);
+    expect(kolkata.active).toBe(true);
+    expect(kolkata.label).toBe(QUIET_HOURS_ACTIVE_LABEL);
+    expect(kolkata.sentence).toBe(
+      "It is 00:15 in Asia/Kolkata, inside 23:30 – 08:00.",
+    );
+
+    const newYork = quietHoursStateLine("America/New_York", night, 1410, 480);
+    expect(newYork.active).toBe(false);
+    expect(newYork.label).toBe(QUIET_HOURS_AWAKE_LABEL);
+    expect(newYork.sentence).toBe(
+      "It is 14:45 in America/New_York, outside 23:30 – 08:00.",
+    );
+
+    const off = quietHoursStateLine("Asia/Kolkata", night, null, null);
+    expect(off.active).toBe(false);
+    expect(off.sentence).toBe("Quiet hours are off. It is 00:15 in Asia/Kolkata.");
   });
 
   it("trims profile text and keeps an empty field empty rather than blank-ish", () => {

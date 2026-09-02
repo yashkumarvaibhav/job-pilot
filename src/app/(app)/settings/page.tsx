@@ -5,6 +5,7 @@ import {
   GMAIL_NOT_CONNECTED_TITLE,
   SCORING_EMPTY_HELP,
   SCORING_EMPTY_TITLE,
+  quietHoursStateLine,
   selectableTimeZones,
 } from "@/domain/settings";
 import { requireTenant } from "@/server/auth/current-session";
@@ -14,6 +15,12 @@ import { readWorkspaceSettings } from "@/server/repos/settings";
 export default async function SettingsPage() {
   const tenant = await requireTenant();
   const view = readWorkspaceSettings(getDatabase(), tenant);
+  const quietState = quietHoursStateLine(
+    view.timezone,
+    new Date(),
+    view.quietStart,
+    view.quietEnd,
+  );
 
   return (
     <section className="settings-screen">
@@ -29,6 +36,7 @@ export default async function SettingsPage() {
       </header>
 
       <SettingsForm
+        quietState={quietState}
         timeZones={selectableTimeZones(view.timezone)}
         values={{
           displayName: view.displayName,
