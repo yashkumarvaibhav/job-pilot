@@ -27,7 +27,10 @@ type FoundationTable =
   | "tag"
   | "entity_tag"
   | "notification"
-  | "interview";
+  | "interview"
+  | "document"
+  | "document_version"
+  | "document_usage";
 
 type BaseTenantTestFixture = {
   client: DatabaseClient;

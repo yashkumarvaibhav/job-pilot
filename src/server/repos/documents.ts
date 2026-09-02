@@ -16,6 +16,10 @@ import {
   uploadExtensionFor,
   type DocumentKind,
 } from "../../domain/document";
+import {
+  CONTENT_MISMATCH_REFUSED,
+  contentMatchesDeclaredType,
+} from "../../domain/file-signature";
 import { logEvent } from "../db/activity";
 import type { AppDatabase } from "../db/client";
 import { document, documentUsage, documentVersion } from "../db/schema";
@@ -259,6 +263,11 @@ export function storeDocumentVersion(
   }
   if (input.bytes.byteLength > UPLOAD_MAX_BYTES) {
     throw new DocumentInputError(UPLOAD_TOO_LARGE);
+  }
+  // The browser derives the declared type from the file name, so a renamed
+  // executable arrives claiming to be a PDF. Judge the bytes (D-022).
+  if (!contentMatchesDeclaredType(input.contentType, input.bytes)) {
+    throw new DocumentInputError(CONTENT_MISMATCH_REFUSED);
   }
 
   const owner = getDocument(database, tenant, input.documentId);

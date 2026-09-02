@@ -339,6 +339,12 @@ describe("document repository", () => {
 
   it("stops one workspace filling the disk, and says so", () => {
     const fixture = newFixture();
+    // Real PDF bytes: content sniffing runs before the quota does.
+    const bigPdf = (megabytes: number) => {
+      const buffer = new Uint8Array(megabytes * 1024 * 1024);
+      buffer.set(PDF, 0);
+      return buffer;
+    };
     createDocument(fixture.client.db, fixture.tenantA, {
       id: "doc-a",
       name: "Backend Java",
@@ -352,7 +358,7 @@ describe("document repository", () => {
         {
           documentId: "doc-a",
           label: `v${index + 1}`,
-          bytes: new Uint8Array(8 * 1024 * 1024),
+          bytes: bigPdf(8),
           contentType: "application/pdf",
         },
         fixture.root,
@@ -369,7 +375,7 @@ describe("document repository", () => {
         {
           documentId: "doc-a",
           label: "v26",
-          bytes: new Uint8Array(8 * 1024 * 1024),
+          bytes: bigPdf(8),
           contentType: "application/pdf",
         },
         fixture.root,

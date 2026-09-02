@@ -207,6 +207,37 @@ describe("document route handlers", () => {
     ).toBe(200);
   });
 
+  it("refuses an executable renamed to .pdf, on its content", async () => {
+    const fixture = newFixture();
+    createDocument(fixture.client.db, fixture.tenantA, {
+      id: "doc-1",
+      name: "Backend Java",
+    });
+
+    // A browser reports application/pdf for anything named resume.pdf.
+    const form = new FormData();
+    form.set("label", "v1");
+    form.set(
+      "file",
+      new File([new Uint8Array([0x4d, 0x5a, 0x90, 0x00])], "resume.pdf", {
+        type: "application/pdf",
+      }),
+    );
+    const response = await uploadVersion(
+      new Request(`${HOST}/api/documents/doc-1/versions`, {
+        method: "POST",
+        body: form,
+      }),
+      { params: Promise.resolve({ id: "doc-1" }) },
+    );
+
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { error: string };
+    expect(body.error).toContain("content");
+    // Nothing was written to disk or to the database.
+    expect(fixture.rowCount("document_version")).toBe(0);
+  });
+
   it("refuses an unsupported file type with a sentence", async () => {
     const fixture = newFixture();
     createDocument(fixture.client.db, fixture.tenantA, {
