@@ -5,7 +5,6 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-  GMAIL_NOT_CONNECTED_HELP,
   GMAIL_NOT_CONNECTED_TITLE,
   QUIET_HOURS_ACTIVE_LABEL,
   QUIET_HOURS_AWAKE_LABEL,
@@ -53,6 +52,7 @@ describe("settings screen", () => {
 
   afterEach(() => {
     for (const fixture of fixtures.splice(0)) fixture.dispose();
+    vi.unstubAllEnvs();
   });
 
   beforeEach(() => {
@@ -126,13 +126,17 @@ describe("settings screen", () => {
     expect(html).toContain('list="');
   });
 
-  it("keeps Gmail disabled and renders all six scoring weights as numeric fields", async () => {
+  it("keeps Gmail honest when OAuth configuration is missing and renders all six scoring weights", async () => {
     newFixture();
 
     const html = renderToStaticMarkup(await SettingsPage());
 
     expect(html).toContain(GMAIL_NOT_CONNECTED_TITLE);
-    expect(html).toContain(GMAIL_NOT_CONNECTED_HELP);
+    expect(html).toContain("Limited pilot");
+    expect(html).toContain("Add Gmail account");
+    expect(html).toContain("GOOGLE_CLIENT_ID");
+    expect(html).toContain("GOOGLE_CLIENT_SECRET");
+    expect(html).toContain("TOKEN_KEY");
     expect(html).toContain("Opportunity scoring");
     expect(html).toContain('name="score.targetCompany"');
     expect(html).toContain('name="score.newGradRole"');
@@ -143,6 +147,20 @@ describe("settings screen", () => {
     expect(html).toContain('value="-3"');
     expect(html).toContain("disabled");
     expect(html).not.toContain('href="/api/gmail');
+  });
+
+  it("offers Add Gmail account only when every OAuth secret is configured", async () => {
+    vi.stubEnv("GOOGLE_CLIENT_ID", "test-client-id");
+    vi.stubEnv("GOOGLE_CLIENT_SECRET", "test-client-secret");
+    vi.stubEnv("TOKEN_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+    newFixture();
+
+    const html = renderToStaticMarkup(await SettingsPage());
+
+    expect(html).toContain("Limited pilot");
+    expect(html).toContain("Add Gmail account");
+    expect(html).toContain('href="/api/gmail/connect"');
+    expect(html).not.toContain("OAuth configuration is missing:");
   });
 
   it("offers Export JSON and Export contacts CSV as same-origin downloads", async () => {

@@ -23,10 +23,10 @@ export const QUIET_HOURS_AWAKE_LABEL = "Not quiet right now";
 export const QUIET_HOURS_HELP =
   "The notification center still lists everything during quiet hours. A future morning digest is what will wait for them to end.";
 
-export const GMAIL_NOT_CONNECTED_TITLE = "Gmail is not connected yet";
+export const GMAIL_NOT_CONNECTED_TITLE = "No Gmail accounts connected";
 
 export const GMAIL_NOT_CONNECTED_HELP =
-  "Connecting a mailbox arrives with the Gmail phase. Until then nothing here reads or sends mail, and there is no address to disconnect.";
+  "Add each Gmail identity you use for your job search. Every account keeps its own sender details, limits and sync state.";
 
 /** Modern IANA names this platform's ICU may still enumerate under a legacy alias. */
 const MODERN_ZONE_NAMES = [

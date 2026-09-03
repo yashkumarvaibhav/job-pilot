@@ -2821,6 +2821,11 @@ main:focus {
   color: var(--info);
 }
 
+.settings-chip--pilot {
+  border-color: color-mix(in srgb, var(--warning) 40%, transparent);
+  color: var(--warning);
+}
+
 .document-manager {
   display: grid;
   gap: var(--space-8);
