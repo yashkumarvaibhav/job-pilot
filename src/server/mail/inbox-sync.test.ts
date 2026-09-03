@@ -7,6 +7,7 @@ import { getEmailThread, upsertEmailThread } from "../repos/email-content";
 import { createContact } from "../repos/contacts";
 import {
   GmailHistoryGapError,
+  addThreadToOpenRecovery,
   runMailboxRecoveryBatch,
   syncInboxAccount,
   type GmailReadPort,
@@ -285,5 +286,264 @@ describe("account-scoped Gmail inbox sync", () => {
     ).rejects.toThrow("Gmail account not found.");
     expect(calls).toEqual([]);
     expect(value.client.sqlite.prepare("select count(*) as count from email_thread").get()).toEqual({ count: 0 });
+  });
+
+  it("allows only one live recovery lease and lets an expired owner be replaced", async () => {
+    const value = fixture();
+    seedCursor(value, value.accountA.id, "expired-cursor");
+    upsertEmailThread(value.client.db, value.tenantA, {
+      accountId: value.accountA.id,
+      gmailThreadId: "leased-thread",
+      subject: "Leased",
+      lastMessageAt: new Date("2026-08-20T10:00:00.000Z"),
+    });
+    let historyCalls = 0;
+    let releaseThread!: () => void;
+    const held = new Promise<void>((resolve) => { releaseThread = resolve; });
+    const fake = port({
+      listHistory: async () => {
+        historyCalls += 1;
+        if (historyCalls === 1) throw new GmailHistoryGapError();
+        return { historyId: "caught-up", threadIds: [], nextPageToken: null };
+      },
+      getProfileHistoryId: async () => "baseline",
+      getThread: async ({ gmailThreadId }) => {
+        await held;
+        return snapshot(gmailThreadId);
+      },
+    });
+    await syncInboxAccount(value.client.db, value.tenantA, value.accountA.id, {
+      port: fake,
+      tokenKey: TOKEN_KEY,
+      now: () => NOW,
+    });
+    const first = runMailboxRecoveryBatch(
+      value.client.db,
+      value.tenantA,
+      value.accountA.id,
+      { port: fake, tokenKey: TOKEN_KEY, tickId: "live-owner", now: () => NOW },
+    );
+    await Promise.resolve();
+    await expect(
+      runMailboxRecoveryBatch(
+        value.client.db,
+        value.tenantA,
+        value.accountA.id,
+        { port: fake, tokenKey: TOKEN_KEY, tickId: "other-owner", now: () => NOW },
+      ),
+    ).resolves.toMatchObject({ claimed: false, reconciled: 0 });
+    releaseThread();
+    await expect(first).resolves.toMatchObject({ claimed: true, completed: true });
+
+    value.client.sqlite
+      .prepare(
+        "update gmail_recovery_generation set status = 'sweeping', completed_at = null, lease_owner = 'dead-owner', lease_expires_at = ?, updated_at = ? where workspace_id = ? and account_id = ?",
+      )
+      .run(
+        new Date("2026-09-03T13:05:00.000Z").valueOf(),
+        NOW.valueOf(),
+        value.tenantA.workspaceId,
+        value.accountA.id,
+      );
+    await expect(
+      runMailboxRecoveryBatch(
+        value.client.db,
+        value.tenantA,
+        value.accountA.id,
+        {
+          port: fake,
+          tokenKey: TOKEN_KEY,
+          tickId: "replacement",
+          now: () => new Date("2026-09-03T13:04:59.000Z"),
+        },
+      ),
+    ).resolves.toMatchObject({ claimed: false });
+    await expect(
+      runMailboxRecoveryBatch(
+        value.client.db,
+        value.tenantA,
+        value.accountA.id,
+        {
+          port: fake,
+          tokenKey: TOKEN_KEY,
+          tickId: "replacement",
+          now: () => new Date("2026-09-03T13:05:01.000Z"),
+        },
+      ),
+    ).resolves.toMatchObject({ claimed: true, completed: true });
+
+    expect(
+      addThreadToOpenRecovery(
+        value.client.db,
+        value.tenantA,
+        value.accountA.id,
+        "enrolled-after-close",
+        new Date("2026-09-03T13:05:02.000Z"),
+      ),
+    ).toBe("added");
+    expect(
+      value.client.sqlite
+        .prepare(
+          "select status from gmail_recovery_thread where gmail_thread_id = ?",
+        )
+        .get("enrolled-after-close"),
+    ).toEqual({ status: "pending" });
+  });
+
+  it("drains every catch-up page and fetches a reply found after a clean first page", async () => {
+    const value = fixture();
+    seedCursor(value, value.accountA.id, "expired-cursor");
+    let incremental = true;
+    const gapPort = port({
+      listHistory: async () => {
+        if (incremental) {
+          incremental = false;
+          throw new GmailHistoryGapError();
+        }
+        return { historyId: "unused", threadIds: [], nextPageToken: null };
+      },
+      getProfileHistoryId: async () => "baseline",
+    });
+    await syncInboxAccount(value.client.db, value.tenantA, value.accountA.id, {
+      port: gapPort,
+      tokenKey: TOKEN_KEY,
+      now: () => NOW,
+    });
+    const safetyBefore = new Date("2026-09-03T12:30:00.000Z");
+    const pages: Array<{ historyId: string; threadIds: string[]; nextPageToken: string | null }> = [
+      { historyId: "page-one", threadIds: [], nextPageToken: "page-2" },
+      { historyId: "page-two", threadIds: ["reply-on-page-two"], nextPageToken: null },
+      { historyId: "final-clean", threadIds: [], nextPageToken: null },
+    ];
+    const seenTokens: Array<string | null> = [];
+    const recoveryPort = port({
+      listHistory: async ({ pageToken }) => {
+        seenTokens.push(pageToken);
+        return pages.shift()!;
+      },
+    });
+
+    const first = await runMailboxRecoveryBatch(
+      value.client.db,
+      value.tenantA,
+      value.accountA.id,
+      { port: recoveryPort, tokenKey: TOKEN_KEY, tickId: "page-a", now: () => NOW },
+    );
+    expect(first.completed).toBe(false);
+    const second = await runMailboxRecoveryBatch(
+      value.client.db,
+      value.tenantA,
+      value.accountA.id,
+      { port: recoveryPort, tokenKey: TOKEN_KEY, tickId: "page-b", now: () => NOW },
+    );
+    expect(second.completed).toBe(false);
+    expect(
+      value.client.db.select().from(emailAccount).all().find((row) => row.id === value.accountA.id)!
+        .sequenceSafeAt,
+    ).toEqual(safetyBefore);
+    const third = await runMailboxRecoveryBatch(
+      value.client.db,
+      value.tenantA,
+      value.accountA.id,
+      { port: recoveryPort, tokenKey: TOKEN_KEY, tickId: "page-c", now: () => NOW },
+    );
+    expect(third.completed).toBe(true);
+    expect(seenTokens).toEqual([null, "page-2", null]);
+    expect(
+      value.client.sqlite
+        .prepare("select count(*) as count from email_message where gmail_id = ?")
+        .get("reply-on-page-two-message"),
+    ).toEqual({ count: 1 });
+  });
+
+  it("backs off a failed recovery request without advancing its work item or safety stamp", async () => {
+    const value = fixture();
+    seedCursor(value, value.accountA.id, "expired-cursor");
+    upsertEmailThread(value.client.db, value.tenantA, {
+      accountId: value.accountA.id,
+      gmailThreadId: "will-time-out",
+      subject: "Old",
+      lastMessageAt: new Date("2026-08-20T10:00:00.000Z"),
+    });
+    const fake = port({
+      listHistory: async () => { throw new GmailHistoryGapError(); },
+      getProfileHistoryId: async () => "baseline",
+      getThread: async () => { throw new Error("request timed out"); },
+    });
+    await syncInboxAccount(value.client.db, value.tenantA, value.accountA.id, {
+      port: fake,
+      tokenKey: TOKEN_KEY,
+      now: () => NOW,
+    });
+    await expect(
+      runMailboxRecoveryBatch(
+        value.client.db,
+        value.tenantA,
+        value.accountA.id,
+        { port: fake, tokenKey: TOKEN_KEY, tickId: "failed", now: () => NOW },
+      ),
+    ).rejects.toThrow("request timed out");
+    expect(
+      value.client.sqlite
+        .prepare("select status from gmail_recovery_thread where gmail_thread_id = ?")
+        .get("will-time-out"),
+    ).toEqual({ status: "pending" });
+    expect(
+      value.client.sqlite
+        .prepare("select next_retry_at as retryAt, lease_owner as leaseOwner from gmail_recovery_generation where status != 'completed'")
+        .get(),
+    ).toEqual({ retryAt: NOW.valueOf() + 60_000, leaseOwner: null });
+  });
+
+  it("absorbs a thread during sweeping and defers one that arrives during catch-up", async () => {
+    const value = fixture();
+    seedCursor(value, value.accountA.id, "expired-cursor");
+    upsertEmailThread(value.client.db, value.tenantA, {
+      accountId: value.accountA.id,
+      gmailThreadId: "existing",
+      subject: "Old",
+      lastMessageAt: new Date("2026-08-20T10:00:00.000Z"),
+    });
+    await syncInboxAccount(value.client.db, value.tenantA, value.accountA.id, {
+      port: port({
+        listHistory: async () => { throw new GmailHistoryGapError(); },
+        getProfileHistoryId: async () => "baseline",
+      }),
+      tokenKey: TOKEN_KEY,
+      now: () => NOW,
+    });
+    expect(
+      addThreadToOpenRecovery(
+        value.client.db,
+        value.tenantA,
+        value.accountA.id,
+        "joined-while-sweeping",
+        NOW,
+      ),
+    ).toBe("added");
+    value.client.sqlite
+      .prepare(
+        "update gmail_recovery_generation set status = 'catching_up' where workspace_id = ? and account_id = ?",
+      )
+      .run(value.tenantA.workspaceId, value.accountA.id);
+    expect(
+      addThreadToOpenRecovery(
+        value.client.db,
+        value.tenantA,
+        value.accountA.id,
+        "deferred-after-catch-up",
+        NOW,
+      ),
+    ).toBe("deferred");
+    expect(
+      value.client.sqlite
+        .prepare("select count(*) as count from gmail_recovery_generation where workspace_id = ? and status != 'completed'")
+        .get(value.tenantA.workspaceId),
+    ).toEqual({ count: 2 });
+    expect(
+      value.client.sqlite
+        .prepare("select count(*) as count from gmail_recovery_thread where gmail_thread_id in (?, ?)")
+        .get("joined-while-sweeping", "deferred-after-catch-up"),
+    ).toEqual({ count: 2 });
   });
 });

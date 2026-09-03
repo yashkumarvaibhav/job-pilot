@@ -95,15 +95,15 @@ function persistThreadSnapshot(
   account: typeof emailAccount.$inferSelect,
   snapshot: GmailThreadSnapshot,
   source: "sync" | "manual_import" = "sync",
-): void {
-  ingestSyncedThreadSnapshot(
+): boolean {
+  return ingestSyncedThreadSnapshot(
     database,
     tenant,
     account.id,
     snapshot,
     new Date(),
     source,
-  );
+  ) !== undefined;
 }
 
 async function fetchAndPersistThreads(
@@ -117,8 +117,9 @@ async function fetchAndPersistThreads(
   let imported = 0;
   for (const gmailThreadId of unique(gmailThreadIds)) {
     const snapshot = await port.getThread({ refreshToken, gmailThreadId });
-    persistThreadSnapshot(database, tenant, account, snapshot);
-    imported += 1;
+    if (persistThreadSnapshot(database, tenant, account, snapshot)) {
+      imported += 1;
+    }
   }
   return imported;
 }
@@ -647,6 +648,9 @@ export async function runMailboxRecoveryBatch(
           .update(gmailRecoveryGeneration)
           .set({
             status: "sweeping",
+            ...(history.nextPageToken === null
+              ? { baselineHistoryId: history.historyId }
+              : {}),
             catchUpPageToken: history.nextPageToken,
             updatedAt: at,
             leaseOwner: null,
@@ -685,6 +689,17 @@ export async function runMailboxRecoveryBatch(
 
     const completedAt = dependencies.now?.() ?? new Date();
     database.transaction((transaction) => {
+      const completionState = transaction
+        .select({ deferredThread: gmailRecoveryGeneration.deferredThread })
+        .from(gmailRecoveryGeneration)
+        .where(
+          and(
+            eq(gmailRecoveryGeneration.workspaceId, tenant.workspaceId),
+            eq(gmailRecoveryGeneration.id, generation.id),
+          ),
+        )
+        .get();
+      const sequenceSafe = completionState?.deferredThread !== true;
       transaction
         .update(gmailRecoveryGeneration)
         .set({
@@ -703,27 +718,32 @@ export async function runMailboxRecoveryBatch(
           ),
         )
         .run();
-      transaction
-        .update(emailAccount)
-        .set({
-          lastHistoryId: history.historyId,
-          sequenceSafeAt: completedAt,
-          updatedAt: completedAt,
-        })
-        .where(
-          and(
-            eq(emailAccount.workspaceId, tenant.workspaceId),
-            eq(emailAccount.id, accountId),
-            eq(emailAccount.status, "connected"),
-          ),
-        )
-        .run();
+      if (sequenceSafe) {
+        transaction
+          .update(emailAccount)
+          .set({
+            lastHistoryId: history.historyId,
+            sequenceSafeAt: completedAt,
+            updatedAt: completedAt,
+          })
+          .where(
+            and(
+              eq(emailAccount.workspaceId, tenant.workspaceId),
+              eq(emailAccount.id, accountId),
+              eq(emailAccount.status, "connected"),
+            ),
+          )
+          .run();
+      }
       logEvent(transaction, tenant, {
         at: completedAt,
         kind: "GMAIL_RECOVERY_COMPLETED",
         entityType: "email_account",
         entityId: accountId,
-        payload: { generationId: generation.id },
+        payload: {
+          generationId: generation.id,
+          sequenceSafe,
+        },
       });
     });
     return { reconciled, completed: true, quotaUnits, claimed: true };
@@ -748,7 +768,7 @@ export function addThreadToOpenRecovery(
   now = new Date(),
 ): "added" | "deferred" | "no_generation" {
   return database.transaction((transaction) => {
-    const generation = transaction
+    let generation = transaction
       .select()
       .from(gmailRecoveryGeneration)
       .where(
@@ -760,7 +780,43 @@ export function addThreadToOpenRecovery(
       )
       .orderBy(asc(gmailRecoveryGeneration.createdAt))
       .get();
-    if (!generation) return "no_generation";
+    if (!generation) {
+      const account = transaction
+        .select({ lastHistoryId: emailAccount.lastHistoryId })
+        .from(emailAccount)
+        .where(
+          and(
+            eq(emailAccount.workspaceId, tenant.workspaceId),
+            eq(emailAccount.id, accountId),
+            eq(emailAccount.status, "connected"),
+          ),
+        )
+        .get();
+      if (!account?.lastHistoryId) return "no_generation";
+      const generationId = randomUUID();
+      transaction
+        .insert(gmailRecoveryGeneration)
+        .values({
+          id: generationId,
+          workspaceId: tenant.workspaceId,
+          accountId,
+          baselineHistoryId: account.lastHistoryId,
+          status: "sweeping",
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      generation = transaction
+        .select()
+        .from(gmailRecoveryGeneration)
+        .where(
+          and(
+            eq(gmailRecoveryGeneration.workspaceId, tenant.workspaceId),
+            eq(gmailRecoveryGeneration.id, generationId),
+          ),
+        )
+        .get()!;
+    }
     if (generation.status === "catching_up") {
       transaction
         .update(gmailRecoveryGeneration)
@@ -771,6 +827,46 @@ export function addThreadToOpenRecovery(
             eq(gmailRecoveryGeneration.id, generation.id),
           ),
         )
+        .run();
+      const later = transaction
+        .select()
+        .from(gmailRecoveryGeneration)
+        .where(
+          and(
+            eq(gmailRecoveryGeneration.workspaceId, tenant.workspaceId),
+            eq(gmailRecoveryGeneration.accountId, accountId),
+            ne(gmailRecoveryGeneration.status, "completed"),
+          ),
+        )
+        .all()
+        .find((row) => row.id !== generation.id);
+      const nextGenerationId = later?.id ?? randomUUID();
+      if (!later) {
+        transaction
+          .insert(gmailRecoveryGeneration)
+          .values({
+            id: nextGenerationId,
+            workspaceId: tenant.workspaceId,
+            accountId,
+            baselineHistoryId: generation.baselineHistoryId,
+            status: "sweeping",
+            createdAt: new Date(now.valueOf() + 1),
+            updatedAt: now,
+          })
+          .run();
+      }
+      transaction
+        .insert(gmailRecoveryThread)
+        .values({
+          id: randomUUID(),
+          workspaceId: tenant.workspaceId,
+          generationId: nextGenerationId,
+          accountId,
+          gmailThreadId,
+          status: "pending",
+          createdAt: now,
+        })
+        .onConflictDoNothing()
         .run();
       return "deferred";
     }

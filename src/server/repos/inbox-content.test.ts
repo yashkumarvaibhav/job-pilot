@@ -6,6 +6,7 @@ import { createContact } from "./contacts";
 import { connectEmailAccount, disconnectEmailAccount } from "./email-accounts";
 import {
   classifyInboxReply,
+  confirmInboxMatch,
   importGmailThread,
   ingestSyncedThreadSnapshot,
   listInboxThreads,
@@ -148,6 +149,16 @@ describe("Job Inbox matching, import and classification", () => {
     expect(getReferral(value.client.db, value.tenantA, referral.id)?.stage).toBe(
       "seen_acknowledged",
     );
+    classifyInboxReply(
+      value.client.db,
+      value.tenantA,
+      first!.id,
+      "declined",
+      NOW,
+    );
+    expect(getReferral(value.client.db, value.tenantA, referral.id)?.stage).toBe(
+      "declined",
+    );
     expect(listInboxThreads(value.client.db, value.tenantB)).toEqual([]);
   });
 
@@ -208,6 +219,36 @@ describe("Job Inbox matching, import and classification", () => {
     });
     expect(domain.suggestedContactIdsJson).toEqual([first.id, second.id]);
     expect(value.rowCount("interaction")).toBe(0);
+    expect(
+      confirmInboxMatch(
+        value.client.db,
+        value.tenantB,
+        ambiguous.id,
+        first.id,
+      ),
+    ).toBeUndefined();
+    expect(() =>
+      confirmInboxMatch(
+        value.client.db,
+        value.tenantA,
+        ambiguous.id,
+        "not-a-candidate",
+      ),
+    ).toThrow("Choose one of this thread's suggested matches.");
+    expect(
+      confirmInboxMatch(
+        value.client.db,
+        value.tenantA,
+        ambiguous.id,
+        first.id,
+        NOW,
+      ),
+    ).toMatchObject({
+      contactId: first.id,
+      matchStatus: "manual",
+      matchReason: "Suggested match confirmed",
+    });
+    expect(value.rowCount("interaction")).toBe(2);
   });
 
   it("searches and idempotently imports any selected owned-account thread as Unmatched", async () => {
