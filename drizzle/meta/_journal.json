@@ -141,6 +141,13 @@
       "when": 1788420000000,
       "tag": "0019_email_account",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1788438014880,
+      "tag": "0020_email_content",
+      "breakpoints": true
     }
   ]
 }

@@ -158,7 +158,16 @@ describe("Gmail account routes", () => {
     expect((await disconnect(new Request(`${ORIGIN}/x`), context)).status).toBe(200);
     expect(mocks.revoke).toHaveBeenCalledWith("refresh-one");
     expect(listEmailAccounts(fixture.client.db, fixture.tenantA)).toEqual([
-      expect.objectContaining({ id: second.id, email: "two@invalid.test" }),
+      expect.objectContaining({
+        id: first.id,
+        email: "one@invalid.test",
+        status: "disconnected",
+      }),
+      expect.objectContaining({
+        id: second.id,
+        email: "two@invalid.test",
+        status: "connected",
+      }),
     ]);
   });
 });

@@ -14,6 +14,8 @@ import {
 
 export type EmailAccountStatus = "connected" | "disconnected" | "error";
 
+const REMOVED_TOKEN_BLOB = "credential-removed";
+
 export type EmailAccountView = Omit<
   typeof emailAccount.$inferSelect,
   "googleSub" | "tokenBlob"
@@ -272,7 +274,7 @@ export function readEmailAccountRefreshToken(
   tokenKey: string,
 ): string | undefined {
   const row = database
-    .select({ tokenBlob: emailAccount.tokenBlob })
+    .select({ status: emailAccount.status, tokenBlob: emailAccount.tokenBlob })
     .from(emailAccount)
     .where(
       and(
@@ -281,7 +283,7 @@ export function readEmailAccountRefreshToken(
       ),
     )
     .get();
-  return row === undefined
+  return row === undefined || row.status !== "connected"
     ? undefined
     : decryptRefreshToken(
         row.tokenBlob,
@@ -459,7 +461,13 @@ export function disconnectEmailAccount(
       )
       .run();
     transaction
-      .delete(emailAccount)
+      .update(emailAccount)
+      .set({
+        tokenBlob: REMOVED_TOKEN_BLOB,
+        status: "disconnected",
+        sequenceSafeAt: null,
+        updatedAt: now,
+      })
       .where(
         and(
           eq(emailAccount.workspaceId, tenant.workspaceId),

@@ -61,13 +61,16 @@ describe("migrateDatabase", () => {
           "automation_rule",
           "automation_execution",
           "email_account",
+          "email_template",
+          "email_thread",
+          "email_message",
         ]),
       );
       expect(
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 20 });
+      ).toEqual({ count: 21 });
 
       for (const indexName of [
         "company_workspace_id_id_unique",
@@ -162,6 +165,15 @@ describe("migrateDatabase", () => {
         "email_account_workspace_id_id_unique",
         "email_account_workspace_google_sub_unique",
         "email_account_workspace_status_idx",
+        "email_template_workspace_id_id_unique",
+        "email_template_workspace_title_unique",
+        "email_thread_workspace_id_id_unique",
+        "email_thread_workspace_account_idx",
+        "email_thread_workspace_id_account_unique",
+        "email_thread_workspace_last_message_idx",
+        "email_message_workspace_id_id_unique",
+        "email_message_workspace_thread_idx",
+        "email_message_workspace_account_sent_idx",
       ]) {
         const columns = client.sqlite
           .prepare(
@@ -849,6 +861,120 @@ describe("migrateDatabase", () => {
           table: "email_account",
           from: "default_email_account_id",
           to: "id",
+        },
+      ]);
+
+      const emailTemplateColumns = client.sqlite
+        .prepare(
+          "select name from pragma_table_info('email_template') order by cid",
+        )
+        .all() as { name: string }[];
+      expect(emailTemplateColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "title",
+        "subject",
+        "body",
+        "variables_json",
+        "default_email_account_id",
+        "default_document_version_id",
+        "default_follow_up_days",
+        "tags_json",
+        "created_at",
+        "updated_at",
+      ]);
+
+      const emailThreadColumns = client.sqlite
+        .prepare(
+          "select name from pragma_table_info('email_thread') order by cid",
+        )
+        .all() as { name: string }[];
+      expect(emailThreadColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "account_id",
+        "gmail_thread_id",
+        "subject",
+        "contact_id",
+        "company_id",
+        "opportunity_id",
+        "referral_id",
+        "source",
+        "last_message_at",
+        "created_at",
+        "updated_at",
+      ]);
+
+      const emailMessageColumns = client.sqlite
+        .prepare(
+          "select name from pragma_table_info('email_message') order by cid",
+        )
+        .all() as { name: string }[];
+      expect(emailMessageColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "thread_id",
+        "account_id",
+        "gmail_id",
+        "rfc_message_id",
+        "direction",
+        "from_email",
+        "to_json",
+        "subject",
+        "body",
+        "attachment_version_ids_json",
+        "sent_at",
+        "created_at",
+      ]);
+
+      const templateAccountForeignKeys = client.sqlite
+        .prepare(
+          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('email_template') where \"table\" = 'email_account' order by seq",
+        )
+        .all();
+      expect(templateAccountForeignKeys).toEqual([
+        {
+          table: "email_account",
+          from: "workspace_id",
+          to: "workspace_id",
+        },
+        {
+          table: "email_account",
+          from: "default_email_account_id",
+          to: "id",
+        },
+      ]);
+
+      const threadAccountForeignKeys = client.sqlite
+        .prepare(
+          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('email_thread') where \"table\" = 'email_account' order by seq",
+        )
+        .all();
+      expect(threadAccountForeignKeys).toEqual([
+        {
+          table: "email_account",
+          from: "workspace_id",
+          to: "workspace_id",
+        },
+        { table: "email_account", from: "account_id", to: "id" },
+      ]);
+
+      const messageThreadForeignKeys = client.sqlite
+        .prepare(
+          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('email_message') where \"table\" = 'email_thread' order by seq",
+        )
+        .all();
+      expect(messageThreadForeignKeys).toEqual([
+        {
+          table: "email_thread",
+          from: "workspace_id",
+          to: "workspace_id",
+        },
+        { table: "email_thread", from: "thread_id", to: "id" },
+        {
+          table: "email_thread",
+          from: "account_id",
+          to: "account_id",
         },
       ]);
 

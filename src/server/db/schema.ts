@@ -1195,6 +1195,206 @@ export const documentUsage = sqliteTable(
   ],
 );
 
+export const emailTemplate = sqliteTable(
+  "email_template",
+  {
+    ...workspaceOwnedEntityColumns(),
+    title: text("title").notNull(),
+    subject: text("subject").notNull().default(""),
+    body: text("body").notNull().default(""),
+    variablesJson: text("variables_json", { mode: "json" })
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'`),
+    defaultEmailAccountId: text("default_email_account_id"),
+    defaultDocumentVersionId: text("default_document_version_id"),
+    defaultFollowUpDays: integer("default_follow_up_days"),
+    tagsJson: text("tags_json", { mode: "json" })
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'`),
+    createdAt: utcInstant("created_at").notNull(),
+    updatedAt: utcInstant("updated_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("email_template", table),
+    uniqueIndex("email_template_workspace_title_unique").on(
+      table.workspaceId,
+      table.title,
+    ),
+    index("email_template_workspace_account_idx").on(
+      table.workspaceId,
+      table.defaultEmailAccountId,
+    ),
+    sameWorkspaceForeignKey(
+      "email_template_default_account_fk",
+      {
+        workspaceId: table.workspaceId,
+        parentId: table.defaultEmailAccountId,
+      },
+      emailAccount,
+    ).onDelete("set null"),
+    sameWorkspaceForeignKey(
+      "email_template_default_document_version_fk",
+      {
+        workspaceId: table.workspaceId,
+        parentId: table.defaultDocumentVersionId,
+      },
+      documentVersion,
+    ).onDelete("set null"),
+    check(
+      "email_template_title_not_blank",
+      sql`length(trim(${table.title})) > 0`,
+    ),
+    check(
+      "email_template_follow_up_days_range",
+      sql`${table.defaultFollowUpDays} is null or ${table.defaultFollowUpDays} between 0 and 365`,
+    ),
+  ],
+);
+
+export const emailThread = sqliteTable(
+  "email_thread",
+  {
+    ...workspaceOwnedEntityColumns(),
+    accountId: text("account_id").notNull(),
+    gmailThreadId: text("gmail_thread_id").notNull(),
+    subject: text("subject").notNull().default(""),
+    contactId: text("contact_id"),
+    companyId: text("company_id"),
+    opportunityId: text("opportunity_id"),
+    referralId: text("referral_id"),
+    source: text("source", {
+      enum: ["sent", "sync", "manual_import"],
+    })
+      .notNull()
+      .default("sync"),
+    lastMessageAt: utcInstant("last_message_at").notNull(),
+    createdAt: utcInstant("created_at").notNull(),
+    updatedAt: utcInstant("updated_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("email_thread", table),
+    index("email_thread_workspace_account_idx").on(
+      table.workspaceId,
+      table.accountId,
+    ),
+    uniqueIndex("email_thread_account_gmail_unique").on(
+      table.accountId,
+      table.gmailThreadId,
+    ),
+    uniqueIndex("email_thread_workspace_id_account_unique").on(
+      table.workspaceId,
+      table.id,
+      table.accountId,
+    ),
+    index("email_thread_workspace_last_message_idx").on(
+      table.workspaceId,
+      table.lastMessageAt,
+    ),
+    sameWorkspaceForeignKey(
+      "email_thread_account_fk",
+      { workspaceId: table.workspaceId, parentId: table.accountId },
+      emailAccount,
+    ),
+    sameWorkspaceForeignKey(
+      "email_thread_contact_fk",
+      { workspaceId: table.workspaceId, parentId: table.contactId },
+      contact,
+    ),
+    sameWorkspaceForeignKey(
+      "email_thread_company_fk",
+      { workspaceId: table.workspaceId, parentId: table.companyId },
+      company,
+    ),
+    sameWorkspaceForeignKey(
+      "email_thread_opportunity_fk",
+      { workspaceId: table.workspaceId, parentId: table.opportunityId },
+      opportunity,
+    ),
+    sameWorkspaceForeignKey(
+      "email_thread_referral_fk",
+      { workspaceId: table.workspaceId, parentId: table.referralId },
+      referralRequest,
+    ),
+    check(
+      "email_thread_source_valid",
+      sql`${table.source} in ('sent', 'sync', 'manual_import')`,
+    ),
+    check(
+      "email_thread_gmail_id_not_blank",
+      sql`length(trim(${table.gmailThreadId})) > 0`,
+    ),
+  ],
+);
+
+export const emailMessage = sqliteTable(
+  "email_message",
+  {
+    ...workspaceOwnedEntityColumns(),
+    threadId: text("thread_id").notNull(),
+    accountId: text("account_id").notNull(),
+    gmailId: text("gmail_id").notNull(),
+    rfcMessageId: text("rfc_message_id"),
+    direction: text("direction", { enum: ["inbound", "outbound"] }).notNull(),
+    fromEmail: text("from_email").notNull(),
+    toJson: text("to_json", { mode: "json" }).$type<string[]>().notNull(),
+    subject: text("subject").notNull().default(""),
+    body: text("body").notNull().default(""),
+    attachmentVersionIdsJson: text("attachment_version_ids_json", {
+      mode: "json",
+    })
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'`),
+    sentAt: utcInstant("sent_at").notNull(),
+    createdAt: utcInstant("created_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("email_message", table),
+    uniqueIndex("email_message_account_gmail_unique").on(
+      table.accountId,
+      table.gmailId,
+    ),
+    index("email_message_workspace_thread_idx").on(
+      table.workspaceId,
+      table.threadId,
+      table.sentAt,
+    ),
+    index("email_message_workspace_account_sent_idx").on(
+      table.workspaceId,
+      table.accountId,
+      table.sentAt,
+    ),
+    foreignKey({
+      name: "email_message_thread_account_fk",
+      columns: [table.workspaceId, table.threadId, table.accountId],
+      foreignColumns: [
+        emailThread.workspaceId,
+        emailThread.id,
+        emailThread.accountId,
+      ],
+    }).onDelete("cascade"),
+    sameWorkspaceForeignKey(
+      "email_message_account_fk",
+      { workspaceId: table.workspaceId, parentId: table.accountId },
+      emailAccount,
+    ),
+    check(
+      "email_message_gmail_id_not_blank",
+      sql`length(trim(${table.gmailId})) > 0`,
+    ),
+    check(
+      "email_message_from_email_not_blank",
+      sql`length(trim(${table.fromEmail})) > 0`,
+    ),
+    check(
+      "email_message_direction_valid",
+      sql`${table.direction} in ('inbound', 'outbound')`,
+    ),
+  ],
+);
+
 export const savedSearch = sqliteTable(
   "saved_search",
   {

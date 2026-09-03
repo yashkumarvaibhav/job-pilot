@@ -256,7 +256,7 @@ describe("email account repository", () => {
     expect(fixture.rowCount("activity_event")).toBe(beforeEvents);
   });
 
-  it("disconnects one account, clears its default reference and leaves the other", () => {
+  it("disconnects one account, clears its credential and leaves both identities", () => {
     const first = connectEmailAccount(
       fixture.client.db,
       fixture.tenantA,
@@ -285,7 +285,16 @@ describe("email account repository", () => {
       first.id,
     )).toBe(true);
     expect(listEmailAccounts(fixture.client.db, fixture.tenantA)).toEqual([
-      expect.objectContaining({ id: second.id, email: "second@invalid.test" }),
+      expect.objectContaining({
+        id: first.id,
+        email: "first@invalid.test",
+        status: "disconnected",
+      }),
+      expect.objectContaining({
+        id: second.id,
+        email: "second@invalid.test",
+        status: "connected",
+      }),
     ]);
     expect(readEmailAccountRefreshToken(
       fixture.client.db,
@@ -299,5 +308,10 @@ describe("email account repository", () => {
       .where(eq(settings.workspaceId, fixture.tenantA.workspaceId))
       .get();
     expect(saved?.defaultEmailAccountId).toBeNull();
+    expect(
+      fixture.client.sqlite
+        .prepare("select token_blob from email_account where id = ?")
+        .get(first.id),
+    ).not.toEqual({ token_blob: expect.stringContaining("refresh-one") });
   });
 });
