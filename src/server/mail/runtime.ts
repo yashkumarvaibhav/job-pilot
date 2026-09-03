@@ -1,13 +1,13 @@
+import type { SendQueueDependencies } from "../jobs/send-queue";
+import type { InboxReadDependencies } from "../repos/inbox-content";
 import { readGmailOAuthConfig } from "./google-config";
 import { GoogleGmailMailPort } from "./google-send";
-import type { ComposeSendDependencies } from "./compose-service";
 import { GoogleGmailReadPort } from "./google-read";
-import type { InboxReadDependencies } from "../repos/inbox-content";
 import type { InboxSyncDependencies } from "./inbox-sync";
 
 export function getMailSendDependencies(
   environment: NodeJS.ProcessEnv = process.env,
-): ComposeSendDependencies | null {
+): SendQueueDependencies | null {
   const config = readGmailOAuthConfig(environment);
   if (!config) return null;
   return {

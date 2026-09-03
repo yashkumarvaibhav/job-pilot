@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the Job Pilot send queue tick every minute
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+AccuracySec=1s
+Persistent=false
+Unit=job-pilot-tick.service
+
+[Install]
+WantedBy=timers.target

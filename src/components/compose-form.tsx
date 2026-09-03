@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Send } from "lucide-react";
+import { AlertTriangle, CalendarClock, CheckCircle2, Clock3, Send } from "lucide-react";
 
 import {
   renderEmailTemplate,
@@ -23,6 +23,7 @@ export type ComposeContactOption = {
   email: string;
   companyName: string | null;
   doNotContact: boolean;
+  suppressionReason?: string | null;
 };
 
 export type ComposeOpportunityOption = {
@@ -56,6 +57,12 @@ type ComposeInitialSelection = {
   opportunityId?: string;
   referralId?: string;
 };
+
+type ComposeApproval =
+  | "send_now"
+  | "send_tonight"
+  | "send_tomorrow"
+  | "custom_time";
 
 export function composeVariableValues(input: {
   contact?: ComposeContactOption;
@@ -97,6 +104,7 @@ export function ComposeForm({
   opportunities,
   referrals,
   templates,
+  timeZone,
 }: {
   accounts: ComposeAccountOption[];
   contacts: ComposeContactOption[];
@@ -107,6 +115,7 @@ export function ComposeForm({
   opportunities: ComposeOpportunityOption[];
   referrals: ComposeReferralOption[];
   templates: ComposeTemplateOption[];
+  timeZone: string;
 }) {
   const router = useRouter();
   const defaultAccount = accounts.find((account) => account.isDefault) ?? accounts[0];
@@ -130,9 +139,10 @@ export function ComposeForm({
   const [documentId, setDocumentId] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
-  const [pending, setPending] = useState(false);
+  const [pendingAction, setPendingAction] = useState<ComposeApproval | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
+  const [outcome, setOutcome] = useState<string | null>(null);
+  const [customTime, setCustomTime] = useState("");
 
   const account = accounts.find((item) => item.id === accountId) ?? defaultAccount;
   const contact = contacts.find((item) => item.id === contactId);
@@ -156,7 +166,11 @@ export function ComposeForm({
   const completeBody = [rendered.body, account.signature?.trim()]
     .filter(Boolean)
     .join("\n\n");
-  const blocked = contact?.doNotContact === true;
+  const blockReason = contact?.suppressionReason ??
+    (contact?.doNotContact
+      ? "This contact is marked Do Not Contact. Email is blocked."
+      : null);
+  const blocked = blockReason !== null;
 
   function chooseTemplate(id: string) {
     setTemplateId(id);
@@ -186,11 +200,10 @@ export function ComposeForm({
     setOpportunityId(referral.opportunityId ?? "");
   }
 
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setPending(true);
+  async function approve(approval: ComposeApproval) {
+    setPendingAction(approval);
     setError(null);
-    setSent(false);
+    setOutcome(null);
     try {
       const response = await fetch("/api/compose", {
         method: "POST",
@@ -203,7 +216,8 @@ export function ComposeForm({
           subject: rendered.subject,
           body: completeBody,
           attachmentVersionIds: documentId ? [documentId] : [],
-          approval: "send_now",
+          approval,
+          ...(approval === "custom_time" ? { sendAt: customTime } : {}),
         }),
       });
       const responseBody: unknown = await response.json().catch(() => null);
@@ -211,13 +225,31 @@ export function ComposeForm({
         setError(responseError(responseBody));
         return;
       }
-      setSent(true);
+      const queued = responseBody as { status?: unknown; sendAt?: unknown } | null;
+      setOutcome(
+        queued?.status === "sent"
+          ? `Email sent through ${account.email}. The interaction is in the contact timeline.`
+          : `Approved for ${
+              typeof queued?.sendAt === "string"
+                ? new Intl.DateTimeFormat(undefined, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                    timeZone,
+                  }).format(new Date(queued.sendAt))
+                : "the selected time"
+            } in ${timeZone}.`,
+      );
       router.refresh();
     } catch {
       setError("Could not reach Job Pilot. Check the connection and retry.");
     } finally {
-      setPending(false);
+      setPendingAction(null);
     }
+  }
+
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void approve("send_now");
   }
 
   return (
@@ -371,7 +403,7 @@ export function ComposeForm({
         {blocked ? (
           <div className="compose-block" role="alert">
             <AlertTriangle aria-hidden="true" />
-            <p>This contact is marked Do Not Contact. Email is blocked with no override.</p>
+            <p>{blockReason} There is no Send anyway button.</p>
           </div>
         ) : null}
         <dl className="compose-review__facts">
@@ -379,7 +411,7 @@ export function ComposeForm({
           <div><dt>Account</dt><dd>{account.email}</dd></div>
           <div><dt>Subject</dt><dd>{rendered.subject || "No subject"}</dd></div>
           <div><dt>Attachment</dt><dd>{document?.displayName ?? "None"}</dd></div>
-          <div><dt>Send time</dt><dd>Now — this click is the approval</dd></div>
+          <div><dt>Send time</dt><dd>Chosen below in {timeZone}; that click is the approval</dd></div>
         </dl>
         <div className="compose-preview">
           <h3>Complete body</h3>
@@ -391,21 +423,65 @@ export function ComposeForm({
             {error}
           </p>
         ) : null}
-        {sent ? (
+        {outcome ? (
           <p className="form-notice" role="status">
             <CheckCircle2 aria-hidden="true" />
-            Email sent through {account.email}. The interaction is in the contact timeline.
+            {outcome}
           </p>
         ) : null}
         {!blocked ? (
-          <button
-            className="btn compose-send"
-            disabled={pending || !contact || !rendered.subject || !completeBody}
-            type="submit"
-          >
-            <Send aria-hidden="true" />
-            {pending ? "Sending…" : `Send now from ${account.email}`}
-          </button>
+          <div className="compose-actions">
+            <button
+              className="btn compose-send"
+              disabled={pendingAction !== null || !contact || !rendered.subject || !completeBody}
+              type="submit"
+            >
+              <Send aria-hidden="true" />
+              {pendingAction === "send_now" ? "Sending…" : `Send now from ${account.email}`}
+            </button>
+            <button
+              className="btn btn--ghost"
+              disabled={pendingAction !== null || !contact || !rendered.subject || !completeBody}
+              onClick={() => void approve("send_tonight")}
+              type="button"
+            >
+              <Clock3 aria-hidden="true" />
+              {pendingAction === "send_tonight" ? "Scheduling…" : "Send tonight"}
+            </button>
+            <button
+              className="btn btn--ghost"
+              disabled={pendingAction !== null || !contact || !rendered.subject || !completeBody}
+              onClick={() => void approve("send_tomorrow")}
+              type="button"
+            >
+              <CalendarClock aria-hidden="true" />
+              {pendingAction === "send_tomorrow" ? "Scheduling…" : "Send tomorrow morning"}
+            </button>
+            <div className="field compose-custom-time">
+              <label htmlFor="compose-custom-time">Custom time in {timeZone}</label>
+              <input
+                id="compose-custom-time"
+                onChange={(event) => setCustomTime(event.target.value)}
+                type="datetime-local"
+                value={customTime}
+              />
+            </div>
+            <button
+              className="btn btn--ghost"
+              disabled={
+                pendingAction !== null ||
+                !contact ||
+                !rendered.subject ||
+                !completeBody ||
+                !customTime
+              }
+              onClick={() => void approve("custom_time")}
+              type="button"
+            >
+              <CalendarClock aria-hidden="true" />
+              {pendingAction === "custom_time" ? "Scheduling…" : "Approve custom time"}
+            </button>
+          </div>
         ) : null}
       </section>
     </form>

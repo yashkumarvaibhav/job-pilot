@@ -176,6 +176,13 @@
       "when": 1788462093701,
       "tag": "0024_send_queue_links",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1788463737152,
+      "tag": "0025_message_id_gate",
+      "breakpoints": true
     }
   ]
 }

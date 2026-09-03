@@ -1,0 +1,1 @@
+ALTER TABLE `email_account` ADD `message_id_verified_at` integer;

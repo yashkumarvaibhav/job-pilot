@@ -140,6 +140,7 @@ export const emailAccount = sqliteTable(
     lastHistoryId: text("last_history_id"),
     lastSyncAt: utcInstant("last_sync_at"),
     sequenceSafeAt: utcInstant("sequence_safe_at"),
+    messageIdVerifiedAt: utcInstant("message_id_verified_at"),
     lastSyncError: text("last_sync_error"),
     createdAt: utcInstant("created_at").notNull(),
     updatedAt: utcInstant("updated_at").notNull(),

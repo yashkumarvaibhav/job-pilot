@@ -1,0 +1,11 @@
+[Unit]
+Description=Flush approved Job Pilot send queue rows
+After=job-pilot-demo.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/siddhartha/job-pilot/app
+Environment=PATH=/home/siddhartha/.local/bin:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=/home/siddhartha/.config/job-pilot/demo.env
+ExecStart=/home/siddhartha/.local/bin/node /home/siddhartha/job-pilot/app/scripts/cron-tick.mjs
+NoNewPrivileges=true

@@ -8,7 +8,11 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
-import { ComposeForm, composeVariableValues } from "@/components/compose-form";
+import {
+  ComposeForm,
+  composeVariableValues,
+  type ComposeContactOption,
+} from "@/components/compose-form";
 
 const accounts = [
   {
@@ -45,7 +49,7 @@ const opportunities = [
   },
 ];
 
-function form(contactRows = contacts) {
+function form(contactRows: ComposeContactOption[] = contacts) {
   return (
     <ComposeForm
       accounts={accounts}
@@ -66,6 +70,7 @@ function form(contactRows = contacts) {
           defaultDocumentVersionId: "resume-v4",
         },
       ]}
+      timeZone="Asia/Kolkata"
     />
   );
 }
@@ -79,10 +84,12 @@ describe("composer UI", () => {
     expect(html).toContain("Rahul Sharma — rahul@invalid.test");
     expect(html).toContain("Employee referral request");
     expect(html).toContain("Review exactly what Gmail will send");
-    expect(html).toContain("Now — this click is the approval");
+    expect(html).toContain("Chosen below in Asia/Kolkata; that click is the approval");
     expect(html).toContain("Send now from default@invalid.test");
+    expect(html).toContain("Send tonight");
+    expect(html).toContain("Send tomorrow morning");
+    expect(html).toContain("Approve custom time");
     expect(html).toContain('type="submit"');
-    expect(html).not.toContain("Send tonight");
   });
 
   it("builds the literal §15 values from the chosen CRM context", () => {
@@ -112,9 +119,23 @@ describe("composer UI", () => {
       form([{ ...contacts[0], doNotContact: true }]),
     );
 
-    expect(html).toContain("Email is blocked with no override.");
+    expect(html).toContain("Email is blocked. There is no Send anyway button.");
     expect(html).toContain('role="alert"');
     expect(html).toContain('aria-hidden="true"');
+    expect(html).not.toContain("Send now from");
+  });
+
+  it("shows a named suppression reason with no override control", () => {
+    const html = renderToStaticMarkup(
+      form([
+        {
+          ...contacts[0],
+          suppressionReason: "Email is blocked by bounced suppression.",
+        },
+      ]),
+    );
+    expect(html).toContain("Email is blocked by bounced suppression.");
+    expect(html).toContain("There is no Send anyway button.");
     expect(html).not.toContain("Send now from");
   });
 

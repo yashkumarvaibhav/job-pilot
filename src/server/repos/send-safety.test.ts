@@ -4,7 +4,7 @@ import { hashSendPayload } from "../../domain/send-safety";
 import { createTenantTestFixture } from "../../test/tenant-fixture";
 import { sendQueue, suppressionEntry } from "../db/schema";
 import { connectEmailAccount } from "./email-accounts";
-import { createContact } from "./contacts";
+import { createContact, updateContact } from "./contacts";
 import {
   SendSafetyError,
   addSuppressionEntry,
@@ -199,5 +199,67 @@ describe("send safety repository", () => {
     expect(removeManualSuppression(fixture.client.db, fixture.tenantA, bounced.id)).toBe(false);
     expect(fixture.client.db.select().from(suppressionEntry).all()).toHaveLength(1);
     expect(fixture.client.db.select().from(sendQueue).all()).toHaveLength(0);
+  });
+
+  it("suppresses new Do Not Contact methods and cancels already queued mail atomically", () => {
+    const { fixture, accountA, contactA } = setup();
+    cleanups.push(fixture.dispose);
+    const queued = createQueueMessage(fixture.client.db, fixture.tenantA, {
+      id: "queue-dnc",
+      accountId: accountA.id,
+      contactId: contactA.id,
+      origin: "one_off",
+      subject: "Subject",
+      body: "Body",
+      attachmentVersionIds: [],
+      sendAt: NOW,
+      approvalKind: "owner_click",
+      now: NOW,
+    });
+    updateContact(
+      fixture.client.db,
+      fixture.tenantA,
+      contactA.id,
+      {
+        networkingStatus: "do_not_contact",
+        methods: [{ kind: "email", value: "new-recipient@invalid.test" }],
+      },
+      new Date(NOW.valueOf() + 1_000),
+    );
+    expect(getQueueMessage(fixture.client.db, fixture.tenantA, queued.id)).toMatchObject({
+      status: "cancelled",
+      approvalHash: null,
+    });
+    expect(fixture.client.db.select().from(suppressionEntry).all()).toEqual([
+      expect.objectContaining({
+        email: "new-recipient@invalid.test",
+        reason: "do_not_contact",
+        sourceKey: `contact:${contactA.id}`,
+      }),
+    ]);
+  });
+
+  it("leaving Do Not Contact removes only that contact source", () => {
+    const { fixture, contactA } = setup();
+    cleanups.push(fixture.dispose);
+    updateContact(fixture.client.db, fixture.tenantA, contactA.id, {
+      networkingStatus: "do_not_contact",
+    });
+    addSuppressionEntry(fixture.client.db, fixture.tenantA, {
+      email: "recipient@invalid.test",
+      reason: "bounced",
+      sourceKey: "gmail:bounce-1",
+      now: NOW,
+    });
+    updateContact(fixture.client.db, fixture.tenantA, contactA.id, {
+      networkingStatus: "keep_in_touch",
+      overrideDoNotContact: true,
+    });
+    expect(
+      fixture.client.db
+        .select({ reason: suppressionEntry.reason, sourceKey: suppressionEntry.sourceKey })
+        .from(suppressionEntry)
+        .all(),
+    ).toEqual([{ reason: "bounced", sourceKey: "gmail:bounce-1" }]);
   });
 });

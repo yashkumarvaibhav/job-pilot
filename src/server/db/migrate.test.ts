@@ -80,7 +80,7 @@ describe("migrateDatabase", () => {
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 25 });
+      ).toEqual({ count: 26 });
 
       for (const indexName of [
         "company_workspace_id_id_unique",
@@ -896,6 +896,7 @@ describe("migrateDatabase", () => {
         "created_at",
         "updated_at",
         "last_sync_error",
+        "message_id_verified_at",
       ]);
       expect(
         emailAccountColumns.find((column) => column.name === "token_blob")

@@ -31,6 +31,7 @@ import {
   clearEntityTagsInTransaction,
   replaceEntityTagsInTransaction,
 } from "./tags";
+import { syncContactSuppressionInTransaction } from "./send-safety";
 
 export type Contact = typeof contact.$inferSelect;
 export type ContactMethod = typeof contactMethod.$inferSelect;
@@ -399,6 +400,13 @@ export function createContactInTransaction(
     })
     .run();
   insertMethods(transaction, tenant, id, methods, now);
+  syncContactSuppressionInTransaction(
+    transaction,
+    tenant,
+    id,
+    input.networkingStatus ?? DEFAULT_NETWORKING_STATUS,
+    now,
+  );
   replaceEntityTagsInTransaction(
     transaction,
     tenant,
@@ -609,6 +617,16 @@ export function updateContact(
         .run();
       insertMethods(transaction, tenant, id, preparedMethods, at);
     }
+    const nextStatus = values.networkingStatus ?? current.networkingStatus;
+    if (preparedMethods !== undefined || input.networkingStatus !== undefined) {
+      syncContactSuppressionInTransaction(
+        transaction,
+        tenant,
+        id,
+        nextStatus,
+        at,
+      );
+    }
     if (input.tags !== undefined) {
       replaceEntityTagsInTransaction(
         transaction,
@@ -661,6 +679,13 @@ export function deleteContact(
     }
 
     clearEntityTagsInTransaction(transaction, tenant, "contact", id);
+    syncContactSuppressionInTransaction(
+      transaction,
+      tenant,
+      id,
+      "inactive",
+      at,
+    );
 
     transaction
       .delete(contact)

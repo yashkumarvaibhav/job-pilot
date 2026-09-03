@@ -489,6 +489,335 @@ body {
   gap: var(--space-2);
 }
 
+.compose-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-2);
+}
+
+.compose-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--target-min);
+}
+
+.compose-actions svg {
+  width: var(--space-5);
+  height: var(--space-5);
+}
+
+.compose-custom-time {
+  min-width: min(100%, 16rem);
+}
+
+/* Send queue — compact safety review with bodies loaded only on demand. */
+
+.queue-page,
+.queue-manager {
+  display: grid;
+  align-content: start;
+  gap: var(--space-5);
+}
+
+.queue-usage {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.queue-usage article {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-inline-end: 1px solid var(--line);
+}
+
+.queue-usage article:last-child {
+  border-inline-end: 0;
+}
+
+.queue-usage span {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.queue-usage strong {
+  color: var(--accent);
+  font-family: var(--font-serif);
+  font-size: var(--h3-size);
+  font-weight: 500;
+}
+
+.queue-stuck {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--warning) 8%, transparent);
+  color: var(--warning);
+}
+
+.queue-stuck p {
+  margin: 0;
+}
+
+.queue-stuck svg,
+.suppression-form svg,
+.queue-review-actions svg {
+  width: var(--space-5);
+  height: var(--space-5);
+  flex: none;
+}
+
+.queue-tabs {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-block-end: var(--space-1);
+}
+
+.queue-tab {
+  display: inline-flex;
+  min-height: var(--target-min);
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--pad-control);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--raised);
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.queue-tab:hover,
+.queue-tab[aria-selected="true"] {
+  border-color: var(--line-strong);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.queue-tab span {
+  display: inline-grid;
+  min-width: var(--space-5);
+  place-items: center;
+}
+
+.queue-table-wrap {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+.queue-table {
+  min-width: 58rem;
+}
+
+.queue-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.queue-status svg {
+  width: var(--space-4);
+  height: var(--space-4);
+}
+
+.queue-status--approved,
+.queue-status--awaiting_approval {
+  color: var(--info);
+}
+
+.queue-status--held {
+  color: var(--warning);
+}
+
+.queue-status--sent {
+  color: var(--success);
+}
+
+.queue-review-link {
+  min-height: var(--target-min);
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 700;
+  text-align: start;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.suppression-panel {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--pad-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--raised);
+}
+
+.suppression-panel > div:first-child,
+.suppression-panel > div:first-child p,
+.suppression-panel > div:first-child .eyebrow {
+  margin: 0;
+}
+
+.suppression-form {
+  display: flex;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.suppression-form .field {
+  width: min(100%, 24rem);
+}
+
+.suppression-form .btn,
+.queue-review-actions .btn {
+  display: inline-flex;
+  min-height: var(--target-min);
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.suppression-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.suppression-list li {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  border-block-start: 1px solid var(--line);
+}
+
+.suppression-list span {
+  display: grid;
+  min-width: 0;
+}
+
+.suppression-list strong {
+  overflow-wrap: anywhere;
+  color: var(--ink);
+}
+
+.suppression-list small {
+  color: var(--muted);
+  text-transform: capitalize;
+}
+
+.queue-dialog {
+  width: min(46rem, calc(100% - 2 * var(--content-gutter-narrow)));
+  max-height: calc(100dvh - 2 * var(--content-gutter-narrow));
+  overflow: auto;
+  padding: var(--pad-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--raised);
+  color: var(--body);
+  box-shadow: var(--shadow-lg);
+}
+
+.queue-dialog::backdrop {
+  background: color-mix(in srgb, var(--ink) 45%, transparent);
+}
+
+.queue-dialog > header,
+.queue-review,
+.queue-review dl,
+.queue-review section,
+.queue-review-actions {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.queue-dialog > header {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.queue-dialog .icon-button {
+  width: var(--target-min);
+  height: var(--target-min);
+}
+
+.queue-review dl {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.queue-review dt {
+  color: var(--faint);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.queue-review dd {
+  margin: var(--space-1) 0 0;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+}
+
+.queue-review section {
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--sidebar);
+}
+
+.queue-review pre {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--body);
+  font: inherit;
+  white-space: pre-wrap;
+}
+
+.queue-review-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 767px) {
+  .suppression-form,
+  .suppression-list li {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .suppression-form .field,
+  .suppression-form .btn,
+  .suppression-list .btn,
+  .queue-review-actions .btn {
+    width: 100%;
+  }
+
+  .queue-review dl,
+  .queue-review-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Job Inbox — familiar split-pane mail reading without duplicating Gmail. */
 
 .inbox-page {
@@ -946,6 +1275,12 @@ body {
   .compose-grid,
   .compose-review__facts {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .compose-actions,
+  .compose-actions .btn,
+  .compose-custom-time {
+    width: 100%;
   }
 
   .detail-header__actions {

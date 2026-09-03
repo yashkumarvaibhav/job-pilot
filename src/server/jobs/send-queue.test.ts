@@ -1,11 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { eq } from "drizzle-orm";
 
 import { createTenantTestFixture } from "../../test/tenant-fixture";
-import { emailMessage, sendQueue } from "../db/schema";
+import { emailAccount, emailMessage, sendQueue } from "../db/schema";
 import type { MailSendRequest, QueueMailPort } from "../mail/mail-port";
 import { createContact } from "../repos/contacts";
 import { connectEmailAccount } from "../repos/email-accounts";
-import { createQueueMessage, getQueueMessage } from "../repos/send-safety";
+import {
+  approveQueueMessage,
+  createQueueMessage,
+  getQueueMessage,
+} from "../repos/send-safety";
 import { flushSendQueue, reconcileClaimedRows } from "./send-queue";
 
 const TOKEN_KEY = Buffer.alloc(32, 19).toString("base64");
@@ -179,6 +184,231 @@ describe("send queue crash safety", () => {
     );
     expect(getQueueMessage(fixture.client.db, fixture.tenantA, row.id)).toMatchObject({
       status: "held",
+    });
+    expect(mailPort.send).not.toHaveBeenCalled();
+  });
+
+  it("never claims an unapproved or hash-mismatched row", async () => {
+    const { fixture, row } = setup();
+    cleanups.push(fixture.dispose);
+    const mailPort = port();
+    fixture.client.db
+      .update(sendQueue)
+      .set({
+        status: "approved",
+        approvalHash: null,
+        approvedAt: NOW,
+        approvalKind: "owner_click",
+      })
+      .run();
+    await flushSendQueue(
+      fixture.client.db,
+      { mailPort, tokenKey: TOKEN_KEY },
+      { now: NOW },
+    );
+    expect(mailPort.send).not.toHaveBeenCalled();
+    expect(getQueueMessage(fixture.client.db, fixture.tenantA, row.id)).toMatchObject({
+      status: "awaiting_approval",
+      approvalHash: null,
+    });
+  });
+
+  it("reserves 40 daily slots transactionally and leaves the 41st approved", async () => {
+    const { fixture, account, contact } = setup();
+    cleanups.push(fixture.dispose);
+    fixture.client.db
+      .update(emailAccount)
+      .set({ dailyLimit: 40 })
+      .where(eq(emailAccount.id, account.id))
+      .run();
+    for (let index = 2; index <= 41; index += 1) {
+      const id = `queue-${String(index).padStart(2, "0")}`;
+      createQueueMessage(fixture.client.db, fixture.tenantA, {
+        id,
+        accountId: account.id,
+        contactId: contact.id,
+        origin: "one_off",
+        subject: id,
+        body: "Body",
+        attachmentVersionIds: [],
+        sendAt: NOW,
+        approvalKind: "owner_click",
+        now: NOW,
+      });
+    }
+    let sequence = 0;
+    const mailPort: QueueMailPort = {
+      send: vi.fn(async (request) => {
+        sequence += 1;
+        return {
+          gmailMessageId: `gmail-${sequence}`,
+          gmailThreadId: `thread-${sequence}`,
+          rfcMessageId: request.rfcMessageId!,
+          sentAt: NOW,
+        };
+      }),
+      findByRfcMessageId: vi.fn(),
+    };
+    await flushSendQueue(
+      fixture.client.db,
+      { mailPort, tokenKey: TOKEN_KEY },
+      { now: NOW, maxSends: 100 },
+    );
+    expect(mailPort.send).toHaveBeenCalledTimes(40);
+    expect(
+      fixture.client.db
+        .select({ status: sendQueue.status })
+        .from(sendQueue)
+        .all()
+        .map(({ status }) => status)
+        .sort(),
+    ).toEqual(["approved", ...Array.from({ length: 40 }, () => "sent")]);
+  });
+
+  it("defers approved rows outside the account's saved-zone weekday window", async () => {
+    const { fixture, row } = setup();
+    cleanups.push(fixture.dispose);
+    const mailPort = port();
+    await flushSendQueue(
+      fixture.client.db,
+      { mailPort, tokenKey: TOKEN_KEY },
+      { now: new Date("2026-09-06T10:00:00.000Z") },
+    );
+    expect(mailPort.send).not.toHaveBeenCalled();
+    expect(getQueueMessage(fixture.client.db, fixture.tenantA, row.id)?.status).toBe(
+      "approved",
+    );
+  });
+
+  it("lets overlapping flushes claim each row once", async () => {
+    const { fixture, account, contact } = setup();
+    cleanups.push(fixture.dispose);
+    createQueueMessage(fixture.client.db, fixture.tenantA, {
+      id: "queue-b",
+      accountId: account.id,
+      contactId: contact.id,
+      origin: "one_off",
+      subject: "Second",
+      body: "Body",
+      attachmentVersionIds: [],
+      sendAt: NOW,
+      approvalKind: "owner_click",
+      now: NOW,
+    });
+    const sentIds: string[] = [];
+    const mailPort: QueueMailPort = {
+      send: vi.fn(async (request) => {
+        sentIds.push(request.rfcMessageId!);
+        await Promise.resolve();
+        return {
+          gmailMessageId: `gmail-${request.rfcMessageId}`,
+          gmailThreadId: `thread-${request.rfcMessageId}`,
+          rfcMessageId: request.rfcMessageId!,
+          sentAt: NOW,
+        };
+      }),
+      findByRfcMessageId: vi.fn(),
+    };
+    await Promise.all([
+      flushSendQueue(
+        fixture.client.db,
+        { mailPort, tokenKey: TOKEN_KEY },
+        { now: NOW, maxSends: 1 },
+      ),
+      flushSendQueue(
+        fixture.client.db,
+        { mailPort, tokenKey: TOKEN_KEY },
+        { now: NOW, maxSends: 1 },
+      ),
+    ]);
+    expect(sentIds).toHaveLength(2);
+    expect(new Set(sentIds).size).toBe(2);
+  });
+
+  it("uses each workspace account, token and timezone independently", async () => {
+    const { fixture } = setup();
+    cleanups.push(fixture.dispose);
+    const accountB = connectEmailAccount(
+      fixture.client.db,
+      fixture.tenantB,
+      {
+        googleSub: "google-b",
+        email: "sender-b@invalid.test",
+        refreshToken: "refresh-b",
+        sendingWindowStart: 0,
+        sendingWindowEnd: 1439,
+        now: NOW,
+      },
+      TOKEN_KEY,
+    );
+    const contactB = createContact(fixture.client.db, fixture.tenantB, {
+      id: "contact-b",
+      name: "Contact B",
+      methods: [{ kind: "email", value: "recipient-b@invalid.test" }],
+      now: NOW,
+    });
+    createQueueMessage(fixture.client.db, fixture.tenantB, {
+      id: "queue-tenant-b",
+      accountId: accountB.id,
+      contactId: contactB.id,
+      origin: "one_off",
+      subject: "Tenant B",
+      body: "Body",
+      attachmentVersionIds: [],
+      sendAt: NOW,
+      approvalKind: "owner_click",
+      now: NOW,
+    });
+    const requests: MailSendRequest[] = [];
+    const mailPort: QueueMailPort = {
+      send: vi.fn(async (request) => {
+        requests.push(request);
+        return {
+          gmailMessageId: `gmail-${request.accountId}`,
+          gmailThreadId: `thread-${request.accountId}`,
+          rfcMessageId: request.rfcMessageId!,
+          sentAt: NOW,
+        };
+      }),
+      findByRfcMessageId: vi.fn(),
+    };
+    await flushSendQueue(
+      fixture.client.db,
+      { mailPort, tokenKey: TOKEN_KEY },
+      { now: NOW, maxSends: 10 },
+    );
+    expect(requests.map(({ fromEmail, refreshToken }) => [fromEmail, refreshToken])).toEqual([
+      ["sender@invalid.test", "refresh-a"],
+      ["sender-b@invalid.test", "refresh-b"],
+    ]);
+  });
+
+  it("holds sequence delivery until Message-ID preservation is verified for its account", async () => {
+    const { fixture, account, contact } = setup();
+    cleanups.push(fixture.dispose);
+    const sequence = createQueueMessage(fixture.client.db, fixture.tenantA, {
+      id: "queue-sequence",
+      accountId: account.id,
+      contactId: contact.id,
+      origin: "sequence",
+      subject: "Sequence step",
+      body: "Body",
+      attachmentVersionIds: [],
+      sendAt: NOW,
+      now: NOW,
+    });
+    approveQueueMessage(fixture.client.db, fixture.tenantA, sequence.id, {
+      now: NOW,
+    });
+    const mailPort = port();
+    await flushSendQueue(
+      fixture.client.db,
+      { mailPort, tokenKey: TOKEN_KEY },
+      { now: NOW, onlyQueueId: sequence.id },
+    );
+    expect(getQueueMessage(fixture.client.db, fixture.tenantA, sequence.id)).toMatchObject({
+      status: "held",
+      lastError: expect.stringContaining("Message-ID preservation"),
     });
     expect(mailPort.send).not.toHaveBeenCalled();
   });

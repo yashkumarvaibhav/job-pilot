@@ -15,6 +15,7 @@ import {
 } from "@/server/repos/email-content";
 import { listOpportunities } from "@/server/repos/opportunities";
 import { listReferrals } from "@/server/repos/referrals";
+import { getSuppressionBlock } from "@/server/repos/send-safety";
 
 type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -44,6 +45,9 @@ export default async function ComposePage({ searchParams }: Props) {
       const detail = getContact(database, tenant, row.id);
       const emailMethods = detail?.methods.filter((method) => method.kind === "email") ?? [];
       const email = emailMethods.find((method) => method.isPrimary) ?? emailMethods[0];
+      const block = email
+        ? getSuppressionBlock(database, tenant, email.valueNormalized, row.id)
+        : null;
       return email
         ? {
             id: row.id,
@@ -51,6 +55,7 @@ export default async function ComposePage({ searchParams }: Props) {
             email: email.value,
             companyName: row.companyName,
             doNotContact: row.networkingStatus === "do_not_contact",
+            suppressionReason: block?.message ?? null,
           }
         : null;
     })
@@ -121,6 +126,7 @@ export default async function ComposePage({ searchParams }: Props) {
           opportunities={opportunities}
           referrals={referrals}
           templates={templates}
+          timeZone={timeZone}
         />
       )}
     </article>

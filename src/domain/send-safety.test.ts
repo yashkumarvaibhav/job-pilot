@@ -4,6 +4,7 @@ import {
   canonicalSendPayload,
   hashSendPayload,
   queueMessageId,
+  tomorrowMorningSlot,
 } from "./send-safety";
 
 const payload = {
@@ -47,5 +48,24 @@ describe("send safety payload", () => {
     expect(queueMessageId("queue-row-1", "Sender@Invalid.Test")).toBe(
       "<jp-queue-row-1@invalid.test>",
     );
+  });
+
+  it("spreads tomorrow-morning rows from the next weekday window start", () => {
+    const friday = new Date("2026-09-04T12:00:00.000Z");
+    expect(
+      [0, 1, 2].map((ordinal) =>
+        tomorrowMorningSlot({
+          timeZone: "Asia/Kolkata",
+          now: friday,
+          windowStart: 9 * 60,
+          windowEnd: 18 * 60,
+          ordinal,
+        }).toISOString(),
+      ),
+    ).toEqual([
+      "2026-09-07T03:30:00.000Z",
+      "2026-09-07T03:32:00.000Z",
+      "2026-09-07T03:34:00.000Z",
+    ]);
   });
 });

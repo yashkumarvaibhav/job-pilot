@@ -1,8 +1,14 @@
 import { randomUUID } from "node:crypto";
 
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, notInArray } from "drizzle-orm";
 
-import { hashSendPayload, queueMessageId } from "../../domain/send-safety";
+import {
+  hashSendPayload,
+  queueMessageId,
+  tomorrowMorningSlot,
+} from "../../domain/send-safety";
+import { calendarDateInZone } from "../../domain/referral";
+import { zonedInterviewAt } from "../../domain/interview";
 import { normalizeEmail } from "../auth/email";
 import { logEvent } from "../db/activity";
 import type { AppDatabase, AppTransaction } from "../db/client";
@@ -10,9 +16,11 @@ import {
   contact,
   contactMethod,
   emailAccount,
+  emailMessage,
   opportunity,
   referralRequest,
   sendQueue,
+  settings,
   suppressionEntry,
 } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
@@ -379,6 +387,266 @@ export function listQueueMessages(
     .all();
 }
 
+export function listQueueSummaries(
+  database: AppDatabase,
+  tenant: TenantContext,
+) {
+  return database
+    .select({
+      id: sendQueue.id,
+      accountId: sendQueue.accountId,
+      accountEmail: emailAccount.email,
+      contactId: sendQueue.contactId,
+      contactName: contact.name,
+      origin: sendQueue.origin,
+      status: sendQueue.status,
+      subject: sendQueue.subject,
+      sendAt: sendQueue.sendAt,
+      sentAt: sendQueue.sentAt,
+      lastError: sendQueue.lastError,
+    })
+    .from(sendQueue)
+    .innerJoin(
+      emailAccount,
+      and(
+        eq(emailAccount.workspaceId, sendQueue.workspaceId),
+        eq(emailAccount.id, sendQueue.accountId),
+      ),
+    )
+    .leftJoin(
+      contact,
+      and(
+        eq(contact.workspaceId, sendQueue.workspaceId),
+        eq(contact.id, sendQueue.contactId),
+      ),
+    )
+    .where(eq(sendQueue.workspaceId, tenant.workspaceId))
+    .orderBy(asc(sendQueue.sendAt), asc(sendQueue.id))
+    .all();
+}
+
+export function queueAccountUsage(
+  database: AppDatabase,
+  tenant: TenantContext,
+  now = new Date(),
+) {
+  const timeZone = database
+    .select({ value: settings.timezone })
+    .from(settings)
+    .where(eq(settings.workspaceId, tenant.workspaceId))
+    .get()?.value;
+  if (!timeZone) return [];
+  const dateOn = calendarDateInZone(timeZone, now);
+  return database
+    .select({
+      id: emailAccount.id,
+      email: emailAccount.email,
+      dailyLimit: emailAccount.dailyLimit,
+    })
+    .from(emailAccount)
+    .where(eq(emailAccount.workspaceId, tenant.workspaceId))
+    .orderBy(asc(emailAccount.createdAt), asc(emailAccount.id))
+    .all()
+    .map((account) => ({
+      ...account,
+      sentToday: database
+        .select({ sentAt: emailMessage.sentAt })
+        .from(emailMessage)
+        .where(
+          and(
+            eq(emailMessage.workspaceId, tenant.workspaceId),
+            eq(emailMessage.accountId, account.id),
+            eq(emailMessage.direction, "outbound"),
+          ),
+        )
+        .all()
+        .filter((row) => calendarDateInZone(timeZone, row.sentAt) === dateOn)
+        .length,
+    }));
+}
+
+export function listSuppressionEntries(
+  database: AppDatabase,
+  tenant: TenantContext,
+): SuppressionEntry[] {
+  return database
+    .select()
+    .from(suppressionEntry)
+    .where(eq(suppressionEntry.workspaceId, tenant.workspaceId))
+    .orderBy(asc(suppressionEntry.email), asc(suppressionEntry.at))
+    .all();
+}
+
+export function setQueueMessageState(
+  database: AppDatabase,
+  tenant: TenantContext,
+  id: string,
+  action: "hold" | "cancel",
+  now = new Date(),
+): QueueMessage | undefined {
+  return database.transaction((transaction) => {
+    const existing = transaction
+      .select()
+      .from(sendQueue)
+      .where(
+        and(eq(sendQueue.workspaceId, tenant.workspaceId), eq(sendQueue.id, id)),
+      )
+      .get();
+    if (!existing) return undefined;
+    if (existing.status === "sent") {
+      throw new SendSafetyError("A sent queue row cannot be changed.");
+    }
+    const cancelled = action === "cancel";
+    return transaction
+      .update(sendQueue)
+      .set({
+        status: cancelled ? "cancelled" : "held",
+        approvalHash: cancelled ? null : existing.approvalHash,
+        approvedAt: cancelled ? null : existing.approvedAt,
+        approvalKind: cancelled ? null : existing.approvalKind,
+        claimedAt: null,
+        lastError: cancelled ? "Cancelled by workspace owner." : "Held by workspace owner.",
+        updatedAt: now,
+      })
+      .where(
+        and(eq(sendQueue.workspaceId, tenant.workspaceId), eq(sendQueue.id, id)),
+      )
+      .returning()
+      .get();
+  });
+}
+
+export function tomorrowMorningQueueTime(
+  database: AppDatabase,
+  tenant: TenantContext,
+  accountId: string,
+  now = new Date(),
+): Date {
+  const account = database
+    .select()
+    .from(emailAccount)
+    .where(
+      and(
+        eq(emailAccount.workspaceId, tenant.workspaceId),
+        eq(emailAccount.id, accountId),
+      ),
+    )
+    .get();
+  const workspaceSettings = database
+    .select({ timeZone: settings.timezone })
+    .from(settings)
+    .where(eq(settings.workspaceId, tenant.workspaceId))
+    .get();
+  if (!account || !workspaceSettings) {
+    throw new SendSafetyError("Gmail account not found.");
+  }
+  const first = tomorrowMorningSlot({
+    timeZone: workspaceSettings.timeZone,
+    now,
+    windowStart: account.sendingWindowStart,
+    windowEnd: account.sendingWindowEnd,
+    ordinal: 0,
+  });
+  const targetDate = calendarDateInZone(workspaceSettings.timeZone, first);
+  const ordinal = database
+    .select({ sendAt: sendQueue.sendAt })
+    .from(sendQueue)
+    .where(
+      and(
+        eq(sendQueue.workspaceId, tenant.workspaceId),
+        eq(sendQueue.accountId, accountId),
+        notInArray(sendQueue.status, ["cancelled", "sent"]),
+      ),
+    )
+    .all()
+    .filter(
+      (row) => calendarDateInZone(workspaceSettings.timeZone, row.sendAt) === targetDate,
+    ).length;
+  return tomorrowMorningSlot({
+    timeZone: workspaceSettings.timeZone,
+    now,
+    windowStart: account.sendingWindowStart,
+    windowEnd: account.sendingWindowEnd,
+    ordinal,
+  });
+}
+
+export function tonightQueueTime(
+  database: AppDatabase,
+  tenant: TenantContext,
+  accountId: string,
+  now = new Date(),
+): Date {
+  const account = database
+    .select()
+    .from(emailAccount)
+    .where(
+      and(
+        eq(emailAccount.workspaceId, tenant.workspaceId),
+        eq(emailAccount.id, accountId),
+      ),
+    )
+    .get();
+  const workspaceSettings = database
+    .select({ timeZone: settings.timezone })
+    .from(settings)
+    .where(eq(settings.workspaceId, tenant.workspaceId))
+    .get();
+  if (!account || !workspaceSettings) {
+    throw new SendSafetyError("Gmail account not found.");
+  }
+  const dateOn = calendarDateInZone(workspaceSettings.timeZone, now);
+  const weekday = new Date(`${dateOn}T00:00:00.000Z`).getUTCDay();
+  const baseMinute = Math.max(
+    account.sendingWindowStart,
+    account.sendingWindowEnd - 60,
+  );
+  const existing = database
+    .select({ sendAt: sendQueue.sendAt })
+    .from(sendQueue)
+    .where(
+      and(
+        eq(sendQueue.workspaceId, tenant.workspaceId),
+        eq(sendQueue.accountId, accountId),
+        notInArray(sendQueue.status, ["cancelled", "sent"]),
+      ),
+    )
+    .all()
+    .filter(
+      (row) => calendarDateInZone(workspaceSettings.timeZone, row.sendAt) === dateOn,
+    ).length;
+  const minute = baseMinute + existing * 2;
+  const hh = String(Math.floor(minute / 60)).padStart(2, "0");
+  const mm = String(minute % 60).padStart(2, "0");
+  const candidate =
+    weekday !== 0 && weekday !== 6 && minute < account.sendingWindowEnd
+      ? zonedInterviewAt(workspaceSettings.timeZone, dateOn, `${hh}:${mm}`)
+      : null;
+  return candidate && candidate.valueOf() > now.valueOf()
+    ? candidate
+    : tomorrowMorningQueueTime(database, tenant, accountId, now);
+}
+
+export function parseWorkspaceSendAt(
+  database: AppDatabase,
+  tenant: TenantContext,
+  value: string,
+): Date {
+  const timeZone = database
+    .select({ value: settings.timezone })
+    .from(settings)
+    .where(eq(settings.workspaceId, tenant.workspaceId))
+    .get()?.value;
+  if (!timeZone) throw new SendSafetyError("Workspace settings not found.");
+  const instant = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)
+    ? zonedInterviewAt(timeZone, value.slice(0, 10), value.slice(11))
+    : new Date(value);
+  if (Number.isNaN(instant.valueOf())) {
+    throw new SendSafetyError("Send time must be a valid instant.");
+  }
+  return instant;
+}
+
 export type UpdateQueueMessageInput = Partial<{
   accountId: string;
   subject: string;
@@ -547,6 +815,81 @@ export function addSuppressionEntry(
     });
     return row;
   });
+}
+
+export function syncContactSuppressionInTransaction(
+  transaction: AppTransaction,
+  tenant: TenantContext,
+  contactId: string,
+  networkingStatus: string,
+  now: Date,
+): void {
+  const sourceKey = `contact:${contactId}`;
+  transaction
+    .delete(suppressionEntry)
+    .where(
+      and(
+        eq(suppressionEntry.workspaceId, tenant.workspaceId),
+        eq(suppressionEntry.sourceKey, sourceKey),
+      ),
+    )
+    .run();
+  if (networkingStatus !== "do_not_contact") return;
+  const emails = transaction
+    .select({ email: contactMethod.valueNormalized })
+    .from(contactMethod)
+    .where(
+      and(
+        eq(contactMethod.workspaceId, tenant.workspaceId),
+        eq(contactMethod.contactId, contactId),
+        eq(contactMethod.kind, "email"),
+      ),
+    )
+    .all();
+  for (const { email } of emails) {
+    transaction
+      .insert(suppressionEntry)
+      .values({
+        id: randomUUID(),
+        workspaceId: tenant.workspaceId,
+        email,
+        reason: "do_not_contact",
+        sourceKey,
+        at: now,
+      })
+      .onConflictDoUpdate({
+        target: [
+          suppressionEntry.workspaceId,
+          suppressionEntry.email,
+          suppressionEntry.sourceKey,
+        ],
+        set: { reason: "do_not_contact", at: now },
+      })
+      .run();
+  }
+  transaction
+    .update(sendQueue)
+    .set({
+      status: "cancelled",
+      approvalHash: null,
+      approvedAt: null,
+      approvalKind: null,
+      lastError: "Contact is marked Do Not Contact.",
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(sendQueue.workspaceId, tenant.workspaceId),
+        eq(sendQueue.contactId, contactId),
+        inArray(sendQueue.status, [
+          "awaiting_approval",
+          "approved",
+          "failed",
+          "held",
+        ]),
+      ),
+    )
+    .run();
 }
 
 export function removeManualSuppression(

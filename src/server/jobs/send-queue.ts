@@ -146,12 +146,15 @@ function countToday(
 export function claimNextQueueMessage(
   database: AppDatabase,
   now = new Date(),
+  onlyQueueId?: string,
 ): ClaimedQueueMessage | null {
   return database.transaction((transaction) => {
+    const conditions = [eq(sendQueue.status, "approved"), lte(sendQueue.sendAt, now)];
+    if (onlyQueueId) conditions.push(eq(sendQueue.id, onlyQueueId));
     const candidates = transaction
       .select()
       .from(sendQueue)
-      .where(and(eq(sendQueue.status, "approved"), lte(sendQueue.sendAt, now)))
+      .where(and(...conditions))
       .orderBy(asc(sendQueue.sendAt), asc(sendQueue.id))
       .limit(100)
       .all();
@@ -230,6 +233,20 @@ export function claimNextQueueMessage(
         transaction
           .update(sendQueue)
           .set({ status: "held", lastError: "Sending account is unavailable.", updatedAt: now })
+          .where(
+            and(eq(sendQueue.workspaceId, row.workspaceId), eq(sendQueue.id, row.id)),
+          )
+          .run();
+        continue;
+      }
+      if (row.origin === "sequence" && account.messageIdVerifiedAt === null) {
+        transaction
+          .update(sendQueue)
+          .set({
+            status: "held",
+            lastError: "Sequence delivery is disabled until Message-ID preservation is verified for this account.",
+            updatedAt: now,
+          })
           .where(
             and(eq(sendQueue.workspaceId, row.workspaceId), eq(sendQueue.id, row.id)),
           )
@@ -655,6 +672,7 @@ export async function flushSendQueue(
     now?: Date;
     reclaimAfterMs?: number;
     maxSends?: number;
+    onlyQueueId?: string;
     afterTransportAccepted?: (
       claim: ClaimedQueueMessage,
       receipt: MailSendResult,
@@ -669,7 +687,7 @@ export async function flushSendQueue(
   let sent = 0;
   let deferred = 0;
   for (let index = 0; index < (options.maxSends ?? DEFAULT_MAX_SENDS); index += 1) {
-    const claim = claimNextQueueMessage(database, now);
+    const claim = claimNextQueueMessage(database, now, options.onlyQueueId);
     if (!claim) break;
     let refreshToken: string;
     try {
