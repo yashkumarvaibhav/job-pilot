@@ -60,13 +60,14 @@ describe("migrateDatabase", () => {
           "saved_search",
           "automation_rule",
           "automation_execution",
+          "email_account",
         ]),
       );
       expect(
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 19 });
+      ).toEqual({ count: 20 });
 
       for (const indexName of [
         "company_workspace_id_id_unique",
@@ -158,6 +159,9 @@ describe("migrateDatabase", () => {
         "automation_execution_workspace_id_id_unique",
         "automation_execution_workspace_rule_idx",
         "automation_execution_workspace_at_idx",
+        "email_account_workspace_id_id_unique",
+        "email_account_workspace_google_sub_unique",
+        "email_account_workspace_status_idx",
       ]) {
         const columns = client.sqlite
           .prepare(
@@ -789,6 +793,64 @@ describe("migrateDatabase", () => {
       expect(settingsColumns.map((column) => column.name)).toContain(
         "muted_notification_kinds_json",
       );
+      expect(settingsColumns.map((column) => column.name)).toContain(
+        "default_email_account_id",
+      );
+
+      const emailAccountColumns = client.sqlite
+        .prepare(
+          "select name, \"notnull\", dflt_value from pragma_table_info('email_account') order by cid",
+        )
+        .all() as {
+        name: string;
+        notnull: number;
+        dflt_value: string | null;
+      }[];
+      expect(emailAccountColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "google_sub",
+        "email_normalized",
+        "token_blob",
+        "sender_name",
+        "signature",
+        "reply_to",
+        "daily_limit",
+        "sending_window_start",
+        "sending_window_end",
+        "status",
+        "last_history_id",
+        "last_sync_at",
+        "sequence_safe_at",
+        "created_at",
+        "updated_at",
+      ]);
+      expect(
+        emailAccountColumns.find((column) => column.name === "token_blob")
+          ?.notnull,
+      ).toBe(1);
+      expect(
+        emailAccountColumns.find((column) => column.name === "daily_limit")
+          ?.dflt_value,
+      ).toBe("40");
+
+      const settingsEmailAccountForeignKeys = client.sqlite
+        .prepare(
+          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('settings') where \"table\" = 'email_account' order by seq",
+        )
+        .all();
+      expect(settingsEmailAccountForeignKeys).toEqual([
+        {
+          table: "email_account",
+          from: "workspace_id",
+          to: "workspace_id",
+        },
+        {
+          table: "email_account",
+          from: "default_email_account_id",
+          to: "id",
+        },
+      ]);
 
       const notificationColumns = client.sqlite
         .prepare(

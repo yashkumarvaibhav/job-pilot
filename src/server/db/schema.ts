@@ -119,6 +119,71 @@ export function sameWorkspaceForeignKey(
   });
 }
 
+export const emailAccount = sqliteTable(
+  "email_account",
+  {
+    ...workspaceOwnedEntityColumns(),
+    googleSub: text("google_sub").notNull(),
+    email: text("email_normalized").notNull(),
+    tokenBlob: text("token_blob").notNull(),
+    senderName: text("sender_name").notNull().default(""),
+    signature: text("signature"),
+    replyTo: text("reply_to"),
+    dailyLimit: integer("daily_limit").notNull().default(40),
+    sendingWindowStart: integer("sending_window_start").notNull().default(540),
+    sendingWindowEnd: integer("sending_window_end").notNull().default(1020),
+    status: text("status", {
+      enum: ["connected", "disconnected", "error"],
+    })
+      .notNull()
+      .default("connected"),
+    lastHistoryId: text("last_history_id"),
+    lastSyncAt: utcInstant("last_sync_at"),
+    sequenceSafeAt: utcInstant("sequence_safe_at"),
+    createdAt: utcInstant("created_at").notNull(),
+    updatedAt: utcInstant("updated_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("email_account", table),
+    uniqueIndex("email_account_workspace_google_sub_unique").on(
+      table.workspaceId,
+      table.googleSub,
+    ),
+    index("email_account_workspace_status_idx").on(
+      table.workspaceId,
+      table.status,
+    ),
+    check(
+      "email_account_google_sub_not_blank",
+      sql`length(trim(${table.googleSub})) > 0`,
+    ),
+    check(
+      "email_account_email_not_blank",
+      sql`length(trim(${table.email})) > 0`,
+    ),
+    check(
+      "email_account_token_blob_not_blank",
+      sql`length(trim(${table.tokenBlob})) > 0`,
+    ),
+    check(
+      "email_account_daily_limit_range",
+      sql`${table.dailyLimit} between 1 and 500`,
+    ),
+    check(
+      "email_account_window_start_range",
+      sql`${table.sendingWindowStart} between 0 and 1439`,
+    ),
+    check(
+      "email_account_window_end_range",
+      sql`${table.sendingWindowEnd} between 0 and 1439`,
+    ),
+    check(
+      "email_account_status_valid",
+      sql`${table.status} in ('connected', 'disconnected', 'error')`,
+    ),
+  ],
+);
+
 export const settings = sqliteTable(
   "settings",
   {
@@ -141,6 +206,7 @@ export const settings = sqliteTable(
     quietStart: integer("quiet_start"),
     quietEnd: integer("quiet_end"),
     digestHour: integer("digest_hour"),
+    defaultEmailAccountId: text("default_email_account_id"),
   },
   (table) => [
     index("settings_workspace_idx").on(table.workspaceId),
@@ -159,6 +225,14 @@ export const settings = sqliteTable(
     check(
       "settings_digest_hour_range",
       sql`${table.digestHour} is null or ${table.digestHour} between 0 and 23`,
+    ),
+    sameWorkspaceForeignKey(
+      "settings_default_email_account_workspace_fk",
+      {
+        workspaceId: table.workspaceId,
+        parentId: table.defaultEmailAccountId,
+      },
+      emailAccount,
     ),
   ],
 );

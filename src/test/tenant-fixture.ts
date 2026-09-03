@@ -14,6 +14,7 @@ type FoundationTable =
   | "auth_session"
   | "account_token"
   | "activity_event"
+  | "email_account"
   | "company"
   | "contact"
   | "contact_method"
@@ -36,14 +37,14 @@ type FoundationTable =
   | "automation_rule"
   | "automation_execution";
 
-type BaseTenantTestFixture = {
+export type BaseTenantTestFixture = {
   client: DatabaseClient;
   databasePath: string;
   rowCount: (table: FoundationTable) => number;
   dispose: () => void;
 };
 
-type SeededTenantTestFixture = BaseTenantTestFixture & {
+export type SeededTenantTestFixture = BaseTenantTestFixture & {
   tenantA: TenantContext;
   tenantB: TenantContext;
 };
