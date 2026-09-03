@@ -20,6 +20,7 @@ import {
 import { ActivityTimeline } from "@/components/activity-timeline";
 import { LinkContactForm } from "@/components/opportunity-contact-forms";
 import { OpportunityEditForm } from "@/components/opportunity-form";
+import { OpportunityHealthBanner } from "@/components/opportunity-health";
 import { ReferralCreateForm } from "@/components/referral-forms";
 import { ReferralCollection } from "@/components/referral-list";
 import { TagPicker } from "@/components/tag-picker";
@@ -35,9 +36,9 @@ import {
 } from "@/server/repos/documents";
 import { listContacts } from "@/server/repos/contacts";
 import {
-  getOpportunity,
   listOpportunityContacts,
 } from "@/server/repos/opportunities";
+import { getScoredOpportunity } from "@/server/repos/scoring";
 import { listInterviews } from "@/server/repos/interviews";
 import { listAssessments } from "@/server/repos/assessments";
 import { listReferrals } from "@/server/repos/referrals";
@@ -47,6 +48,7 @@ import { formatInterviewWhen } from "@/domain/interview";
 import { isAssessmentStatus } from "@/domain/assessment";
 import { calendarDateInZone } from "@/domain/referral";
 import { listStaleIndex } from "@/server/repos/rules";
+import { opportunityHealth } from "@/domain/opportunity-health";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -77,7 +79,11 @@ export default async function OpportunityDetailPage({ params }: Props) {
   const tenant = await requireTenant();
   const database = getDatabase();
   const { id } = await params;
-  const row = getOpportunity(database, tenant, id);
+  const timeZone =
+    getWorkspaceSettings(database, tenant, tenant.workspaceId)?.timezone ??
+    DEFAULT_TIME_ZONE;
+  const asOfOn = calendarDateInZone(timeZone);
+  const row = getScoredOpportunity(database, tenant, id, asOfOn);
   if (!row) {
     return (
       <section className="data-state data-state--error opportunity-not-found">
@@ -94,17 +100,9 @@ export default async function OpportunityDetailPage({ params }: Props) {
   const companies = listCompanies(database, tenant).map(
     ({ id: companyId, name }) => ({ id: companyId, name }),
   );
-  const timeZone =
-    getWorkspaceSettings(database, tenant, tenant.workspaceId)?.timezone ??
-    DEFAULT_TIME_ZONE;
   const versionChoices = listVersionChoices(database, tenant);
   const versionNames = versionDisplayNames(database, tenant);
-  const defaultAppliedOn = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
+  const defaultAppliedOn = asOfOn;
   const linkedContacts = listOpportunityContacts(database, tenant, row.id);
   const linkedIds = new Set(linkedContacts.map((item) => item.contactId));
   const allContacts = listContacts(database, tenant);
@@ -115,7 +113,6 @@ export default async function OpportunityDetailPage({ params }: Props) {
       name: item.name,
       companyName: item.companyName,
     }));
-  const asOfOn = calendarDateInZone(timeZone);
   const stale = listStaleIndex(database, tenant, asOfOn);
   const staleReasons = stale.opportunity.get(row.id) ?? [];
   const referrals = listReferrals(database, tenant, {
@@ -131,6 +128,14 @@ export default async function OpportunityDetailPage({ params }: Props) {
   });
   const interviews = listInterviews(database, tenant, row.id);
   const assessments = listAssessments(database, tenant, row.id);
+  const health = opportunityHealth(
+    {
+      deadlineOn: row.deadlineOn,
+      hasApplication: row.application !== null,
+      referralAvailable: row.scoringInputs.referralAvailable,
+    },
+    asOfOn,
+  );
   const applicationChoices = row.application
     ? [{ id: row.application.id, label: `${row.companyName} application` }]
     : [];
@@ -189,6 +194,7 @@ export default async function OpportunityDetailPage({ params }: Props) {
           </p>
         </div>
       </header>
+      {health ? <OpportunityHealthBanner health={health} /> : null}
       <section aria-labelledby="opportunity-fields" className="detail-section">
         <h2 id="opportunity-fields">Opportunity details</h2>
         <dl className="opportunity-field-grid">

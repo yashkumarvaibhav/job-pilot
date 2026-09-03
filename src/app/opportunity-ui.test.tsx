@@ -10,7 +10,9 @@ import { createContact } from "../server/repos/contacts";
 import { createInterview } from "../server/repos/interviews";
 import { createAssessment } from "../server/repos/assessments";
 import { createOpportunity, linkContactToOpportunity } from "../server/repos/opportunities";
+import { createReferral } from "../server/repos/referrals";
 import { createTenantTestFixture } from "../test/tenant-fixture";
+import { calendarDateInZone, shiftCalendarDate } from "../domain/referral";
 
 const mocks = vi.hoisted(() => ({
   database: undefined as unknown,
@@ -183,6 +185,50 @@ describe("opportunity screens", () => {
     expect(html).not.toContain("score--success");
     expect(html).not.toContain("score--warning");
     expect(html).not.toContain("score--danger");
+  });
+
+  it("shows the section 59 action-required banner with icon and reasons", async () => {
+    const fixture = newFixture();
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "target",
+      name: "Target Company",
+      target: true,
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "referrer",
+      companyId: "target",
+      name: "Synthetic Referrer",
+    });
+    const asOfOn = calendarDateInZone("Asia/Kolkata");
+    const deadlineOn = shiftCalendarDate(asOfOn, 2);
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "deadline-role",
+      companyId: "target",
+      role: "New Grad Engineer",
+      deadlineOn,
+    });
+    createReferral(fixture.client.db, fixture.tenantA, {
+      id: "received-referral",
+      contactId: "referrer",
+      opportunityId: "deadline-role",
+      channel: "email",
+      stage: "referral_received",
+      todayOn: asOfOn,
+    });
+
+    const html = renderToStaticMarkup(
+      await OpportunityDetailPage({
+        params: Promise.resolve({ id: "deadline-role" }),
+      }),
+    );
+    expect(html).toContain("Action required");
+    expect(html).toContain(`Apply before ${deadlineOn}.`);
+    expect(html).toContain("Deadline is in 2 days.");
+    expect(html).toContain("Referral received.");
+    expect(html).toContain("Application not submitted.");
+    expect(html).toContain('class="opportunity-health"');
+    expect(html).toContain('data-tone="warning"');
+    expect(html).toContain('aria-hidden="true"');
   });
 
   it("renders persisted detail fields and only pursuit stages in the edit form", async () => {

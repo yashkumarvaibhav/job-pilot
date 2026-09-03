@@ -1885,6 +1885,53 @@ main:focus {
   margin: 0;
 }
 
+.opportunity-health {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--pad-card);
+  border: 1px solid;
+  border-radius: var(--radius-lg);
+}
+
+.opportunity-health[data-tone="warning"] {
+  border-color: color-mix(in srgb, var(--warning) 40%, transparent);
+  background: color-mix(in srgb, var(--warning) 8%, transparent);
+  color: var(--warning);
+}
+
+.opportunity-health[data-tone="danger"] {
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  color: var(--danger);
+}
+
+.opportunity-health__heading {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.opportunity-health__heading svg {
+  width: var(--space-6);
+  height: var(--space-6);
+  flex: none;
+}
+
+.opportunity-health h2,
+.opportunity-health p,
+.opportunity-health ul {
+  margin: 0;
+}
+
+.opportunity-health h2 {
+  color: currentColor;
+}
+
+.opportunity-health ul {
+  padding-left: var(--space-8);
+  color: var(--body);
+}
+
 .opportunity-field-grid div {
   min-width: 0;
 }
