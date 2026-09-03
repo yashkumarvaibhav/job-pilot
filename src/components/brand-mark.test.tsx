@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { renderToStaticMarkup } from "react-dom/server";
@@ -65,6 +65,29 @@ describe("JP monogram", () => {
 
     expect(html).toContain('aria-hidden="true"');
     expect(html).toContain('focusable="false"');
+  });
+});
+
+/**
+ * D-047. `icon.svg` covers current browsers, but Safari only learned SVG
+ * favicons recently and plenty of things still fetch `/favicon.ico` blind, so
+ * the ICO stays as the fallback — rebuilt from the same outline rather than
+ * left as the scaffold's Vercel triangle.
+ */
+describe("platform icons", () => {
+  it("ships an ICO fallback carrying more than one size", () => {
+    const ico = readFileSync(join(process.cwd(), "src/app/favicon.ico"));
+
+    expect(ico.readUInt16LE(0)).toBe(0); // reserved
+    expect(ico.readUInt16LE(2)).toBe(1); // type: icon
+    expect(ico.readUInt16LE(4)).toBeGreaterThanOrEqual(3); // 16 / 32 / 48
+  });
+
+  it("keeps the scaffold's stock assets out of the served root", () => {
+    // create-next-app writes these; a re-scaffold would silently restore them.
+    for (const stock of ["file.svg", "globe.svg", "next.svg", "vercel.svg", "window.svg"]) {
+      expect(existsSync(join(process.cwd(), "public", stock))).toBe(false);
+    }
   });
 });
 
