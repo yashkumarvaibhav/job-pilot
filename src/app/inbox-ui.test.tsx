@@ -65,6 +65,7 @@ describe("Job Inbox UI", () => {
 
     expect(html).toContain("Job Inbox");
     expect(html).toContain("All accounts");
+    expect(html).toContain('class="field inbox-account-filter"');
     expect(html).toContain("Import Gmail thread");
     expect(html).toContain("one@invalid.test");
     expect(html).toContain("two@invalid.test is disconnected");

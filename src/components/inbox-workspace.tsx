@@ -296,7 +296,7 @@ export function InboxWorkspace({
           </p>
         </div>
         <div className="inbox-header__actions">
-          <label className="inbox-account-filter" htmlFor="inbox-account-filter">
+          <label className="field inbox-account-filter" htmlFor="inbox-account-filter">
             <span>Mailbox</span>
             <select
               id="inbox-account-filter"
