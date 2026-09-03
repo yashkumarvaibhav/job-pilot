@@ -1395,6 +1395,100 @@ export const emailMessage = sqliteTable(
   ],
 );
 
+export const gmailRecoveryGeneration = sqliteTable(
+  "gmail_recovery_generation",
+  {
+    ...workspaceOwnedEntityColumns(),
+    accountId: text("account_id").notNull(),
+    baselineHistoryId: text("baseline_history_id").notNull(),
+    status: text("status", {
+      enum: ["sweeping", "catching_up", "completed"],
+    })
+      .notNull()
+      .default("sweeping"),
+    catchUpPageToken: text("catch_up_page_token"),
+    deferredThread: integer("deferred_thread", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    leaseOwner: text("lease_owner"),
+    leaseExpiresAt: utcInstant("lease_expires_at"),
+    nextRetryAt: utcInstant("next_retry_at"),
+    createdAt: utcInstant("created_at").notNull(),
+    updatedAt: utcInstant("updated_at").notNull(),
+    completedAt: utcInstant("completed_at"),
+  },
+  (table) => [
+    workspaceEntityKey("gmail_recovery_generation", table),
+    uniqueIndex("gmail_recovery_generation_workspace_id_account_unique").on(
+      table.workspaceId,
+      table.id,
+      table.accountId,
+    ),
+    index("gmail_recovery_workspace_account_status_idx").on(
+      table.workspaceId,
+      table.accountId,
+      table.status,
+    ),
+    sameWorkspaceForeignKey(
+      "gmail_recovery_generation_account_fk",
+      { workspaceId: table.workspaceId, parentId: table.accountId },
+      emailAccount,
+    ).onDelete("cascade"),
+    check(
+      "gmail_recovery_generation_baseline_not_blank",
+      sql`length(trim(${table.baselineHistoryId})) > 0`,
+    ),
+    check(
+      "gmail_recovery_generation_status_valid",
+      sql`${table.status} in ('sweeping', 'catching_up', 'completed')`,
+    ),
+  ],
+);
+
+export const gmailRecoveryThread = sqliteTable(
+  "gmail_recovery_thread",
+  {
+    ...workspaceOwnedEntityColumns(),
+    generationId: text("generation_id").notNull(),
+    accountId: text("account_id").notNull(),
+    gmailThreadId: text("gmail_thread_id").notNull(),
+    status: text("status", { enum: ["pending", "reconciled"] })
+      .notNull()
+      .default("pending"),
+    createdAt: utcInstant("created_at").notNull(),
+    reconciledAt: utcInstant("reconciled_at"),
+  },
+  (table) => [
+    workspaceEntityKey("gmail_recovery_thread", table),
+    uniqueIndex("gmail_recovery_thread_generation_gmail_unique").on(
+      table.generationId,
+      table.gmailThreadId,
+    ),
+    index("gmail_recovery_thread_workspace_generation_status_idx").on(
+      table.workspaceId,
+      table.generationId,
+      table.status,
+    ),
+    foreignKey({
+      name: "gmail_recovery_thread_generation_account_fk",
+      columns: [table.workspaceId, table.generationId, table.accountId],
+      foreignColumns: [
+        gmailRecoveryGeneration.workspaceId,
+        gmailRecoveryGeneration.id,
+        gmailRecoveryGeneration.accountId,
+      ],
+    }).onDelete("cascade"),
+    check(
+      "gmail_recovery_thread_id_not_blank",
+      sql`length(trim(${table.gmailThreadId})) > 0`,
+    ),
+    check(
+      "gmail_recovery_thread_status_valid",
+      sql`${table.status} in ('pending', 'reconciled')`,
+    ),
+  ],
+);
+
 export const savedSearch = sqliteTable(
   "saved_search",
   {

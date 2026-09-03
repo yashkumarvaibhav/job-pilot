@@ -18,6 +18,8 @@ type FoundationTable =
   | "email_template"
   | "email_thread"
   | "email_message"
+  | "gmail_recovery_generation"
+  | "gmail_recovery_thread"
   | "company"
   | "contact"
   | "contact_method"

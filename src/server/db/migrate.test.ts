@@ -64,13 +64,15 @@ describe("migrateDatabase", () => {
           "email_template",
           "email_thread",
           "email_message",
+          "gmail_recovery_generation",
+          "gmail_recovery_thread",
         ]),
       );
       expect(
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 21 });
+      ).toEqual({ count: 22 });
 
       for (const indexName of [
         "company_workspace_id_id_unique",
@@ -925,6 +927,43 @@ describe("migrateDatabase", () => {
         "attachment_version_ids_json",
         "sent_at",
         "created_at",
+      ]);
+
+      const recoveryGenerationColumns = client.sqlite
+        .prepare(
+          "select name from pragma_table_info('gmail_recovery_generation') order by cid",
+        )
+        .all() as { name: string }[];
+      expect(recoveryGenerationColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "account_id",
+        "baseline_history_id",
+        "status",
+        "catch_up_page_token",
+        "deferred_thread",
+        "lease_owner",
+        "lease_expires_at",
+        "next_retry_at",
+        "created_at",
+        "updated_at",
+        "completed_at",
+      ]);
+
+      const recoveryThreadColumns = client.sqlite
+        .prepare(
+          "select name from pragma_table_info('gmail_recovery_thread') order by cid",
+        )
+        .all() as { name: string }[];
+      expect(recoveryThreadColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "generation_id",
+        "account_id",
+        "gmail_thread_id",
+        "status",
+        "created_at",
+        "reconciled_at",
       ]);
 
       const templateAccountForeignKeys = client.sqlite
