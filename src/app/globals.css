@@ -2826,6 +2826,108 @@ main:focus {
   color: var(--warning);
 }
 
+.gmail-accounts {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.gmail-accounts__toolbar,
+.gmail-account-card__header,
+.gmail-account-card__chips,
+.gmail-account-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.gmail-accounts__toolbar,
+.gmail-account-card__header {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.gmail-accounts__toolbar > div {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.gmail-account-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr));
+}
+
+.gmail-account-card {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--ground);
+}
+
+.gmail-account-card__eyebrow {
+  margin: 0 0 var(--space-1);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gmail-account-card h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+}
+
+.gmail-account-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.gmail-account-form textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.gmail-status--connected {
+  border-color: color-mix(in srgb, var(--success) 40%, transparent);
+  color: var(--success);
+}
+
+.gmail-status--error {
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+  color: var(--danger);
+}
+
+.gmail-status--default {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--accent);
+}
+
+.gmail-account-card__actions .btn,
+.gmail-accounts__toolbar .btn {
+  min-height: var(--target-min);
+}
+
+@media (max-width: 767px) {
+  .gmail-account-card__actions,
+  .gmail-accounts__toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gmail-account-card__actions .btn,
+  .gmail-accounts__toolbar .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 .document-manager {
   display: grid;
   gap: var(--space-8);

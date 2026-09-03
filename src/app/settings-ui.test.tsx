@@ -22,6 +22,10 @@ import {
   EXPORT_JSON_LABEL,
 } from "../domain/export";
 import { updateWorkspaceSettings } from "../server/repos/settings";
+import {
+  connectEmailAccount,
+  setDefaultEmailAccount,
+} from "../server/repos/email-accounts";
 import { createTenantTestFixture } from "../test/tenant-fixture";
 
 const mocks = vi.hoisted(() => ({
@@ -166,6 +170,63 @@ describe("settings screen", () => {
     expect(html).toContain("Add Gmail account");
     expect(html).toContain('href="/api/gmail/connect"');
     expect(html).not.toContain("OAuth configuration is missing:");
+  });
+
+  it("renders two Gmail identities as independent account cards", async () => {
+    vi.stubEnv("GOOGLE_CLIENT_ID", "test-client-id");
+    vi.stubEnv("GOOGLE_CLIENT_SECRET", "test-client-secret");
+    vi.stubEnv(
+      "GOOGLE_REDIRECT_URI",
+      "https://jobpilot.invalid.test/api/gmail/callback",
+    );
+    const tokenKey = Buffer.alloc(32, 2).toString("base64");
+    vi.stubEnv("TOKEN_KEY", tokenKey);
+    const fixture = newFixture();
+    const first = connectEmailAccount(
+      fixture.client.db,
+      fixture.tenantA,
+      {
+        googleSub: "google-personal",
+        email: "personal@invalid.test",
+        refreshToken: "refresh-personal",
+        senderName: "Personal sender",
+        signature: "Personal signature",
+        dailyLimit: 35,
+      },
+      tokenKey,
+    );
+    const second = connectEmailAccount(
+      fixture.client.db,
+      fixture.tenantA,
+      {
+        googleSub: "google-career",
+        email: "career@invalid.test",
+        refreshToken: "refresh-career",
+        senderName: "Career sender",
+        replyTo: "reply@invalid.test",
+        dailyLimit: 20,
+      },
+      tokenKey,
+    );
+    setDefaultEmailAccount(fixture.client.db, fixture.tenantA, second.id);
+
+    const html = renderToStaticMarkup(await SettingsPage());
+
+    expect(html).toContain("personal@invalid.test");
+    expect(html).toContain("career@invalid.test");
+    expect(html).toContain("Personal sender");
+    expect(html).toContain("Personal signature");
+    expect(html).toContain("reply@invalid.test");
+    expect(html).toContain("Connected");
+    expect(html).toContain("Default sender");
+    expect(html).toContain("Set as default");
+    expect(html).toContain("Save account settings");
+    expect(html).toContain("Disconnect");
+    expect(html).toContain(
+      `/api/gmail/connect?accountId=${encodeURIComponent(first.id)}`,
+    );
+    expect(html).not.toContain("refresh-personal");
+    expect(html).not.toContain("google-personal");
   });
 
   it("offers Export JSON and Export contacts CSV as same-origin downloads", async () => {
