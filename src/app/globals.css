@@ -2119,7 +2119,7 @@ main:focus {
 }
 
 .import-mapping-table th[scope="row"] {
-  width: 42%;
+  width: 28%;
   color: var(--ink);
   font-size: 0.83rem;
   letter-spacing: 0;

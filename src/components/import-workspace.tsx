@@ -131,6 +131,37 @@ const SUMMARY_LABELS: Record<string, string> = {
   skipped: "Skipped",
 };
 
+function MappingStatus({
+  mapped,
+  required,
+}: {
+  mapped: boolean;
+  required?: boolean;
+}) {
+  if (required && !mapped) {
+    return (
+      <span className="chip contact-status-chip" data-tone="danger">
+        <span aria-hidden="true">!</span>
+        Required
+      </span>
+    );
+  }
+  if (mapped) {
+    return (
+      <span className="chip contact-status-chip" data-tone="success">
+        <span aria-hidden="true">+</span>
+        Ready
+      </span>
+    );
+  }
+  return (
+    <span className="chip contact-status-chip" data-tone="muted">
+      <span aria-hidden="true">−</span>
+      Skipped
+    </span>
+  );
+}
+
 export function ImportDisabledNotice() {
   return (
     <section className="import-page">
@@ -160,6 +191,7 @@ export function ImportWorkspace() {
   const [fileName, setFileName] = useState("");
   const [csv, setCsv] = useState("");
   const [headers, setHeaders] = useState<string[]>([]);
+  const [samples, setSamples] = useState<Record<string, string>>({});
   const [mapping, setMapping] = useState<Mapping>({});
   const [createMissingCompanies, setCreateMissingCompanies] = useState(true);
   const [report, setReport] = useState<Report | null>(null);
@@ -210,6 +242,7 @@ export function ImportWorkspace() {
       setFileName("");
       setCsv("");
       setHeaders([]);
+      setSamples({});
       return;
     }
     if (file.size > MAX_CSV_BYTES) {
@@ -223,6 +256,15 @@ export function ImportWorkspace() {
       setFileName(file.name);
       setCsv(contents);
       setHeaders(document.headers);
+      const firstRow = document.rows[0]?.values ?? [];
+      setSamples(
+        Object.fromEntries(
+          document.headers.map((header, index) => [
+            header,
+            firstRow[index]?.trim() ?? "",
+          ]),
+        ),
+      );
       setMapping((current) =>
         Object.fromEntries(
           Object.entries(current).filter(([, header]) =>
@@ -234,6 +276,7 @@ export function ImportWorkspace() {
       setFileName("");
       setCsv("");
       setHeaders([]);
+      setSamples({});
       setMessage(
         error instanceof CsvImportError
           ? error.message
@@ -391,35 +434,47 @@ export function ImportWorkspace() {
               <tr>
                 <th scope="col">Job Pilot field</th>
                 <th scope="col">CSV column</th>
+                <th scope="col">Sample</th>
+                <th scope="col">Status</th>
               </tr>
             </thead>
             <tbody>
-              {FIELD_CONFIG[entitySet].map((field) => (
-                <tr key={field.value}>
-                  <th data-label="Job Pilot field" scope="row">
-                    {field.label}
-                    {field.required ? <span aria-label="required"> *</span> : null}
-                  </th>
-                  <td data-label="CSV column">
-                    <label className="sr-only" htmlFor={`${controlId}-${field.value}`}>
-                      CSV column for {field.label}
-                    </label>
-                    <select
-                      disabled={pending || loadingMapping || headers.length === 0}
-                      id={`${controlId}-${field.value}`}
-                      onChange={(event) => changeMapping(field.value, event.target.value)}
-                      value={headers.includes(mapping[field.value]) ? mapping[field.value] : ""}
-                    >
-                      <option value="">Do not import</option>
-                      {headers.map((header) => (
-                        <option key={header} value={header}>
-                          {header}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                </tr>
-              ))}
+              {FIELD_CONFIG[entitySet].map((field) => {
+                const header = headers.includes(mapping[field.value])
+                  ? mapping[field.value]
+                  : "";
+                const sample = header ? samples[header] : "";
+                return (
+                  <tr key={field.value}>
+                    <th data-label="Job Pilot field" scope="row">
+                      {field.label}
+                      {field.required ? <span aria-label="required"> *</span> : null}
+                    </th>
+                    <td data-label="CSV column">
+                      <label className="sr-only" htmlFor={`${controlId}-${field.value}`}>
+                        CSV column for {field.label}
+                      </label>
+                      <select
+                        disabled={pending || loadingMapping || headers.length === 0}
+                        id={`${controlId}-${field.value}`}
+                        onChange={(event) => changeMapping(field.value, event.target.value)}
+                        value={header}
+                      >
+                        <option value="">Do not import</option>
+                        {headers.map((item) => (
+                          <option key={item} value={item}>
+                            {item}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td data-label="Sample">{sample || "—"}</td>
+                    <td data-label="Status">
+                      <MappingStatus mapped={Boolean(header)} required={field.required} />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
