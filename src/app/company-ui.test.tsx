@@ -2,7 +2,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTenantTestFixture } from "../test/tenant-fixture";
+import { applyToOpportunity } from "../server/repos/applications";
 import { createCompany } from "../server/repos/companies";
+import { createContact } from "../server/repos/contacts";
+import { createInterview } from "../server/repos/interviews";
+import { createOpportunity } from "../server/repos/opportunities";
+import { createReferral } from "../server/repos/referrals";
 
 const mocks = vi.hoisted(() => ({
   database: undefined as unknown,
@@ -92,6 +97,7 @@ describe("company screens", () => {
       await CompanyDetailPage({ params: Promise.resolve({ id: "microsoft" }) }),
     );
 
+    expect(html).toContain("Conversion statistics");
     for (const expected of [
       "https://microsoft.com",
       "https://careers.microsoft.com",
@@ -99,10 +105,11 @@ describe("company screens", () => {
       "Product",
       "Bengaluru",
       "Target roles in cloud engineering.",
-      "Contacts",
-      "Open roles",
+      "Active opportunities",
       "Applications",
-      "Referrals",
+      "Contacts",
+      "Referral requests",
+      "Referrals received",
       "Interviews",
       "Edit company",
     ]) {
@@ -124,5 +131,79 @@ describe("company screens", () => {
       expect(html).toContain("Company not found");
       expect(html).not.toContain("Private Company");
     }
+  });
+
+  it("shows the six conversion counts next to the rows that produce them", async () => {
+    const fixture = newFixture();
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "microsoft",
+      name: "Microsoft",
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "rahul",
+      name: "Rahul Sharma",
+      companyId: "microsoft",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "msft-sde",
+      companyId: "microsoft",
+      role: "SDE",
+      bucket: "active",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "msft-saved",
+      companyId: "microsoft",
+      role: "Saved intern",
+      bucket: "saved",
+    });
+    applyToOpportunity(fixture.client.db, fixture.tenantA, {
+      opportunityId: "msft-sde",
+      portal: "Careers",
+      appliedOn: "2026-09-01",
+    });
+    createReferral(fixture.client.db, fixture.tenantA, {
+      id: "msft-ref",
+      contactId: "rahul",
+      opportunityId: "msft-sde",
+      channel: "whatsapp",
+      stage: "referral_received",
+      todayOn: "2026-09-03",
+    });
+    createInterview(fixture.client.db, fixture.tenantA, {
+      opportunityId: "msft-sde",
+      kind: "Coding",
+    });
+    createCompany(fixture.client.db, fixture.tenantB, {
+      id: "hidden-co",
+      name: "Hidden Co",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantB, {
+      id: "hidden-role",
+      companyId: "hidden-co",
+      role: "Hidden role",
+      bucket: "active",
+    });
+
+    const html = renderToStaticMarkup(
+      await CompanyDetailPage({
+        params: Promise.resolve({ id: "microsoft" }),
+      }),
+    );
+
+    expect(html).toContain("Active opportunities");
+    expect(html).toContain("Referral requests");
+    expect(html).toContain("Referrals received");
+    expect(html).toContain("Rahul Sharma");
+    expect(html).toContain("SDE");
+    expect(html).toContain("Saved intern");
+    expect(html).toContain("Coding");
+    expect(html).not.toContain("Hidden Co");
+    expect(html).not.toContain("Hidden role");
+    expect(html).toMatch(/Active opportunities[\s\S]*?>1</);
+    expect(html).toMatch(/Applications[\s\S]*?>1</);
+    expect(html).toMatch(/Contacts[\s\S]*?>1</);
+    expect(html).toMatch(/Referral requests[\s\S]*?>1</);
+    expect(html).toMatch(/Referrals received[\s\S]*?>1</);
+    expect(html).toMatch(/Interviews[\s\S]*?>1</);
   });
 });

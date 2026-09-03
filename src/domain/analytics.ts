@@ -309,6 +309,30 @@ export function buildAnalyticsSnapshot(facts: AnalyticsFacts): AnalyticsSnapshot
     sliceApps[applicationSlice(row.opportunityId, received)].push(row);
   }
 
+  const channels: ChannelRow[] = [];
+  for (const channel of INTERACTION_CHANNELS) {
+    const bucket = grouped.get(channel.value);
+    if (!bucket) {
+      continue;
+    }
+    channels.push({
+      channel: channel.value,
+      label: interactionChannelLabel(channel.value),
+      attempts: bucket.attempts,
+      replies: bucket.replies,
+      referrals: bucket.referrals,
+    });
+  }
+  channels.sort((left, right) => {
+    if (right.attempts !== left.attempts) {
+      return right.attempts - left.attempts;
+    }
+    if (right.replies !== left.replies) {
+      return right.replies - left.replies;
+    }
+    return left.label.localeCompare(right.label);
+  });
+
   return {
     empty,
     emptyCopy: ANALYTICS_EMPTY,
@@ -321,27 +345,7 @@ export function buildAnalyticsSnapshot(facts: AnalyticsFacts): AnalyticsSnapshot
     slices: SLICE_COLUMNS.map((column) =>
       sliceColumn(column.key, sliceApps[column.key], interviewed),
     ),
-    channels: INTERACTION_CHANNELS.map((channel) => {
-      const bucket = grouped.get(channel.value);
-      if (!bucket) {
-        return null;
-      }
-      return {
-        channel: channel.value,
-        label: interactionChannelLabel(channel.value),
-        ...bucket,
-      };
-    })
-      .filter((row): row is ChannelRow => row !== null)
-      .sort((left, right) => {
-        if (right.attempts !== left.attempts) {
-          return right.attempts - left.attempts;
-        }
-        if (right.replies !== left.replies) {
-          return right.replies - left.replies;
-        }
-        return left.label.localeCompare(right.label);
-      }),
+    channels,
   };
 }
 

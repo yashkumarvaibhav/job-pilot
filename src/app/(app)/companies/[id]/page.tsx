@@ -2,6 +2,10 @@ import Link from "next/link";
 
 import { ActivityTimeline } from "@/components/activity-timeline";
 import { CompanyEditForm, TargetChip } from "@/components/company-form";
+import {
+  CompanyConversionTiles,
+  CompanyRelatedLists,
+} from "@/components/company-conversion";
 import { TagPicker } from "@/components/tag-picker";
 import { calendarDateInZone } from "@/domain/referral";
 import { requireTenant } from "@/server/auth/current-session";
@@ -9,20 +13,18 @@ import { getWorkspaceSettings } from "@/server/db/foundation";
 import { getDatabase } from "@/server/db/runtime";
 import { DEFAULT_TIME_ZONE } from "@/server/db/timezone";
 import { listActivity } from "@/server/repos/activity";
+import { getCompanyConversionStats } from "@/server/repos/analytics";
+import { listApplications } from "@/server/repos/applications";
 import { getCompany } from "@/server/repos/companies";
+import { listContacts } from "@/server/repos/contacts";
+import { listInterviews } from "@/server/repos/interviews";
+import { listOpportunities } from "@/server/repos/opportunities";
+import { listReferrals } from "@/server/repos/referrals";
 import { listEntityTags, listTags } from "@/server/repos/tags";
 
 type CompanyDetailPageProps = {
   params: Promise<{ id: string }>;
 };
-
-const counts = [
-  ["Contacts", 0],
-  ["Open roles", 0],
-  ["Applications", 0],
-  ["Referrals", 0],
-  ["Interviews", 0],
-] as const;
 
 function Field({ label, value }: { label: string; value: string | null }) {
   return (
@@ -57,6 +59,7 @@ export default async function CompanyDetailPage({
   const timeZone =
     getWorkspaceSettings(database, tenant, tenant.workspaceId)?.timezone ??
     DEFAULT_TIME_ZONE;
+  const todayOn = calendarDateInZone(timeZone);
   const attached = listEntityTags(database, tenant, "company", company.id);
   const workspaceTags = listTags(database, tenant).map((row) => row.label);
   const activity = listActivity(database, tenant, {
@@ -64,7 +67,22 @@ export default async function CompanyDetailPage({
     entityType: "company",
     entityId: company.id,
   });
-  const todayOn = calendarDateInZone(timeZone);
+  const stats = getCompanyConversionStats(database, tenant, company.id);
+  const contacts = listContacts(database, tenant, { companyId: company.id });
+  const opportunities = listOpportunities(database, tenant, {
+    companyId: company.id,
+  });
+  const opportunityIds = new Set(opportunities.map((row) => row.id));
+  const applications = listApplications(database, tenant).filter((row) =>
+    opportunityIds.has(row.opportunityId),
+  );
+  const referrals = listReferrals(database, tenant, {
+    asOfOn: todayOn,
+    companyId: company.id,
+  });
+  const interviews = listInterviews(database, tenant).filter((row) =>
+    opportunityIds.has(row.opportunityId),
+  );
 
   return (
     <article className="company-detail">
@@ -95,16 +113,17 @@ export default async function CompanyDetailPage({
       </section>
 
       <section aria-labelledby="company-counts" className="detail-section">
-        <h2 id="company-counts">Search activity</h2>
-        <div className="tiles company-tiles">
-          {counts.map(([label, value]) => (
-            <div className="tile" key={label}>
-              <span className="eyebrow">{label}</span>
-              <strong className="tnum">{value}</strong>
-            </div>
-          ))}
-        </div>
+        <h2 id="company-counts">Conversion statistics</h2>
+        {stats ? <CompanyConversionTiles stats={stats} /> : null}
       </section>
+
+      <CompanyRelatedLists
+        applications={applications}
+        contacts={contacts}
+        interviews={interviews}
+        opportunities={opportunities}
+        referrals={referrals}
+      />
 
       <section aria-labelledby="company-tags" className="detail-section">
         <h2 id="company-tags">Tags</h2>
