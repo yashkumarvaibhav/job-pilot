@@ -1932,6 +1932,55 @@ main:focus {
   color: var(--body);
 }
 
+.opportunity-score {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.opportunity-score__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.opportunity-score__heading .eyebrow {
+  margin: 0 0 var(--space-1);
+}
+
+.opportunity-score__total {
+  color: var(--accent);
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.opportunity-score__terms {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.opportunity-score__terms li {
+  display: flex;
+  min-height: var(--target-min);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--body);
+}
+
+.opportunity-score__terms .tnum {
+  color: var(--ink);
+  font-weight: 700;
+}
+
 .opportunity-field-grid div {
   min-width: 0;
 }

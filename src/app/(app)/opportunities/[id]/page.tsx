@@ -21,6 +21,7 @@ import { ActivityTimeline } from "@/components/activity-timeline";
 import { LinkContactForm } from "@/components/opportunity-contact-forms";
 import { OpportunityEditForm } from "@/components/opportunity-form";
 import { OpportunityHealthBanner } from "@/components/opportunity-health";
+import { OpportunityScoreCard } from "@/components/opportunity-score";
 import { ReferralCreateForm } from "@/components/referral-forms";
 import { ReferralCollection } from "@/components/referral-list";
 import { TagPicker } from "@/components/tag-picker";
@@ -195,6 +196,7 @@ export default async function OpportunityDetailPage({ params }: Props) {
         </div>
       </header>
       {health ? <OpportunityHealthBanner health={health} /> : null}
+      <OpportunityScoreCard score={row} />
       <section aria-labelledby="opportunity-fields" className="detail-section">
         <h2 id="opportunity-fields">Opportunity details</h2>
         <dl className="opportunity-field-grid">

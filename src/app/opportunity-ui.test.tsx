@@ -11,6 +11,7 @@ import { createInterview } from "../server/repos/interviews";
 import { createAssessment } from "../server/repos/assessments";
 import { createOpportunity, linkContactToOpportunity } from "../server/repos/opportunities";
 import { createReferral } from "../server/repos/referrals";
+import { updateWorkspaceSettings } from "../server/repos/settings";
 import { createTenantTestFixture } from "../test/tenant-fixture";
 import { calendarDateInZone, shiftCalendarDate } from "../domain/referral";
 
@@ -229,6 +230,45 @@ describe("opportunity screens", () => {
     expect(html).toContain('class="opportunity-health"');
     expect(html).toContain('data-tone="warning"');
     expect(html).toContain('aria-hidden="true"');
+  });
+
+  it("shows the numeric score, fired terms, and a saved weight change", async () => {
+    const fixture = newFixture();
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "target",
+      name: "Target Company",
+      target: true,
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "scored-role",
+      companyId: "target",
+      role: "New Grad Engineer",
+    });
+
+    const before = renderToStaticMarkup(
+      await OpportunityDetailPage({
+        params: Promise.resolve({ id: "scored-role" }),
+      }),
+    );
+    expect(before).toContain("Priority score");
+    expect(before).toContain('aria-label="Priority score terms"');
+    expect(before).toContain('class="tnum opportunity-score__total">6</strong>');
+    expect(before).toContain("Target company");
+    expect(before).toContain("New-grad role");
+    expect(before).toContain("+3");
+
+    updateWorkspaceSettings(fixture.client.db, fixture.tenantA, {
+      displayName: "Tenant A",
+      scoringWeights: { targetCompany: 0 },
+    });
+    const after = renderToStaticMarkup(
+      await OpportunityDetailPage({
+        params: Promise.resolve({ id: "scored-role" }),
+      }),
+    );
+    expect(after).toContain('class="tnum opportunity-score__total">3</strong>');
+    expect(after).toContain("Target company");
+    expect(after).toContain('class="tnum">0</span>');
   });
 
   it("renders persisted detail fields and only pursuit stages in the edit form", async () => {
