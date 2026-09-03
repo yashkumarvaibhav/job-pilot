@@ -1481,6 +1481,8 @@ export const sendQueue = sqliteTable(
     ...workspaceOwnedEntityColumns(),
     accountId: text("account_id").notNull(),
     contactId: text("contact_id"),
+    opportunityId: text("opportunity_id"),
+    referralId: text("referral_id"),
     origin: text("origin", {
       enum: ["one_off", "sequence", "self_digest"],
     }).notNull(),
@@ -1545,6 +1547,16 @@ export const sendQueue = sqliteTable(
       "send_queue_contact_fk",
       { workspaceId: table.workspaceId, parentId: table.contactId },
       contact,
+    ),
+    sameWorkspaceForeignKey(
+      "send_queue_opportunity_fk",
+      { workspaceId: table.workspaceId, parentId: table.opportunityId },
+      opportunity,
+    ),
+    sameWorkspaceForeignKey(
+      "send_queue_referral_fk",
+      { workspaceId: table.workspaceId, parentId: table.referralId },
+      referralRequest,
     ),
     check(
       "send_queue_origin_valid",

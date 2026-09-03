@@ -80,7 +80,7 @@ describe("migrateDatabase", () => {
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 24 });
+      ).toEqual({ count: 25 });
 
       for (const indexName of [
         "company_workspace_id_id_unique",
@@ -206,6 +206,8 @@ describe("migrateDatabase", () => {
         "workspace_id",
         "account_id",
         "contact_id",
+        "opportunity_id",
+        "referral_id",
         "origin",
         "status",
         "recipient",

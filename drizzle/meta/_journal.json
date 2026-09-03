@@ -169,6 +169,13 @@
       "when": 1788461915789,
       "tag": "0023_send_safety",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1788462093701,
+      "tag": "0024_send_queue_links",
+      "breakpoints": true
     }
   ]
 }

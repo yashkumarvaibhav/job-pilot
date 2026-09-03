@@ -2,12 +2,15 @@ import { randomUUID } from "node:crypto";
 
 import type {
   MailPort,
+  MailMessageLookupResult,
   MailSendRequest,
   MailSendResult,
+  QueueMailPort,
 } from "./mail-port";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
+const MESSAGES_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages";
 
 type GoogleClient = { clientId: string; clientSecret: string };
 
@@ -119,7 +122,7 @@ async function jsonObject(response: Response): Promise<Record<string, unknown>> 
   }
 }
 
-export class GoogleGmailMailPort implements MailPort {
+export class GoogleGmailMailPort implements MailPort, QueueMailPort {
   private readonly fetcher: typeof fetch;
   private readonly now: () => Date;
   private readonly randomId: () => string;
@@ -151,7 +154,7 @@ export class GoogleGmailMailPort implements MailPort {
     }
 
     const id = this.randomId();
-    const rfcMessageId = `<${id}@jobpilot.invalid>`;
+    const rfcMessageId = request.rfcMessageId ?? `<${id}@jobpilot.invalid>`;
     const raw = buildRawGmailMessage(request, `job-pilot-${id}`, rfcMessageId);
     const sendResponse = await this.fetcher(SEND_URL, {
       method: "POST",
@@ -177,6 +180,54 @@ export class GoogleGmailMailPort implements MailPort {
       gmailThreadId: sendBody.threadId,
       rfcMessageId,
       sentAt: this.now(),
+    };
+  }
+
+  async findByRfcMessageId(input: {
+    refreshToken: string;
+    rfcMessageId: string;
+  }): Promise<MailMessageLookupResult> {
+    const tokenResponse = await this.fetcher(TOKEN_URL, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: this.client.clientId,
+        client_secret: this.client.clientSecret,
+        refresh_token: input.refreshToken,
+        grant_type: "refresh_token",
+      }),
+      cache: "no-store",
+    });
+    const tokenBody = await jsonObject(tokenResponse);
+    if (!tokenResponse.ok || typeof tokenBody.access_token !== "string") {
+      throw new GoogleMailSendError();
+    }
+    const query = new URLSearchParams({
+      q: `rfc822msgid:${input.rfcMessageId}`,
+      maxResults: "2",
+    });
+    const response = await this.fetcher(`${MESSAGES_URL}?${query.toString()}`, {
+      method: "GET",
+      headers: { authorization: `Bearer ${tokenBody.access_token}` },
+      cache: "no-store",
+    });
+    const body = await jsonObject(response);
+    if (!response.ok) throw new GoogleMailSendError();
+    const messages = Array.isArray(body.messages)
+      ? body.messages.filter(
+          (value): value is { id: string; threadId: string } =>
+            typeof value === "object" &&
+            value !== null &&
+            typeof (value as { id?: unknown }).id === "string" &&
+            typeof (value as { threadId?: unknown }).threadId === "string",
+        )
+      : [];
+    if (messages.length === 0) return { status: "absent" };
+    if (messages.length !== 1) return { status: "ambiguous" };
+    return {
+      status: "found",
+      gmailMessageId: messages[0].id,
+      gmailThreadId: messages[0].threadId,
     };
   }
 }
