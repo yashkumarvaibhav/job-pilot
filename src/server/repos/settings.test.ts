@@ -9,6 +9,7 @@ import {
   updateWorkspaceSettings,
 } from "./settings";
 import { getTodaySnapshot } from "./today";
+import { DEFAULT_SCORING_WEIGHTS } from "../../domain/scoring";
 
 describe("settings repository", () => {
   const fixtures: { dispose: () => void }[] = [];
@@ -35,9 +36,39 @@ describe("settings repository", () => {
       quietStart: null,
       quietEnd: null,
       digestHour: null,
-      scoringWeights: {},
+      scoringWeights: DEFAULT_SCORING_WEIGHTS,
       mutedNotificationKinds: [],
     });
+  });
+
+  it("persists scoring weights only in the current workspace", () => {
+    const fixture = newFixture();
+
+    const saved = updateWorkspaceSettings(fixture.client.db, fixture.tenantA, {
+      displayName: "Tenant A",
+      scoringWeights: { targetCompany: 0, newGradRole: 8 },
+    });
+
+    expect(saved.scoringWeights).toEqual({
+      ...DEFAULT_SCORING_WEIGHTS,
+      targetCompany: 0,
+      newGradRole: 8,
+    });
+    expect(
+      readWorkspaceSettings(fixture.client.db, fixture.tenantB).scoringWeights,
+    ).toEqual(DEFAULT_SCORING_WEIGHTS);
+    expect(() =>
+      updateWorkspaceSettings(fixture.client.db, fixture.tenantA, {
+        displayName: "Tenant A",
+        scoringWeights: { targetCompany: 1.5 },
+      }),
+    ).toThrow(SettingsInputError);
+    expect(() =>
+      updateWorkspaceSettings(fixture.client.db, fixture.tenantA, {
+        displayName: "Tenant A",
+        scoringWeights: { hiddenTerm: 100 } as never,
+      }),
+    ).toThrow(SettingsInputError);
   });
 
   it("persists profile fields and quiet hours in workspace local time", () => {

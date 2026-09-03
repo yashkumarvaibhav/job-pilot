@@ -10,8 +10,6 @@ import {
   QUIET_HOURS_ACTIVE_LABEL,
   QUIET_HOURS_AWAKE_LABEL,
   QUIET_HOURS_HELP,
-  SCORING_EMPTY_HELP,
-  SCORING_EMPTY_TITLE,
   SETTINGS_ERROR,
   SETTINGS_LOADING,
   TIMEZONE_HELP,
@@ -128,15 +126,21 @@ describe("settings screen", () => {
     expect(html).toContain('list="');
   });
 
-  it("states honestly that Gmail and scoring are not wired yet, with no live button", async () => {
+  it("keeps Gmail disabled and renders all six scoring weights as numeric fields", async () => {
     newFixture();
 
     const html = renderToStaticMarkup(await SettingsPage());
 
     expect(html).toContain(GMAIL_NOT_CONNECTED_TITLE);
     expect(html).toContain(GMAIL_NOT_CONNECTED_HELP);
-    expect(html).toContain(SCORING_EMPTY_TITLE);
-    expect(html).toContain(SCORING_EMPTY_HELP);
+    expect(html).toContain("Opportunity scoring");
+    expect(html).toContain('name="score.targetCompany"');
+    expect(html).toContain('name="score.newGradRole"');
+    expect(html).toContain('name="score.preferredLocation"');
+    expect(html).toContain('name="score.referralAvailable"');
+    expect(html).toContain('name="score.postedWithin48Hours"');
+    expect(html).toContain('name="score.experienceExceedsEligibility"');
+    expect(html).toContain('value="-3"');
     expect(html).toContain("disabled");
     expect(html).not.toContain('href="/api/gmail');
   });

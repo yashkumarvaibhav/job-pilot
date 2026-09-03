@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { readWorkspaceSettings } from "../../../server/repos/settings";
 import { createTenantTestFixture } from "../../../test/tenant-fixture";
+import { DEFAULT_SCORING_WEIGHTS } from "../../../domain/scoring";
 
 const mocks = vi.hoisted(() => ({
   database: undefined as unknown,
@@ -71,6 +72,7 @@ describe("settings route handlers", () => {
       timezone: "Asia/Kolkata",
       quietStart: null,
       quietEnd: null,
+      scoringWeights: DEFAULT_SCORING_WEIGHTS,
     });
   });
 
@@ -83,6 +85,7 @@ describe("settings route handlers", () => {
       timezone: "America/New_York",
       quietStart: "23:30",
       quietEnd: "08:00",
+      scoringWeights: { targetCompany: 0, newGradRole: 7 },
     });
 
     expect(response.status).toBe(200);
@@ -92,6 +95,11 @@ describe("settings route handlers", () => {
       timezone: "America/New_York",
       quietStart: "23:30",
       quietEnd: "08:00",
+      scoringWeights: {
+        ...DEFAULT_SCORING_WEIGHTS,
+        targetCompany: 0,
+        newGradRole: 7,
+      },
     });
   });
 
@@ -120,6 +128,8 @@ describe("settings route handlers", () => {
       { displayName: "Tenant A", quietStart: "23:30", quietEnd: "" },
       { displayName: "Tenant A", quietStart: "11:30 PM", quietEnd: "08:00" },
       { displayName: "   " },
+      { displayName: "Tenant A", scoringWeights: { hiddenTerm: 20 } },
+      { displayName: "Tenant A", scoringWeights: { targetCompany: 1.5 } },
     ]) {
       const response = await patch(body);
       expect(response.status).toBe(400);
@@ -140,5 +150,8 @@ describe("settings route handlers", () => {
     expect((await patch({ displayName: "Tenant A", quietStart: 1410 })).status).toBe(
       400,
     );
+    expect(
+      (await patch({ displayName: "Tenant A", scoringWeights: "heavy" })).status,
+    ).toBe(400);
   });
 });

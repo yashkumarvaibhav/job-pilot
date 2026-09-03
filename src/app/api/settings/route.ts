@@ -15,7 +15,10 @@ import {
 export const runtime = "nodejs";
 
 const AUTHENTICATION_REQUIRED = { error: "Authentication required." };
-const INVALID = { error: "Settings accept a name, university, timezone and quiet hours." };
+const INVALID = {
+  error:
+    "Settings accept a name, university, timezone, quiet hours and named scoring weights.",
+};
 
 export async function GET() {
   const tenant = await currentTenant();
@@ -45,6 +48,7 @@ export async function PATCH(request: Request) {
       timezone: input.timezone,
       quietStart: input.quietStart,
       quietEnd: input.quietEnd,
+      scoringWeights: input.scoringWeights,
     });
     return NextResponse.json(settingsResponse(saved));
   } catch (error) {

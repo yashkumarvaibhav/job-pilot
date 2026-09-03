@@ -6,6 +6,11 @@ import {
   QuietHoursError,
   SETTINGS_PROFILE_MAX,
 } from "../../domain/settings";
+import {
+  isScoringWeightInput,
+  resolveScoringWeights,
+  type ScoringWeights,
+} from "../../domain/scoring";
 import { logEvent } from "../db/activity";
 import type { AppDatabase } from "../db/client";
 import { settings } from "../db/schema";
@@ -19,7 +24,7 @@ export type WorkspaceSettingsView = {
   quietStart: number | null;
   quietEnd: number | null;
   digestHour: number | null;
-  scoringWeights: Record<string, number>;
+  scoringWeights: ScoringWeights;
   mutedNotificationKinds: string[];
 };
 
@@ -29,6 +34,7 @@ export type UpdateWorkspaceSettingsInput = {
   timezone?: string;
   quietStart?: string | null;
   quietEnd?: string | null;
+  scoringWeights?: Partial<ScoringWeights>;
   now?: Date;
 };
 
@@ -49,6 +55,7 @@ const ALLOWED_INPUT_KEYS = new Set<string>([
   "timezone",
   "quietStart",
   "quietEnd",
+  "scoringWeights",
   "now",
 ]);
 
@@ -60,7 +67,7 @@ function toView(row: typeof settings.$inferSelect): WorkspaceSettingsView {
     quietStart: row.quietStart ?? null,
     quietEnd: row.quietEnd ?? null,
     digestHour: row.digestHour ?? null,
-    scoringWeights: row.scoringWeightsJson ?? {},
+    scoringWeights: resolveScoringWeights(row.scoringWeightsJson),
     mutedNotificationKinds: row.mutedNotificationKindsJson ?? [],
   };
 }
@@ -151,6 +158,22 @@ export function updateWorkspaceSettings(
       }
     }
 
+    if (
+      input.scoringWeights !== undefined &&
+      !isScoringWeightInput(input.scoringWeights)
+    ) {
+      throw new SettingsInputError(
+        "Scoring weights must be named whole numbers.",
+      );
+    }
+    const beforeScoringWeights = resolveScoringWeights(
+      before.scoringWeightsJson,
+    );
+    const scoringWeights = {
+      ...beforeScoringWeights,
+      ...(input.scoringWeights ?? {}),
+    };
+
     const row = transaction
       .update(settings)
       .set({
@@ -159,6 +182,7 @@ export function updateWorkspaceSettings(
         timezone,
         quietStart: quiet.quietStart,
         quietEnd: quiet.quietEnd,
+        scoringWeightsJson: scoringWeights,
       })
       .where(eq(settings.workspaceId, tenant.workspaceId))
       .returning()
@@ -171,6 +195,22 @@ export function updateWorkspaceSettings(
         entityType: "workspace",
         entityId: tenant.workspaceId,
         payload: { from: before.timezone, to: timezone },
+      });
+    }
+
+
+    const changedScoringTerms = Object.keys(scoringWeights).filter(
+      (key) =>
+        scoringWeights[key as keyof ScoringWeights] !==
+        beforeScoringWeights[key as keyof ScoringWeights],
+    );
+    if (changedScoringTerms.length > 0) {
+      logEvent(transaction, tenant, {
+        at: now,
+        kind: "SETTINGS_SCORING_WEIGHTS_CHANGED",
+        entityType: "workspace",
+        entityId: tenant.workspaceId,
+        payload: { terms: changedScoringTerms.sort() },
       });
     }
 

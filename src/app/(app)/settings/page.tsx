@@ -6,8 +6,6 @@ import {
   formatClockMinutes,
   GMAIL_NOT_CONNECTED_HELP,
   GMAIL_NOT_CONNECTED_TITLE,
-  SCORING_EMPTY_HELP,
-  SCORING_EMPTY_TITLE,
   quietHoursStateLine,
   selectableTimeZones,
 } from "@/domain/settings";
@@ -51,6 +49,7 @@ export default async function SettingsPage() {
             view.quietStart == null ? "" : formatClockMinutes(view.quietStart),
           quietEnd:
             view.quietEnd == null ? "" : formatClockMinutes(view.quietEnd),
+          scoringWeights: view.scoringWeights,
         }}
       />
 
@@ -86,30 +85,6 @@ export default async function SettingsPage() {
           <button className="btn btn--ghost" disabled type="button">
             Connect Gmail
           </button>
-        </div>
-      </section>
-
-      <section
-        aria-labelledby="settings-scoring"
-        className="settings-section settings-section--slot"
-      >
-        <h2 id="settings-scoring">Opportunity scoring</h2>
-        <div className="data-state data-state--empty" role="status">
-          <p className="chip settings-chip">
-            <svg aria-hidden="true" height="16" viewBox="0 0 24 24" width="16">
-              <path
-                d="M4 19h16M7 16V9m5 7V5m5 11v-4"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-              />
-            </svg>
-            Not configured
-          </p>
-          <h3>{SCORING_EMPTY_TITLE}</h3>
-          <p>{SCORING_EMPTY_HELP}</p>
         </div>
       </section>
 

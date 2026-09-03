@@ -49,6 +49,40 @@ export const DEFAULT_SCORING_WEIGHTS: Readonly<ScoringWeights> = {
   experienceExceedsEligibility: -3,
 };
 
+const scoringTermKeys = new Set<string>(
+  SCORING_TERMS.map((term) => term.key),
+);
+
+export function isScoringWeightInput(
+  value: unknown,
+): value is Partial<ScoringWeights> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  return (
+    Object.keys(record).every((key) => scoringTermKeys.has(key)) &&
+    Object.values(record).every(
+      (weight) => typeof weight === "number" && Number.isSafeInteger(weight),
+    )
+  );
+}
+
+export function resolveScoringWeights(value: unknown): ScoringWeights {
+  const record =
+    typeof value === "object" && value !== null && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  return Object.fromEntries(
+    SCORING_TERMS.map((term) => [
+      term.key,
+      Number.isSafeInteger(record[term.key])
+        ? (record[term.key] as number)
+        : term.defaultWeight,
+    ]),
+  ) as ScoringWeights;
+}
+
 export type ScoredTerm = {
   key: ScoringTermKey;
   label: string;

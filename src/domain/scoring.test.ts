@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_SCORING_WEIGHTS,
   SCORING_TERMS,
+  isScoringWeightInput,
+  resolveScoringWeights,
   scoreOpportunity,
 } from "./scoring";
 
@@ -106,5 +108,27 @@ describe("deterministic opportunity scoring", () => {
         experienceExceedsEligibility: false,
       }),
     ).toEqual({ score: 0, terms: [] });
+  });
+
+  it("accepts only named, finite whole-number overrides", () => {
+    expect(isScoringWeightInput({ targetCompany: 0, newGradRole: -2 })).toBe(
+      true,
+    );
+    expect(isScoringWeightInput({ hiddenTerm: 10 })).toBe(false);
+    expect(isScoringWeightInput({ targetCompany: 1.5 })).toBe(false);
+    expect(isScoringWeightInput({ targetCompany: Number.POSITIVE_INFINITY })).toBe(
+      false,
+    );
+    expect(isScoringWeightInput(null)).toBe(false);
+  });
+
+  it("fills missing stored weights from the documented defaults", () => {
+    expect(resolveScoringWeights({ targetCompany: 0 })).toEqual({
+      ...DEFAULT_SCORING_WEIGHTS,
+      targetCompany: 0,
+    });
+    expect(resolveScoringWeights({ hiddenTerm: 99, newGradRole: "many" })).toEqual(
+      DEFAULT_SCORING_WEIGHTS,
+    );
   });
 });

@@ -28,11 +28,6 @@ export const GMAIL_NOT_CONNECTED_TITLE = "Gmail is not connected yet";
 export const GMAIL_NOT_CONNECTED_HELP =
   "Connecting a mailbox arrives with the Gmail phase. Until then nothing here reads or sends mail, and there is no address to disconnect.";
 
-export const SCORING_EMPTY_TITLE = "Scoring weights are not set yet";
-
-export const SCORING_EMPTY_HELP =
-  "Opportunity scoring arrives with the scoring phase. When it does, its terms become numeric fields here rather than a hidden file.";
-
 /** Modern IANA names this platform's ICU may still enumerate under a legacy alias. */
 const MODERN_ZONE_NAMES = [
   "America/Argentina/Buenos_Aires",

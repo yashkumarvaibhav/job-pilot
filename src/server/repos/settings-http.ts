@@ -1,5 +1,9 @@
 import type { WorkspaceSettingsView } from "./settings";
 import { formatClockMinutes } from "../../domain/settings";
+import {
+  isScoringWeightInput,
+  type ScoringWeights,
+} from "../../domain/scoring";
 
 const SETTINGS_FIELDS = [
   "displayName",
@@ -15,6 +19,7 @@ export type SettingsRequestInput = {
   timezone?: string;
   quietStart?: string;
   quietEnd?: string;
+  scoringWeights?: Partial<ScoringWeights>;
 };
 
 async function readObject(
@@ -45,7 +50,7 @@ export async function readSettingsInput(
   if (!body) {
     return null;
   }
-  const allowed = new Set<string>(SETTINGS_FIELDS);
+  const allowed = new Set<string>([...SETTINGS_FIELDS, "scoringWeights"]);
   if (!Object.keys(body).every((key) => allowed.has(key))) {
     return null;
   }
@@ -59,12 +64,21 @@ export async function readSettingsInput(
   if (typeof body.displayName !== "string") {
     return null;
   }
+  if (
+    body.scoringWeights !== undefined &&
+    !isScoringWeightInput(body.scoringWeights)
+  ) {
+    return null;
+  }
   return {
     displayName: body.displayName,
     university: body.university as string | undefined,
     timezone: body.timezone as string | undefined,
     quietStart: body.quietStart as string | undefined,
     quietEnd: body.quietEnd as string | undefined,
+    scoringWeights: body.scoringWeights as
+      | Partial<ScoringWeights>
+      | undefined,
   };
 }
 
@@ -76,5 +90,6 @@ export function settingsResponse(view: WorkspaceSettingsView) {
     quietStart:
       view.quietStart == null ? null : formatClockMinutes(view.quietStart),
     quietEnd: view.quietEnd == null ? null : formatClockMinutes(view.quietEnd),
+    scoringWeights: view.scoringWeights,
   };
 }

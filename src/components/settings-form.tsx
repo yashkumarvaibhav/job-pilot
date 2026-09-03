@@ -8,6 +8,10 @@ import {
   SETTINGS_PROFILE_MAX,
   TIMEZONE_HELP,
 } from "@/domain/settings";
+import {
+  SCORING_TERMS,
+  type ScoringWeights,
+} from "@/domain/scoring";
 
 function responseError(value: unknown, fallback: string): string {
   return typeof value === "object" &&
@@ -24,6 +28,7 @@ export type SettingsFormValues = {
   timezone: string;
   quietStart: string;
   quietEnd: string;
+  scoringWeights: ScoringWeights;
 };
 
 export function SettingsForm({
@@ -56,6 +61,12 @@ export function SettingsForm({
       timezone: String(form.get("timezone") ?? ""),
       quietStart: String(form.get("quietStart") ?? ""),
       quietEnd: String(form.get("quietEnd") ?? ""),
+      scoringWeights: Object.fromEntries(
+        SCORING_TERMS.map((term) => [
+          term.key,
+          Number(form.get(`score.${term.key}`)),
+        ]),
+      ),
     };
 
     try {
@@ -200,6 +211,33 @@ export function SettingsForm({
         <p className="settings-hint">
           {quietState.sentence} Clear both fields to turn quiet hours off.
         </p>
+      </section>
+
+      <section aria-labelledby={`${formId}-scoring`} className="settings-section">
+        <h2 id={`${formId}-scoring`}>Opportunity scoring</h2>
+        <p className="settings-help">
+          Each whole number is added when that named fact is true. Negative
+          numbers reduce the score; zero turns a term off.
+        </p>
+        <div className="settings-grid">
+          {SCORING_TERMS.map((term) => (
+            <div className="field" key={term.key}>
+              <label htmlFor={`${formId}-score-${term.key}`}>
+                {term.label}
+              </label>
+              <input
+                className="tnum"
+                defaultValue={values.scoringWeights[term.key]}
+                disabled={pending}
+                id={`${formId}-score-${term.key}`}
+                name={`score.${term.key}`}
+                required
+                step="1"
+                type="number"
+              />
+            </div>
+          ))}
+        </div>
       </section>
 
       {error ? (
