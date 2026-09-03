@@ -32,6 +32,16 @@ export type ConnectEmailAccountInput = {
   now?: Date;
 };
 
+export type UpdateEmailAccountSettingsInput = {
+  senderName?: string;
+  signature?: string | null;
+  replyTo?: string | null;
+  dailyLimit?: number;
+  sendingWindowStart?: number;
+  sendingWindowEnd?: number;
+  now?: Date;
+};
+
 export class EmailAccountInputError extends Error {
   constructor(message: string) {
     super(message);
@@ -53,6 +63,20 @@ function optionalText(value: string | null | undefined): string | null {
   }
   const normalized = value.trim();
   return normalized.length > 0 ? normalized : null;
+}
+
+function boundedText(
+  value: string,
+  label: string,
+  maximum: number,
+): string {
+  const normalized = value.trim();
+  if (normalized.length > maximum) {
+    throw new EmailAccountInputError(
+      `${label} must be ${maximum} characters or fewer.`,
+    );
+  }
+  return normalized;
 }
 
 function validEmail(value: string, label: string): string {
@@ -281,6 +305,91 @@ export function readEmailAccountGoogleSubject(
       ),
     )
     .get()?.googleSub;
+}
+
+export function updateEmailAccountSettings(
+  database: AppDatabase,
+  tenant: TenantContext,
+  accountId: string,
+  input: UpdateEmailAccountSettingsInput,
+): EmailAccountView | undefined {
+  const now = input.now ?? new Date();
+  const dailyLimit = validLimit(input.dailyLimit);
+  const sendingWindowStart = validMinute(
+    input.sendingWindowStart,
+    "Sending window start",
+  );
+  const sendingWindowEnd = validMinute(
+    input.sendingWindowEnd,
+    "Sending window end",
+  );
+
+  return database.transaction((transaction) => {
+    const existing = transaction
+      .select()
+      .from(emailAccount)
+      .where(
+        and(
+          eq(emailAccount.workspaceId, tenant.workspaceId),
+          eq(emailAccount.id, accountId),
+        ),
+      )
+      .get();
+    if (!existing) {
+      return undefined;
+    }
+
+    const row = transaction
+      .update(emailAccount)
+      .set({
+        senderName:
+          input.senderName === undefined
+            ? existing.senderName
+            : boundedText(input.senderName, "Sender name", 120),
+        signature:
+          input.signature === undefined
+            ? existing.signature
+            : input.signature === null
+              ? null
+              : boundedText(input.signature, "Signature", 10_000) || null,
+        replyTo:
+          input.replyTo === undefined
+            ? existing.replyTo
+            : input.replyTo === null || input.replyTo.trim().length === 0
+              ? null
+              : validEmail(input.replyTo, "Reply-to"),
+        dailyLimit: dailyLimit ?? existing.dailyLimit,
+        sendingWindowStart:
+          sendingWindowStart ?? existing.sendingWindowStart,
+        sendingWindowEnd: sendingWindowEnd ?? existing.sendingWindowEnd,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(emailAccount.workspaceId, tenant.workspaceId),
+          eq(emailAccount.id, accountId),
+        ),
+      )
+      .returning()
+      .get();
+    logEvent(transaction, tenant, {
+      at: now,
+      kind: "EMAIL_ACCOUNT_SETTINGS_UPDATED",
+      entityType: "email_account",
+      entityId: accountId,
+      payload: {
+        fields: Object.keys(input)
+          .filter((key) => key !== "now")
+          .sort(),
+      },
+    });
+    const defaultRow = transaction
+      .select({ id: settings.defaultEmailAccountId })
+      .from(settings)
+      .where(eq(settings.workspaceId, tenant.workspaceId))
+      .get();
+    return toView(row, defaultRow?.id ?? null);
+  });
 }
 
 export function setDefaultEmailAccount(

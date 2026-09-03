@@ -10,6 +10,7 @@ import {
   listEmailAccounts,
   readEmailAccountRefreshToken,
   setDefaultEmailAccount,
+  updateEmailAccountSettings,
 } from "./email-accounts";
 
 const TOKEN_KEY = Buffer.alloc(32, 4).toString("base64");
@@ -125,6 +126,60 @@ describe("email account repository", () => {
       TOKEN_KEY,
     )).toBe("new-refresh");
     expect(fixture.rowCount("email_account")).toBe(1);
+  });
+
+  it("updates settings only on the selected owned account", () => {
+    const first = connectEmailAccount(
+      fixture.client.db,
+      fixture.tenantA,
+      {
+        googleSub: "google-user-1",
+        email: "first@invalid.test",
+        refreshToken: "refresh-one",
+      },
+      TOKEN_KEY,
+    );
+    const second = connectEmailAccount(
+      fixture.client.db,
+      fixture.tenantA,
+      {
+        googleSub: "google-user-2",
+        email: "second@invalid.test",
+        refreshToken: "refresh-two",
+      },
+      TOKEN_KEY,
+    );
+
+    expect(
+      updateEmailAccountSettings(fixture.client.db, fixture.tenantA, first.id, {
+        senderName: "  Job search  ",
+        signature: "Thanks,\nYash",
+        replyTo: "REPLY@INVALID.TEST",
+        dailyLimit: 25,
+        sendingWindowStart: 600,
+        sendingWindowEnd: 1080,
+      }),
+    ).toMatchObject({
+      id: first.id,
+      senderName: "Job search",
+      signature: "Thanks,\nYash",
+      replyTo: "reply@invalid.test",
+      dailyLimit: 25,
+      sendingWindowStart: 600,
+      sendingWindowEnd: 1080,
+    });
+    expect(listEmailAccounts(fixture.client.db, fixture.tenantA)).toEqual([
+      expect.objectContaining({ id: first.id, dailyLimit: 25 }),
+      expect.objectContaining({ id: second.id, dailyLimit: 40 }),
+    ]);
+
+    const beforeEvents = fixture.rowCount("activity_event");
+    expect(
+      updateEmailAccountSettings(fixture.client.db, fixture.tenantB, first.id, {
+        senderName: "Impostor",
+      }),
+    ).toBeUndefined();
+    expect(fixture.rowCount("activity_event")).toBe(beforeEvents);
   });
 
   it("allows only a connected account in the same workspace to become default", () => {
