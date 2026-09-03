@@ -1634,6 +1634,8 @@ main:focus {
 .today-page,
 .notification-page {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   align-content: start;
   gap: var(--space-8);
 }
