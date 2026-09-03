@@ -60,12 +60,10 @@ describe("P01 walkthrough", () => {
     const asOfOn = calendarDateInZone("Asia/Kolkata", now);
     const tomorrowOn = shiftCalendarDate(asOfOn, 1);
 
-    const tables = fixture.client.sqlite
-      .prepare("select name from sqlite_master where type = 'table'")
-      .all() as { name: string }[];
-    expect(
-      tables.some((row) => /gmail|oauth/i.test(row.name)),
-    ).toBe(false);
+    const emailAccounts = fixture.client.sqlite
+      .prepare("select count(*) as count from email_account")
+      .get() as { count: number };
+    expect(emailAccounts.count).toBe(0);
 
     const neha = createContact(db, a, {
       id: "neha",

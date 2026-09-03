@@ -62,10 +62,10 @@ describe("P02 walkthrough", () => {
     const b = fixture.tenantB;
     const asOfOn = calendarDateInZone("Asia/Kolkata", now);
 
-    const tables = fixture.client.sqlite
-      .prepare("select name from sqlite_master where type = 'table'")
-      .all() as { name: string }[];
-    expect(tables.some((row) => /gmail|oauth/i.test(row.name))).toBe(false);
+    const emailAccounts = fixture.client.sqlite
+      .prepare("select count(*) as count from email_account")
+      .get() as { count: number };
+    expect(emailAccounts.count).toBe(0);
 
     const microsoft = createCompany(db, a, {
       id: "microsoft",
