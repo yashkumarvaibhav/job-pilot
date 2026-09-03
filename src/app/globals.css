@@ -2184,6 +2184,13 @@ main:focus {
   background: transparent;
 }
 
+.import-status svg {
+  width: var(--space-3);
+  height: var(--space-3);
+  flex: none;
+  stroke-width: 2;
+}
+
 .import-status[data-status="created"],
 .import-status[data-status="would-create"] {
   border-color: color-mix(in srgb, var(--success) 40%, transparent);

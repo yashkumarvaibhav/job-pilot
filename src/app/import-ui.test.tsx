@@ -23,6 +23,7 @@ describe("import settings UI", () => {
     expect(html).toContain("Sample");
     expect(html).toContain("Status");
     expect(html).toContain("Required");
+    expect(html).toContain('<svg aria-hidden="true"');
   });
 
   it("renders a visible public-demo safety state without a file input", () => {

@@ -122,6 +122,26 @@ function statusSymbol(status: ReportRow["status"]) {
   return "−";
 }
 
+function ImportStatusIcon({ symbol }: { symbol: "+" | "!" | "−" }) {
+  return (
+    <svg aria-hidden="true" height="16" viewBox="0 0 24 24" width="16">
+      <path
+        d={
+          symbol === "+"
+            ? "M12 5v14M5 12h14"
+            : symbol === "!"
+              ? "M12 6v8m0 4h.01"
+              : "M5 12h14"
+        }
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
 const SUMMARY_LABELS: Record<string, string> = {
   wouldCreate: "Would create",
   wouldWarn: "Would warn",
@@ -141,7 +161,7 @@ function MappingStatus({
   if (required && !mapped) {
     return (
       <span className="chip contact-status-chip" data-tone="danger">
-        <span aria-hidden="true">!</span>
+        <ImportStatusIcon symbol="!" />
         Required
       </span>
     );
@@ -149,14 +169,14 @@ function MappingStatus({
   if (mapped) {
     return (
       <span className="chip contact-status-chip" data-tone="success">
-        <span aria-hidden="true">+</span>
+        <ImportStatusIcon symbol="+" />
         Ready
       </span>
     );
   }
   return (
     <span className="chip contact-status-chip" data-tone="muted">
-      <span aria-hidden="true">−</span>
+      <ImportStatusIcon symbol="−" />
       Skipped
     </span>
   );
@@ -542,7 +562,7 @@ export function ImportWorkspace() {
                       <td className="tnum" data-label="Line">{row.line}</td>
                       <td data-label="Result">
                         <span className="chip import-status" data-status={row.status}>
-                          <span aria-hidden="true">{statusSymbol(row.status)}</span>
+                          <ImportStatusIcon symbol={statusSymbol(row.status)} />
                           {statusLabel(row.status)}
                         </span>
                       </td>
