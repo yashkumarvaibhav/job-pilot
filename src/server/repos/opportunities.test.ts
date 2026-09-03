@@ -7,6 +7,7 @@ import {
   createOpportunity,
   getOpportunity,
   listOpportunities,
+  parseOpportunityListFilter,
   updateOpportunity,
 } from "./opportunities";
 
@@ -122,6 +123,21 @@ describe("opportunity repository", () => {
     expect(getOpportunity(fixture.client.db, fixture.tenantA, savedB.id)).toBe(
       undefined,
     );
+  });
+
+  it("accepts only the named score sort in list search params", () => {
+    expect(
+      parseOpportunityListFilter(
+        new URLSearchParams("bucket=active&sort=score"),
+        "2026-09-03",
+      ),
+    ).toMatchObject({ bucket: "active", sort: "score" });
+    expect(
+      parseOpportunityListFilter(
+        new URLSearchParams("sort=hidden"),
+        "2026-09-03",
+      ),
+    ).not.toHaveProperty("sort");
   });
 
   it("requires an owned company and treats a foreign opportunity as not found", () => {

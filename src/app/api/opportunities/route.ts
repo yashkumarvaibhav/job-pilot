@@ -9,9 +9,9 @@ import { DEFAULT_TIME_ZONE } from "@/server/db/timezone";
 import {
   OpportunityInputError,
   createOpportunity,
-  listOpportunities,
   parseOpportunityListFilter,
 } from "@/server/repos/opportunities";
+import { listScoredOpportunities } from "@/server/repos/scoring";
 import {
   opportunityResponse,
   readCreateOpportunityInput,
@@ -32,12 +32,12 @@ export async function GET(request: Request) {
   const timeZone =
     getWorkspaceSettings(database, tenant, tenant.workspaceId)?.timezone ??
     DEFAULT_TIME_ZONE;
-  const filter = parseOpportunityListFilter(
-    new URL(request.url).searchParams,
-    calendarDateInZone(timeZone),
-  );
+  const asOfOn = calendarDateInZone(timeZone);
+  const filter = parseOpportunityListFilter(new URL(request.url).searchParams, asOfOn);
   return NextResponse.json(
-    listOpportunities(database, tenant, filter).map(opportunityResponse),
+    listScoredOpportunities(database, tenant, filter, asOfOn).map(
+      opportunityResponse,
+    ),
   );
 }
 

@@ -57,6 +57,7 @@ export type OpportunityListFilter =
       deadlineWithinDays?: number;
       appliedWithinDays?: number;
       asOfOn?: string;
+      sort?: "score";
     };
 
 export type CreateOpportunityInput = {
@@ -623,6 +624,7 @@ export function parseOpportunityListFilter(
     search.get("deadlineWithinDays"),
   );
   const appliedWithinDays = positiveDayCount(search.get("appliedWithinDays"));
+  const sort = search.get("sort") === "score" ? "score" : undefined;
   return {
     bucket,
     ...(companyId ? { companyId } : {}),
@@ -633,6 +635,7 @@ export function parseOpportunityListFilter(
     ...(appliedWithinDays !== undefined
       ? { appliedWithinDays, asOfOn }
       : {}),
+    ...(sort ? { sort } : {}),
   };
 }
 

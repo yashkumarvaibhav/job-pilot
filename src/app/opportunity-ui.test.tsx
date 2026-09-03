@@ -129,6 +129,8 @@ describe("opportunity screens", () => {
       'name="priority"',
       'name="deadlineWithinDays"',
       'name="appliedWithinDays"',
+      'name="sort"',
+      "Priority score",
       "Apply filters",
       "Clear filters",
       "SDE",
@@ -145,6 +147,42 @@ describe("opportunity screens", () => {
       }),
     );
     expect(empty).toContain("No opportunities match these filters.");
+  });
+
+  it("sorts the list by its numeric score without using score colour", async () => {
+    const fixture = newFixture();
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "target",
+      name: "Zeta Target",
+      target: true,
+    });
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "random",
+      name: "Alpha Random",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "target-role",
+      companyId: "target",
+      role: "New Grad Engineer",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "random-role",
+      companyId: "random",
+      role: "Software Engineer",
+    });
+
+    const html = renderToStaticMarkup(
+      await OpportunitiesPage({
+        searchParams: Promise.resolve({ sort: "score" }),
+      }),
+    );
+    expect(html.indexOf("New Grad Engineer")).toBeLessThan(
+      html.indexOf("Software Engineer"),
+    );
+    expect(html).toContain('class="tnum">6</td>');
+    expect(html).not.toContain("score--success");
+    expect(html).not.toContain("score--warning");
+    expect(html).not.toContain("score--danger");
   });
 
   it("renders persisted detail fields and only pursuit stages in the edit form", async () => {

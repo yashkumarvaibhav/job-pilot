@@ -77,7 +77,9 @@ describe("opportunity route handlers", () => {
     const saved = await listRoute(
       new Request("http://localhost/api/opportunities?bucket=saved"),
     );
-    expect(await saved.json()).toEqual([created]);
+    expect(await saved.json()).toEqual([
+      expect.objectContaining({ id: created.id, score: 0, terms: [] }),
+    ]);
     const active = await listRoute(
       new Request("http://localhost/api/opportunities?bucket=active"),
     );
