@@ -181,9 +181,9 @@ describe("CSV import apply", () => {
     });
 
     expect(result).toMatchObject({
-      summary: { created: 0, warned: 1, skipped: 2 },
+      summary: { created: 1, warned: 0, skipped: 2 },
       rows: [
-        { line: 2, status: "created-with-warning" },
+        { line: 2, status: "created" },
         { line: 3, status: "skipped" },
         { line: 4, status: "skipped", reason: "Contact name is required." },
       ],
@@ -229,11 +229,11 @@ describe("CSV import apply", () => {
         .get(fixture.tenantA.workspaceId, companyA.id),
     ).toEqual({ count: 1 });
 
-    const warned = apply(fixture, { ...common, createMissingCompanies: true });
-    expect(warned.summary).toEqual({ created: 0, warned: 1, skipped: 2 });
-    expect(warned.rows[1]).toMatchObject({
+    const createdMissing = apply(fixture, { ...common, createMissingCompanies: true });
+    expect(createdMissing.summary).toEqual({ created: 1, warned: 0, skipped: 2 });
+    expect(createdMissing.rows[1]).toMatchObject({
       line: 3,
-      status: "created-with-warning",
+      status: "created",
     });
   });
 });

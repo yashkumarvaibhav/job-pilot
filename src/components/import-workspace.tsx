@@ -122,6 +122,15 @@ function statusSymbol(status: ReportRow["status"]) {
   return "−";
 }
 
+const SUMMARY_LABELS: Record<string, string> = {
+  wouldCreate: "Would create",
+  wouldWarn: "Would warn",
+  wouldSkip: "Would skip",
+  created: "Created",
+  warned: "Warned",
+  skipped: "Skipped",
+};
+
 export function ImportDisabledNotice() {
   return (
     <section className="import-page">
@@ -152,7 +161,7 @@ export function ImportWorkspace() {
   const [csv, setCsv] = useState("");
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Mapping>({});
-  const [createMissingCompanies, setCreateMissingCompanies] = useState(false);
+  const [createMissingCompanies, setCreateMissingCompanies] = useState(true);
   const [report, setReport] = useState<Report | null>(null);
   const [overrideLines, setOverrideLines] = useState<number[]>([]);
   const [pending, setPending] = useState(false);
@@ -348,7 +357,7 @@ export function ImportWorkspace() {
             type="file"
           />
           <p className="field-hint">
-            {fileName || "CSV only, up to 2 MB. Public demo uploads remain disabled."}
+            {fileName || "Choose a CSV to begin. CSV only, up to 2 MB."}
           </p>
         </div>
         {entitySet !== "companies" ? (
@@ -456,7 +465,7 @@ export function ImportWorkspace() {
             <div className="import-summary">
               {Object.entries(report.summary).map(([label, count]) => (
                 <div key={label}>
-                  <span className="eyebrow">{label.replace(/([A-Z])/g, " $1")}</span>
+                  <span className="eyebrow">{SUMMARY_LABELS[label] ?? label}</span>
                   <strong className="tnum">{count}</strong>
                 </div>
               ))}

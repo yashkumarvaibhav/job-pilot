@@ -26,14 +26,12 @@ describe("saved search domain", () => {
       "Follow-ups",
       "High Priority",
       "Referral Pending",
+      "Stale Opportunities",
     ]);
     expect(SAVED_SEARCH_SEEDS.map((seed) => seed.name)).not.toContain(
       "Apply Today",
     );
     expect(SAVED_SEARCH_SEEDS.map((seed) => seed.name)).not.toContain("OAs");
-    expect(SAVED_SEARCH_SEEDS.map((seed) => seed.name)).not.toContain(
-      "Stale Opportunities",
-    );
   });
 
   it("stores the query string without workspace selectors", () => {

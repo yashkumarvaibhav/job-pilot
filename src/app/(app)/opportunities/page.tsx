@@ -73,7 +73,8 @@ export default async function OpportunitiesPage({ searchParams }: Props) {
     filter.companyId !== undefined ||
     filter.priority !== undefined ||
     filter.deadlineWithinDays !== undefined ||
-    filter.appliedWithinDays !== undefined;
+    filter.appliedWithinDays !== undefined ||
+    filter.stale === true;
   const hasControls = hasFilters || filter.sort !== undefined;
 
   return (
@@ -141,6 +142,13 @@ export default async function OpportunitiesPage({ searchParams }: Props) {
             </select>
           </div>
           <div className="field">
+            <label htmlFor="opportunity-stale-filter">Stale</label>
+            <select defaultValue={filter.stale ? "1" : ""} id="opportunity-stale-filter" name="stale">
+              <option value="">Any opportunity</option>
+              <option value="1">Stale only</option>
+            </select>
+          </div>
+          <div className="field">
             <label htmlFor="opportunity-sort">Sort</label>
             <select defaultValue={filter.sort ?? ""} id="opportunity-sort" name="sort">
               <option value="">Company and role</option>
@@ -166,7 +174,7 @@ export default async function OpportunitiesPage({ searchParams }: Props) {
         <>
           <div className="table-scroll opportunity-table-wrap">
             <table className="tbl opportunity-table">
-              <thead><tr><th scope="col">Company</th><th scope="col">Role</th><th scope="col">Job ID</th><th scope="col">Bucket</th><th scope="col">Stage</th><th scope="col">Health</th><th scope="col">Priority</th><th scope="col">Score</th><th scope="col">Deadline</th><th scope="col">Next action</th></tr></thead>
+              <thead><tr><th scope="col">Company</th><th scope="col">Role</th><th scope="col">Job ID</th><th scope="col">Bucket</th><th scope="col">Stage</th><th scope="col">Stale</th><th scope="col">Priority</th><th scope="col">Score</th><th scope="col">Deadline</th><th scope="col">Next action</th></tr></thead>
               <tbody>{opportunities.map((row) => <tr key={row.id}><td>{row.companyName}</td><td><Link className="table-link" href={`/opportunities/${row.id}`}>{row.role}</Link></td><td className="tnum mono-value">{row.jobId ?? "—"}</td><td>{row.bucket === "saved" ? "Saved" : "Active"}</td><td><RolledUpStageChip applicationStage={row.application?.stage} opportunityStage={row.stage} /></td><td><StaleFlag reasons={stale.opportunity.get(row.id) ?? []} /></td><td>{row.priority ?? "—"}</td><td className="tnum">{row.score}</td><td className="tnum">{row.deadlineOn ?? "—"}</td><td>{row.nextAction ?? "—"}</td></tr>)}</tbody>
             </table>
           </div>

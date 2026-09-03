@@ -5,7 +5,7 @@ import { and, asc, eq, gte, lte } from "drizzle-orm";
 import type {
   ApplicationStage,
 } from "../../domain/application";
-import { positiveDayCount } from "../../domain/list-filter";
+import { positiveDayCount, queryFlagEnabled } from "../../domain/list-filter";
 import {
   DEFAULT_OPPORTUNITY_BUCKET,
   DEFAULT_OPPORTUNITY_STAGE,
@@ -29,6 +29,7 @@ import {
 import type { TenantContext } from "../db/tenant";
 import { replaceEntityTagsInTransaction } from "./tags";
 import { requireOpportunityDuplicatesAcknowledged } from "./duplicates";
+import { listStaleIndex } from "./rules";
 
 export type Opportunity = typeof opportunity.$inferSelect;
 export type OpportunityApplication = {
@@ -57,6 +58,7 @@ export type OpportunityListFilter =
       deadlineWithinDays?: number;
       appliedWithinDays?: number;
       asOfOn?: string;
+      stale?: boolean;
       sort?: "score";
     };
 
@@ -585,7 +587,7 @@ export function listOpportunities(
     conditions.push(lte(application.appliedOn, selected.asOfOn));
   }
 
-  return database
+  const rows = database
     .select({
       opportunity,
       companyName: company.name,
@@ -610,6 +612,13 @@ export function listOpportunities(
     .orderBy(asc(company.name), asc(opportunity.role), asc(opportunity.id))
     .all()
     .map(toOpportunityListItem);
+
+  if (!selected.stale) {
+    return rows;
+  }
+
+  const staleIds = listStaleIndex(database, tenant, selected.asOfOn).opportunity;
+  return rows.filter((row) => staleIds.has(row.id));
 }
 
 export function parseOpportunityListFilter(
@@ -625,6 +634,7 @@ export function parseOpportunityListFilter(
   );
   const appliedWithinDays = positiveDayCount(search.get("appliedWithinDays"));
   const sort = search.get("sort") === "score" ? "score" : undefined;
+  const stale = queryFlagEnabled(search.get("stale"));
   return {
     bucket,
     ...(companyId ? { companyId } : {}),
@@ -635,6 +645,7 @@ export function parseOpportunityListFilter(
     ...(appliedWithinDays !== undefined
       ? { appliedWithinDays, asOfOn }
       : {}),
+    ...(stale ? { stale: true, asOfOn } : {}),
     ...(sort ? { sort } : {}),
   };
 }

@@ -37,7 +37,7 @@ function seedRows(tenant: TenantContext, now: Date) {
     workspaceId: tenant.workspaceId,
     name: seed.name,
     entityType: seed.entityType,
-    query: "",
+    query: "query" in seed && seed.query ? seed.query : "",
     createdAt: now,
     updatedAt: now,
   }));

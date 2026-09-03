@@ -22,8 +22,9 @@ export const SAVED_SEARCH_LIST_PATH: Record<SavedSearchEntityType, string> = {
 
 /**
  * Named filters §42 that the JP-0024 query engine can already express.
- * Apply Today, OAs, and Stale Opportunities need stages, assessment lists, or
- * stale flags that do not exist yet, so they are omitted.
+ * Apply Today and OAs still need stages or assessment lists that the list
+ * filters cannot name, so they stay omitted. Stale Opportunities is live now
+ * that built-in stale marks exist.
  */
 export const SAVED_SEARCH_SEEDS = [
   { name: "Checking for Openings", entityType: "contacts" },
@@ -31,9 +32,11 @@ export const SAVED_SEARCH_SEEDS = [
   { name: "Follow-ups", entityType: "contacts" },
   { name: "High Priority", entityType: "opportunities" },
   { name: "Referral Pending", entityType: "referrals" },
+  { name: "Stale Opportunities", entityType: "opportunities", query: "stale=1" },
 ] as const satisfies readonly {
   name: string;
   entityType: SavedSearchEntityType;
+  query?: string;
 }[];
 
 const WORKSPACE_QUERY_KEYS = new Set([

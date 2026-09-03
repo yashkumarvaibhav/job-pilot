@@ -34,8 +34,16 @@ describe("saved searches and palette search", () => {
       "High Priority",
       "Need Reply",
       "Referral Pending",
+      "Stale Opportunities",
     ]);
-    expect(seeded.every((row) => row.query === "")).toBe(true);
+    expect(
+      seeded
+        .filter((row) => row.name !== "Stale Opportunities")
+        .every((row) => row.query === ""),
+    ).toBe(true);
+    expect(
+      seeded.find((row) => row.name === "Stale Opportunities")?.query,
+    ).toBe("stale=1");
 
     const saved = saveSavedSearch(fixture.client.db, fixture.tenantA, {
       name: "High Priority",
@@ -47,7 +55,7 @@ describe("saved searches and palette search", () => {
       listSavedSearches(fixture.client.db, fixture.tenantA, "opportunities").map(
         (row) => row.query,
       ),
-    ).toEqual(["priority=High"]);
+    ).toEqual(["priority=High", "stale=1"]);
 
     const again = listSavedSearches(fixture.client.db, fixture.tenantA);
     expect(again.filter((row) => row.name === "High Priority")).toHaveLength(1);

@@ -195,7 +195,7 @@ export default async function OpportunityDetailPage({ params }: Props) {
           </p>
         </div>
       </header>
-      {health ? <OpportunityHealthBanner health={health} /> : null}
+      {health ? <OpportunityHealthBanner health={health} score={row.score} /> : null}
       <OpportunityScoreCard score={row} />
       <section aria-labelledby="opportunity-fields" className="detail-section">
         <h2 id="opportunity-fields">Opportunity details</h2>

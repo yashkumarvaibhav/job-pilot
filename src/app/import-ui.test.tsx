@@ -19,6 +19,7 @@ describe("import settings UI", () => {
     expect(html).toContain("Apply import");
     expect(html).toContain("disabled");
     expect(html).toContain("import-mapping-table");
+    expect(html).toContain("Choose a CSV to begin");
   });
 
   it("renders a visible public-demo safety state without a file input", () => {

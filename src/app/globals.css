@@ -1929,6 +1929,15 @@ main:focus {
   flex: none;
 }
 
+.opportunity-health__score {
+  margin-left: auto;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: var(--h2-size);
+  font-weight: 500;
+  line-height: 1;
+}
+
 .opportunity-health h2,
 .opportunity-health p,
 .opportunity-health ul {

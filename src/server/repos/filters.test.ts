@@ -192,6 +192,48 @@ describe("list filters", () => {
     ).not.toContain("Private Role");
   });
 
+  it("filters stale opportunities without leaking another workspace", () => {
+    const fixture = newFixture();
+    const a = fixture.tenantA;
+    const b = fixture.tenantB;
+    const asOfOn = "2026-09-03";
+    const staleAt = new Date("2026-08-13T08:30:00.000Z");
+    createCompany(fixture.client.db, a, { id: "microsoft", name: "Microsoft" });
+    createCompany(fixture.client.db, b, { id: "private", name: "Private Co" });
+    createOpportunity(fixture.client.db, a, {
+      id: "fresh",
+      companyId: "microsoft",
+      role: "Fresh Role",
+      bucket: "active",
+    });
+    createOpportunity(fixture.client.db, a, {
+      id: "silent",
+      companyId: "microsoft",
+      role: "Silent Role",
+      bucket: "active",
+      now: staleAt,
+    });
+    createOpportunity(fixture.client.db, b, {
+      id: "private-silent",
+      companyId: "private",
+      role: "Private Silent",
+      bucket: "active",
+      now: staleAt,
+    });
+
+    const filter = parseOpportunityListFilter(
+      new URLSearchParams({ stale: "1" }),
+      asOfOn,
+    );
+    expect(filter).toMatchObject({ stale: true, asOfOn, bucket: "all" });
+    expect(
+      listOpportunities(fixture.client.db, a, filter).map((row) => row.id),
+    ).toEqual(["silent"]);
+    expect(
+      JSON.stringify(listOpportunities(fixture.client.db, a, filter)),
+    ).not.toContain("Private Silent");
+  });
+
   it("filters referral stage, company, and configurable no-response age", () => {
     const fixture = newFixture();
     const a = fixture.tenantA;

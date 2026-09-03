@@ -134,10 +134,16 @@ describe("opportunity repository", () => {
     ).toMatchObject({ bucket: "active", sort: "score" });
     expect(
       parseOpportunityListFilter(
-        new URLSearchParams("sort=hidden"),
+        new URLSearchParams("stale=1&sort=score"),
         "2026-09-03",
       ),
-    ).not.toHaveProperty("sort");
+    ).toMatchObject({ stale: true, asOfOn: "2026-09-03", sort: "score" });
+    expect(
+      parseOpportunityListFilter(
+        new URLSearchParams("stale=no"),
+        "2026-09-03",
+      ),
+    ).not.toHaveProperty("stale");
   });
 
   it("requires an owned company and treats a foreign opportunity as not found", () => {

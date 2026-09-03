@@ -132,7 +132,9 @@ describe("opportunity screens", () => {
       'name="priority"',
       'name="deadlineWithinDays"',
       'name="appliedWithinDays"',
+      'name="stale"',
       'name="sort"',
+      "Stale only",
       "Priority score",
       "Apply filters",
       "Clear filters",
@@ -230,6 +232,8 @@ describe("opportunity screens", () => {
     expect(html).toContain('class="opportunity-health"');
     expect(html).toContain('data-tone="warning"');
     expect(html).toContain('aria-hidden="true"');
+    expect(html).toContain('aria-label="Priority score 8"');
+    expect(html).toContain('class="tnum opportunity-health__score"');
   });
 
   it("shows the numeric score, fired terms, and a saved weight change", async () => {

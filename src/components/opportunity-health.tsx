@@ -2,8 +2,10 @@ import type { OpportunityHealth } from "@/domain/opportunity-health";
 
 export function OpportunityHealthBanner({
   health,
+  score,
 }: {
   health: OpportunityHealth;
+  score: number;
 }) {
   return (
     <aside className="opportunity-health" data-tone={health.tone} role="status">
@@ -22,6 +24,12 @@ export function OpportunityHealthBanner({
           <h2>{health.title}</h2>
           <p className="tnum">{health.sentence}</p>
         </div>
+        <strong
+          aria-label={`Priority score ${score}`}
+          className="tnum opportunity-health__score"
+        >
+          {score}
+        </strong>
       </div>
       <ul aria-label="Opportunity health reasons">
         {health.reasons.map((reason) => (

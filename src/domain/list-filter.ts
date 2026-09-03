@@ -40,3 +40,8 @@ export function positiveDayCount(value: string | null): number | undefined {
   const parsed = Number(normalized);
   return parsed >= 1 && parsed <= 365 ? parsed : undefined;
 }
+
+export function queryFlagEnabled(value: string | null): boolean {
+  const normalized = value?.trim().toLocaleLowerCase("en-US");
+  return normalized === "1" || normalized === "true" || normalized === "yes";
+}

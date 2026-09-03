@@ -422,7 +422,7 @@ function planContact(
   const companyName = mapped(document, row, request.mapping, "company");
   if (companyName && !companyByName(database, tenant, companyName)) {
     return request.createMissingCompanies
-      ? report(row.line, "would-warn", `Company "${companyName}" will be created with this contact.`)
+      ? report(row.line, "would-create", `Company "${companyName}" will be created with this contact.`)
       : report(row.line, "would-skip", `Company not found: "${companyName}".`);
   }
   return email
@@ -496,7 +496,7 @@ function planOpportunity(
   if (!foundCompany) {
     return report(
       row.line,
-      "would-warn",
+      "would-create",
       `Company "${companyName}" will be created with this opportunity.`,
     );
   }

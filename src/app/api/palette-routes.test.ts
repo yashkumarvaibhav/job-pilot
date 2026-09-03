@@ -115,8 +115,16 @@ describe("palette and saved-search routes", () => {
       ),
     );
     const rows = (await listed.json()) as { name: string; href: string }[];
-    expect(rows.map((row) => row.name)).toEqual(["High Priority"]);
-    expect(rows[0]?.href).toBe("/opportunities");
+    expect(rows.map((row) => row.name)).toEqual([
+      "High Priority",
+      "Stale Opportunities",
+    ]);
+    expect(rows.find((row) => row.name === "High Priority")?.href).toBe(
+      "/opportunities",
+    );
+    expect(rows.find((row) => row.name === "Stale Opportunities")?.href).toBe(
+      "/opportunities?stale=1",
+    );
 
     const saved = await saveSearchRoute(
       jsonRequest("http://localhost/api/saved-searches", "POST", {
