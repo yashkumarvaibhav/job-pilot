@@ -72,7 +72,7 @@ describe("migrateDatabase", () => {
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 22 });
+      ).toEqual({ count: 23 });
 
       for (const indexName of [
         "company_workspace_id_id_unique",
@@ -93,6 +93,7 @@ describe("migrateDatabase", () => {
         "interaction_workspace_referral_idx",
         "interaction_workspace_occurred_idx",
         "interaction_workspace_need_reply_idx",
+        "interaction_workspace_email_message_unique",
         "import_mapping_workspace_idx",
         "opportunity_workspace_id_id_unique",
         "opportunity_workspace_company_idx",
@@ -838,6 +839,7 @@ describe("migrateDatabase", () => {
         "sequence_safe_at",
         "created_at",
         "updated_at",
+        "last_sync_error",
       ]);
       expect(
         emailAccountColumns.find((column) => column.name === "token_blob")
@@ -902,6 +904,9 @@ describe("migrateDatabase", () => {
         "opportunity_id",
         "referral_id",
         "source",
+        "match_status",
+        "match_reason",
+        "suggested_contact_ids_json",
         "last_message_at",
         "created_at",
         "updated_at",
@@ -925,6 +930,7 @@ describe("migrateDatabase", () => {
         "subject",
         "body",
         "attachment_version_ids_json",
+        "classification",
         "sent_at",
         "created_at",
       ]);

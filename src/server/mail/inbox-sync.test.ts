@@ -4,6 +4,7 @@ import { createTenantTestFixture } from "../../test/tenant-fixture";
 import { emailAccount } from "../db/schema";
 import { connectEmailAccount } from "../repos/email-accounts";
 import { getEmailThread, upsertEmailThread } from "../repos/email-content";
+import { createContact } from "../repos/contacts";
 import {
   GmailHistoryGapError,
   runMailboxRecoveryBatch,
@@ -90,6 +91,12 @@ describe("account-scoped Gmail inbox sync", () => {
       },
       TOKEN_KEY,
     );
+    createContact(value.client.db, value.tenantA, {
+      id: "known-recruiter-a",
+      name: "Known recruiter",
+      methods: [{ kind: "email", value: "recruiter@invalid.test" }],
+      now: new Date("2026-09-03T12:03:00.000Z"),
+    });
     return { ...value, accountA, accountASecond, accountB };
   }
 

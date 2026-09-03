@@ -140,6 +140,7 @@ export const emailAccount = sqliteTable(
     lastHistoryId: text("last_history_id"),
     lastSyncAt: utcInstant("last_sync_at"),
     sequenceSafeAt: utcInstant("sequence_safe_at"),
+    lastSyncError: text("last_sync_error"),
     createdAt: utcInstant("created_at").notNull(),
     updatedAt: utcInstant("updated_at").notNull(),
   },
@@ -667,6 +668,10 @@ export const interaction = sqliteTable(
       table.workspaceId,
       table.requiresReply,
       table.replyResolvedAt,
+    ),
+    uniqueIndex("interaction_workspace_email_message_unique").on(
+      table.workspaceId,
+      table.emailMessageId,
     ),
     sameWorkspaceForeignKey(
       "interaction_contact_fk",
@@ -1269,6 +1274,18 @@ export const emailThread = sqliteTable(
     })
       .notNull()
       .default("sync"),
+    matchStatus: text("match_status", {
+      enum: ["unmatched", "automatic", "suggested", "manual"],
+    })
+      .notNull()
+      .default("unmatched"),
+    matchReason: text("match_reason"),
+    suggestedContactIdsJson: text("suggested_contact_ids_json", {
+      mode: "json",
+    })
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'`),
     lastMessageAt: utcInstant("last_message_at").notNull(),
     createdAt: utcInstant("created_at").notNull(),
     updatedAt: utcInstant("updated_at").notNull(),
@@ -1322,6 +1339,10 @@ export const emailThread = sqliteTable(
       sql`${table.source} in ('sent', 'sync', 'manual_import')`,
     ),
     check(
+      "email_thread_match_status_valid",
+      sql`${table.matchStatus} in ('unmatched', 'automatic', 'suggested', 'manual')`,
+    ),
+    check(
       "email_thread_gmail_id_not_blank",
       sql`length(trim(${table.gmailThreadId})) > 0`,
     ),
@@ -1347,6 +1368,17 @@ export const emailMessage = sqliteTable(
       .$type<string[]>()
       .notNull()
       .default(sql`'[]'`),
+    classification: text("classification", {
+      enum: [
+        "referral_promised",
+        "referral_submitted",
+        "declined",
+        "need_to_respond",
+        "no_opening",
+        "follow_up_later",
+        "not_relevant",
+      ],
+    }),
     sentAt: utcInstant("sent_at").notNull(),
     createdAt: utcInstant("created_at").notNull(),
   },
@@ -1391,6 +1423,10 @@ export const emailMessage = sqliteTable(
     check(
       "email_message_direction_valid",
       sql`${table.direction} in ('inbound', 'outbound')`,
+    ),
+    check(
+      "email_message_classification_valid",
+      sql`${table.classification} is null or ${table.classification} in ('referral_promised', 'referral_submitted', 'declined', 'need_to_respond', 'no_opening', 'follow_up_later', 'not_relevant')`,
     ),
   ],
 );

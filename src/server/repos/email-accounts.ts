@@ -131,6 +131,7 @@ function toView(
     lastHistoryId: row.lastHistoryId,
     lastSyncAt: row.lastSyncAt,
     sequenceSafeAt: row.sequenceSafeAt,
+    lastSyncError: row.lastSyncError,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     isDefault: row.id === defaultEmailAccountId,

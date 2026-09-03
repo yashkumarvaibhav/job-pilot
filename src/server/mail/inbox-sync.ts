@@ -12,55 +12,25 @@ import {
 } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
 import { readEmailAccountRefreshToken } from "../repos/email-accounts";
-import { recordEmailMessage, upsertEmailThread } from "../repos/email-content";
+import { ingestSyncedThreadSnapshot } from "../repos/inbox-content";
+import {
+  GmailHistoryGapError,
+  type GmailReadPort,
+  type GmailThreadSnapshot,
+} from "./gmail-read-port";
+
+export { GmailHistoryGapError } from "./gmail-read-port";
+export type {
+  GmailMessageSnapshot,
+  GmailReadPort,
+  GmailThreadSnapshot,
+} from "./gmail-read-port";
 
 const RECENT_THREAD_LIMIT = 50;
 const RECOVERY_THREAD_LIMIT = 20;
 const RECOVERY_TICK_MS = 15_000;
 const RECOVERY_LEASE_MS = 5 * 60_000;
 const RECOVERY_RETRY_MS = 60_000;
-
-export type GmailMessageSnapshot = {
-  gmailId: string;
-  rfcMessageId: string | null;
-  fromEmail: string;
-  to: string[];
-  subject: string;
-  body: string;
-  sentAt: Date;
-};
-
-export type GmailThreadSnapshot = {
-  gmailThreadId: string;
-  historyId: string;
-  messages: GmailMessageSnapshot[];
-};
-
-type GmailCall = {
-  refreshToken: string;
-  signal?: AbortSignal;
-};
-
-export type GmailReadPort = {
-  getProfileHistoryId(input: GmailCall): Promise<string>;
-  listHistory(
-    input: GmailCall & { startHistoryId: string; pageToken: string | null },
-  ): Promise<{
-    historyId: string;
-    threadIds: string[];
-    nextPageToken: string | null;
-  }>;
-  listThreads(
-    input: GmailCall & {
-      query: string;
-      maxResults: number;
-      pageToken: string | null;
-    },
-  ): Promise<{ threadIds: string[]; nextPageToken: string | null }>;
-  getThread(
-    input: GmailCall & { gmailThreadId: string },
-  ): Promise<GmailThreadSnapshot>;
-};
 
 export type InboxSyncDependencies = {
   port: GmailReadPort;
@@ -74,13 +44,6 @@ export class InboxSyncError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "InboxSyncError";
-  }
-}
-
-export class GmailHistoryGapError extends Error {
-  constructor() {
-    super("Gmail history is no longer available from the saved cursor.");
-    this.name = "GmailHistoryGapError";
   }
 }
 
@@ -133,35 +96,14 @@ function persistThreadSnapshot(
   snapshot: GmailThreadSnapshot,
   source: "sync" | "manual_import" = "sync",
 ): void {
-  if (snapshot.messages.length === 0) return;
-  const ordered = [...snapshot.messages].sort(
-    (left, right) => left.sentAt.valueOf() - right.sentAt.valueOf(),
-  );
-  const latest = ordered.at(-1)!;
-  const thread = upsertEmailThread(database, tenant, {
-    accountId: account.id,
-    gmailThreadId: snapshot.gmailThreadId,
-    subject: latest.subject,
+  ingestSyncedThreadSnapshot(
+    database,
+    tenant,
+    account.id,
+    snapshot,
+    new Date(),
     source,
-    lastMessageAt: latest.sentAt,
-  });
-  for (const message of ordered) {
-    recordEmailMessage(database, tenant, {
-      threadId: thread.id,
-      accountId: account.id,
-      gmailId: message.gmailId,
-      rfcMessageId: message.rfcMessageId,
-      direction:
-        message.fromEmail.toLowerCase() === account.email.toLowerCase()
-          ? "outbound"
-          : "inbound",
-      fromEmail: message.fromEmail,
-      to: message.to,
-      subject: message.subject,
-      body: message.body,
-      sentAt: message.sentAt,
-    });
-  }
+  );
 }
 
 async function fetchAndPersistThreads(
@@ -196,6 +138,7 @@ function stampSuccessfulSync(
         lastHistoryId: historyId,
         lastSyncAt: now,
         ...(sequenceSafe ? { sequenceSafeAt: now } : {}),
+        lastSyncError: null,
         updatedAt: now,
       })
       .where(
@@ -341,7 +284,7 @@ async function initialSync(
   return { historyGap: false, importedThreadCount: imported };
 }
 
-export async function syncInboxAccount(
+async function syncInboxAccountInternal(
   database: AppDatabase,
   tenant: TenantContext,
   accountId: string,
@@ -435,6 +378,51 @@ export async function syncInboxAccount(
     false,
   );
   return { historyGap: true, importedThreadCount };
+}
+
+export async function syncInboxAccount(
+  database: AppDatabase,
+  tenant: TenantContext,
+  accountId: string,
+  dependencies: InboxSyncDependencies,
+): Promise<{ historyGap: boolean; importedThreadCount: number }> {
+  try {
+    return await syncInboxAccountInternal(
+      database,
+      tenant,
+      accountId,
+      dependencies,
+    );
+  } catch (error) {
+    const account = database
+      .select({ id: emailAccount.id })
+      .from(emailAccount)
+      .where(
+        and(
+          eq(emailAccount.workspaceId, tenant.workspaceId),
+          eq(emailAccount.id, accountId),
+        ),
+      )
+      .get();
+    if (account) {
+      const at = dependencies.now?.() ?? new Date();
+      database
+        .update(emailAccount)
+        .set({
+          lastSyncError:
+            error instanceof Error ? error.message.slice(0, 500) : "Gmail sync failed.",
+          updatedAt: at,
+        })
+        .where(
+          and(
+            eq(emailAccount.workspaceId, tenant.workspaceId),
+            eq(emailAccount.id, accountId),
+          ),
+        )
+        .run();
+    }
+    throw error;
+  }
 }
 
 function claimRecovery(

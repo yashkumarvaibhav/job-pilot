@@ -45,6 +45,11 @@ export type UpdateEmailTemplateInput = Partial<
 > & { now?: Date };
 
 export type EmailThreadSource = "sent" | "sync" | "manual_import";
+export type EmailThreadMatchStatus =
+  | "unmatched"
+  | "automatic"
+  | "suggested"
+  | "manual";
 
 export type UpsertEmailThreadInput = {
   id?: string;
@@ -56,6 +61,9 @@ export type UpsertEmailThreadInput = {
   opportunityId?: string | null;
   referralId?: string | null;
   source?: EmailThreadSource;
+  matchStatus?: EmailThreadMatchStatus;
+  matchReason?: string | null;
+  suggestedContactIds?: string[];
   lastMessageAt: Date;
   now?: Date;
 };
@@ -454,29 +462,47 @@ export function upsertEmailThread(
 ): EmailThread {
   const accountId = requiredText(input.accountId, "Gmail account");
   const gmailThreadId = requiredText(input.gmailThreadId, "Gmail thread id");
-  const contactId = optionalId(input.contactId);
-  const companyId = optionalId(input.companyId);
-  const opportunityId = optionalId(input.opportunityId);
-  const referralId = optionalId(input.referralId);
+  const contactId =
+    input.contactId === undefined ? undefined : optionalId(input.contactId);
+  const companyId =
+    input.companyId === undefined ? undefined : optionalId(input.companyId);
+  const opportunityId =
+    input.opportunityId === undefined
+      ? undefined
+      : optionalId(input.opportunityId);
+  const referralId =
+    input.referralId === undefined ? undefined : optionalId(input.referralId);
   const lastMessageAt = validInstant(input.lastMessageAt, "Last message at");
   const now = input.now ?? new Date();
 
   return database.transaction((transaction) => {
     requireOwnedAccount(transaction, tenant, accountId);
-    requireOwnedOptionalEntity(transaction, tenant, "Contact", contactId, contact);
-    requireOwnedOptionalEntity(transaction, tenant, "Company", companyId, company);
+    requireOwnedOptionalEntity(
+      transaction,
+      tenant,
+      "Contact",
+      contactId ?? null,
+      contact,
+    );
+    requireOwnedOptionalEntity(
+      transaction,
+      tenant,
+      "Company",
+      companyId ?? null,
+      company,
+    );
     requireOwnedOptionalEntity(
       transaction,
       tenant,
       "Opportunity",
-      opportunityId,
+      opportunityId ?? null,
       opportunity,
     );
     requireOwnedOptionalEntity(
       transaction,
       tenant,
       "Referral",
-      referralId,
+      referralId ?? null,
       referralRequest,
     );
 
@@ -496,11 +522,22 @@ export function upsertEmailThread(
         .update(emailThread)
         .set({
           subject: (input.subject ?? "").trim(),
-          contactId,
-          companyId,
-          opportunityId,
-          referralId,
+          contactId: contactId === undefined ? existing.contactId : contactId,
+          companyId: companyId === undefined ? existing.companyId : companyId,
+          opportunityId:
+            opportunityId === undefined ? existing.opportunityId : opportunityId,
+          referralId:
+            referralId === undefined ? existing.referralId : referralId,
           source: input.source ?? existing.source,
+          matchStatus: input.matchStatus ?? existing.matchStatus,
+          matchReason:
+            input.matchReason === undefined
+              ? existing.matchReason
+              : optionalId(input.matchReason),
+          suggestedContactIdsJson:
+            input.suggestedContactIds === undefined
+              ? existing.suggestedContactIdsJson
+              : uniqueText(input.suggestedContactIds),
           lastMessageAt,
           updatedAt: now,
         })
@@ -522,11 +559,21 @@ export function upsertEmailThread(
         accountId,
         gmailThreadId,
         subject: (input.subject ?? "").trim(),
-        contactId,
-        companyId,
-        opportunityId,
-        referralId,
+        contactId: contactId ?? null,
+        companyId: companyId ?? null,
+        opportunityId: opportunityId ?? null,
+        referralId: referralId ?? null,
         source: input.source ?? "sync",
+        matchStatus:
+          input.matchStatus ??
+          (contactId != null ||
+          companyId != null ||
+          opportunityId != null ||
+          referralId != null
+            ? "automatic"
+            : "unmatched"),
+        matchReason: optionalId(input.matchReason),
+        suggestedContactIdsJson: uniqueText(input.suggestedContactIds),
         lastMessageAt,
         createdAt: now,
         updatedAt: now,
