@@ -114,6 +114,7 @@ import {
   listTasks,
   updateTask,
 } from "./tasks";
+import { getAnalyticsSnapshot, getCompanyConversionStats } from "./analytics";
 import { getTodaySnapshot } from "./today";
 import { loadPaletteCatalog, searchPaletteEntities } from "./palette";
 import {
@@ -125,6 +126,7 @@ import {
 
 const TENANT_ROUTE_FILES = [
   "activity/route.ts",
+  "analytics/route.ts",
   "applications/[id]/route.ts",
   "applications/route.ts",
   "assessments/[id]/route.ts",
@@ -568,6 +570,12 @@ describe("registered tenant perimeter", () => {
         entityId: privateRows.company.id,
       }),
       today: getTodaySnapshot(database, a, { now }),
+      analytics: getAnalyticsSnapshot(database, a),
+      companyStats: getCompanyConversionStats(
+        database,
+        a,
+        privateRows.company.id,
+      ),
       importMapping: getImportMapping(database, a, "companies"),
       storedBytes: workspaceStoredBytes(database, a),
       savedSearches: listSavedSearches(database, a),
