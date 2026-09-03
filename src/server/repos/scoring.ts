@@ -31,9 +31,15 @@ function normalizedSignal(value: string): string {
 }
 
 function isNewGradRole(row: OpportunityListItem): boolean {
-  const signals = [row.role, ...(row.tagsJson ?? [])].map(normalizedSignal);
+  const signals = [
+    row.role,
+    row.employmentType ?? "",
+    row.experienceRequirement ?? "",
+    ...(row.tagsJson ?? []),
+  ].map(normalizedSignal);
   return signals.some(
     (signal) =>
+      signal === "graduate" ||
       /\bnew grad(?:uate)?\b/.test(signal) ||
       /\bentry level\b/.test(signal) ||
       /\bfresher\b/.test(signal) ||

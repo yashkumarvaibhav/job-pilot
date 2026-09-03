@@ -39,9 +39,9 @@ describe("scoring repository", () => {
     createOpportunity(fixture.client.db, fixture.tenantA, {
       id: "target-role",
       companyId: company.id,
-      role: "Software Engineer, New Grad",
+      role: "Software Engineer",
       postedOn: "2026-09-02",
-      experienceRequirement: "3+ years",
+      experienceRequirement: "Graduate role · 3+ years",
       eligibility: "Not eligible — experience shortfall",
       tags: ["preferred location"],
     });
