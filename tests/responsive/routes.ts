@@ -18,6 +18,7 @@ export const REGISTERED_PAGES: RegisteredPage[] = [
   { file: "(app)/applications/page.tsx", path: "/applications", access: "signed-in" },
   { file: "(app)/companies/page.tsx", path: "/companies", access: "signed-in" },
   { file: "(app)/companies/[id]/page.tsx", path: `/companies/${FIXTURE.a.companyId}`, access: "signed-in" },
+  { file: "(app)/compose/page.tsx", path: `/compose?contactId=${FIXTURE.a.contactId}&opportunityId=${FIXTURE.a.opportunityId}`, access: "signed-in" },
   { file: "(app)/contacts/page.tsx", path: "/contacts", access: "signed-in" },
   { file: "(app)/contacts/[id]/page.tsx", path: `/contacts/${FIXTURE.a.contactId}`, access: "signed-in" },
   { file: "(app)/inbox/page.tsx", path: "/inbox", access: "signed-in" },
@@ -31,5 +32,6 @@ export const REGISTERED_PAGES: RegisteredPage[] = [
   { file: "(app)/settings/activity/page.tsx", path: "/settings/activity", access: "signed-in" },
   { file: "(app)/settings/documents/page.tsx", path: "/settings/documents", access: "signed-in" },
   { file: "(app)/settings/import/page.tsx", path: "/settings/import", access: "signed-in" },
+  { file: "(app)/settings/templates/page.tsx", path: "/settings/templates", access: "signed-in" },
   { file: "(app)/tasks/page.tsx", path: "/tasks", access: "signed-in" },
 ];
