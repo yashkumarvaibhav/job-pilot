@@ -20,6 +20,8 @@ type FoundationTable =
   | "email_message"
   | "gmail_recovery_generation"
   | "gmail_recovery_thread"
+  | "send_queue"
+  | "suppression_entry"
   | "company"
   | "contact"
   | "contact_method"

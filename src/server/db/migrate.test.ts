@@ -1,4 +1,10 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  cpSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -66,13 +72,15 @@ describe("migrateDatabase", () => {
           "email_message",
           "gmail_recovery_generation",
           "gmail_recovery_thread",
+          "send_queue",
+          "suppression_entry",
         ]),
       );
       expect(
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 23 });
+      ).toEqual({ count: 24 });
 
       for (const indexName of [
         "company_workspace_id_id_unique",
@@ -177,6 +185,10 @@ describe("migrateDatabase", () => {
         "email_message_workspace_id_id_unique",
         "email_message_workspace_thread_idx",
         "email_message_workspace_account_sent_idx",
+        "send_queue_workspace_status_send_idx",
+        "send_queue_workspace_account_sent_idx",
+        "suppression_entry_workspace_email_idx",
+        "suppression_entry_workspace_source_unique",
       ]) {
         const columns = client.sqlite
           .prepare(
@@ -185,6 +197,48 @@ describe("migrateDatabase", () => {
           .all(indexName) as { name: string }[];
         expect(columns[0]?.name, indexName).toBe("workspace_id");
       }
+
+      const queueColumns = client.sqlite
+        .prepare("select name from pragma_table_info('send_queue') order by cid")
+        .all() as { name: string }[];
+      expect(queueColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "account_id",
+        "contact_id",
+        "origin",
+        "status",
+        "recipient",
+        "subject",
+        "body",
+        "attachment_version_ids_json",
+        "send_at",
+        "payload_hash",
+        "approval_hash",
+        "approved_at",
+        "approval_kind",
+        "message_id",
+        "claimed_at",
+        "attempts",
+        "last_error",
+        "gmail_message_id",
+        "gmail_thread_id",
+        "sent_at",
+        "created_at",
+        "updated_at",
+      ]);
+
+      const suppressionColumns = client.sqlite
+        .prepare("select name from pragma_table_info('suppression_entry') order by cid")
+        .all() as { name: string }[];
+      expect(suppressionColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "email",
+        "reason",
+        "source_key",
+        "at",
+      ]);
 
       // Deliberately NOT workspace-first: one stored file may back exactly one
       // version row anywhere in the database, so a key collision across two
@@ -1118,6 +1172,62 @@ describe("migrateDatabase", () => {
       ]);
     } finally {
       client.close();
+    }
+  });
+
+  it("backfills existing Do Not Contact email methods into suppression", () => {
+    const directory = mkdtempSync(join(tmpdir(), "job-pilot-backfill-"));
+    temporaryDirectories.push(directory);
+    const priorMigrations = join(directory, "prior-migrations");
+    cpSync(resolve(process.cwd(), "drizzle"), priorMigrations, {
+      recursive: true,
+    });
+    rmSync(join(priorMigrations, "0023_send_safety.sql"));
+    rmSync(join(priorMigrations, "meta", "0023_snapshot.json"));
+    const journalPath = join(priorMigrations, "meta", "_journal.json");
+    const journal = JSON.parse(readFileSync(journalPath, "utf8")) as {
+      entries: { idx: number }[];
+    };
+    journal.entries = journal.entries.filter((entry) => entry.idx < 23);
+    writeFileSync(journalPath, `${JSON.stringify(journal, null, 2)}\n`);
+
+    const databasePath = join(directory, "backfill.sqlite");
+    migrateDatabase(databasePath, { migrationsFolder: priorMigrations });
+    const prior = openDatabase(databasePath);
+    try {
+      prior.sqlite.exec(`
+        insert into user_account (id, email_normalized, password_hash, status, created_at, updated_at)
+        values ('user-a', 'owner@invalid.test', 'hash', 'active', 1, 1);
+        insert into workspace (id, owner_user_id, created_at)
+        values ('workspace-a', 'user-a', 1);
+        insert into settings (workspace_id, display_name, timezone)
+        values ('workspace-a', 'Owner', 'Asia/Kolkata');
+        insert into contact (id, workspace_id, name, networking_status, created_at)
+        values ('contact-a', 'workspace-a', 'Blocked', 'do_not_contact', 2);
+        insert into contact_method (id, workspace_id, contact_id, kind, value, value_normalized, is_primary, created_at)
+        values ('method-a', 'workspace-a', 'contact-a', 'email', 'Blocked@Invalid.Test', 'blocked@invalid.test', 1, 3);
+      `);
+    } finally {
+      prior.close();
+    }
+
+    migrateDatabase(databasePath);
+    const migrated = openDatabase(databasePath);
+    try {
+      expect(
+        migrated.sqlite.prepare(
+          "select workspace_id, email, reason, source_key from suppression_entry",
+        ).all(),
+      ).toEqual([
+        {
+          workspace_id: "workspace-a",
+          email: "blocked@invalid.test",
+          reason: "do_not_contact",
+          source_key: "contact:contact-a",
+        },
+      ]);
+    } finally {
+      migrated.close();
     }
   });
 

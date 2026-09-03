@@ -1431,6 +1431,149 @@ export const emailMessage = sqliteTable(
   ],
 );
 
+export const suppressionEntry = sqliteTable(
+  "suppression_entry",
+  {
+    ...workspaceOwnedEntityColumns(),
+    email: text("email").notNull(),
+    reason: text("reason", {
+      enum: [
+        "do_not_contact",
+        "invalid_email",
+        "unsubscribed",
+        "bounced",
+        "asked_not_to_follow_up",
+        "manual",
+      ],
+    }).notNull(),
+    sourceKey: text("source_key").notNull(),
+    at: utcInstant("at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("suppression_entry", table),
+    index("suppression_entry_workspace_email_idx").on(
+      table.workspaceId,
+      table.email,
+    ),
+    uniqueIndex("suppression_entry_workspace_source_unique").on(
+      table.workspaceId,
+      table.email,
+      table.sourceKey,
+    ),
+    check(
+      "suppression_entry_email_not_blank",
+      sql`length(trim(${table.email})) > 0`,
+    ),
+    check(
+      "suppression_entry_source_not_blank",
+      sql`length(trim(${table.sourceKey})) > 0`,
+    ),
+    check(
+      "suppression_entry_reason_valid",
+      sql`${table.reason} in ('do_not_contact', 'invalid_email', 'unsubscribed', 'bounced', 'asked_not_to_follow_up', 'manual')`,
+    ),
+  ],
+);
+
+export const sendQueue = sqliteTable(
+  "send_queue",
+  {
+    ...workspaceOwnedEntityColumns(),
+    accountId: text("account_id").notNull(),
+    contactId: text("contact_id"),
+    origin: text("origin", {
+      enum: ["one_off", "sequence", "self_digest"],
+    }).notNull(),
+    status: text("status", {
+      enum: [
+        "awaiting_approval",
+        "approved",
+        "claimed",
+        "sent",
+        "failed",
+        "held",
+        "cancelled",
+      ],
+    })
+      .notNull()
+      .default("awaiting_approval"),
+    recipient: text("recipient").notNull(),
+    subject: text("subject").notNull(),
+    body: text("body").notNull(),
+    attachmentVersionIdsJson: text("attachment_version_ids_json", {
+      mode: "json",
+    })
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'`),
+    sendAt: utcInstant("send_at").notNull(),
+    payloadHash: text("payload_hash").notNull(),
+    approvalHash: text("approval_hash"),
+    approvedAt: utcInstant("approved_at"),
+    approvalKind: text("approval_kind", {
+      enum: ["owner_click", "self_digest_policy"],
+    }),
+    messageId: text("message_id").notNull(),
+    claimedAt: utcInstant("claimed_at"),
+    attempts: integer("attempts").notNull().default(0),
+    lastError: text("last_error"),
+    gmailMessageId: text("gmail_message_id"),
+    gmailThreadId: text("gmail_thread_id"),
+    sentAt: utcInstant("sent_at"),
+    createdAt: utcInstant("created_at").notNull(),
+    updatedAt: utcInstant("updated_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("send_queue", table),
+    uniqueIndex("send_queue_message_id_unique").on(table.messageId),
+    index("send_queue_workspace_status_send_idx").on(
+      table.workspaceId,
+      table.status,
+      table.sendAt,
+    ),
+    index("send_queue_workspace_account_sent_idx").on(
+      table.workspaceId,
+      table.accountId,
+      table.sentAt,
+    ),
+    sameWorkspaceForeignKey(
+      "send_queue_account_fk",
+      { workspaceId: table.workspaceId, parentId: table.accountId },
+      emailAccount,
+    ),
+    sameWorkspaceForeignKey(
+      "send_queue_contact_fk",
+      { workspaceId: table.workspaceId, parentId: table.contactId },
+      contact,
+    ),
+    check(
+      "send_queue_origin_valid",
+      sql`${table.origin} in ('one_off', 'sequence', 'self_digest')`,
+    ),
+    check(
+      "send_queue_status_valid",
+      sql`${table.status} in ('awaiting_approval', 'approved', 'claimed', 'sent', 'failed', 'held', 'cancelled')`,
+    ),
+    check(
+      "send_queue_recipient_not_blank",
+      sql`length(trim(${table.recipient})) > 0`,
+    ),
+    check(
+      "send_queue_payload_hash_not_blank",
+      sql`length(trim(${table.payloadHash})) > 0`,
+    ),
+    check(
+      "send_queue_message_id_not_blank",
+      sql`length(trim(${table.messageId})) > 0`,
+    ),
+    check(
+      "send_queue_approval_kind_valid",
+      sql`${table.approvalKind} is null or ${table.approvalKind} in ('owner_click', 'self_digest_policy')`,
+    ),
+    check("send_queue_attempts_nonnegative", sql`${table.attempts} >= 0`),
+  ],
+);
+
 export const gmailRecoveryGeneration = sqliteTable(
   "gmail_recovery_generation",
   {
