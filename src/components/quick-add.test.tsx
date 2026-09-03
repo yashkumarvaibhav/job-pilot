@@ -56,6 +56,19 @@ describe("global quick add", () => {
     expect(html).toContain('class="tnum">2</span>');
   });
 
+  it("pairs every desktop rail label with a decorative icon", () => {
+    const html = renderToStaticMarkup(
+      <AppShell quickAddData={data}><p>Workspace</p></AppShell>,
+    );
+    const rail = html.slice(
+      html.indexOf('<aside class="rail">'),
+      html.indexOf("</aside>") + "</aside>".length,
+    );
+
+    expect(rail.match(/rail-icon/g) ?? []).toHaveLength(11);
+    expect(rail.match(/aria-hidden="true"/g) ?? []).toHaveLength(11);
+  });
+
   it("lists all nine actions and explains the remaining disabled action", () => {
     const html = renderToStaticMarkup(
       <QuickAdd data={data} onClose={() => undefined} returnFocusTo={null} />,

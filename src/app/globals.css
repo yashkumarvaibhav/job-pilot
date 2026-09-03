@@ -551,6 +551,7 @@ main:focus {
 .rail-link {
   display: flex;
   align-items: center;
+  gap: var(--space-2);
   min-height: var(--target-min);
   padding-inline: var(--space-3);
   border: 1px solid transparent;
@@ -559,6 +560,12 @@ main:focus {
   font-size: 0.88rem;
   font-weight: 700;
   text-decoration: none;
+}
+
+.rail-icon {
+  width: var(--space-5);
+  height: var(--space-5);
+  flex: 0 0 auto;
 }
 
 .rail-link:hover {

@@ -1,15 +1,23 @@
 export const railItems = [
-  { label: "Today", href: "/" },
-  { label: "Companies", href: "/companies" },
-  { label: "Contacts", href: "/contacts" },
-  { label: "Opportunities", href: "/opportunities" },
-  { label: "Referrals", href: "/referrals" },
-  { label: "Applications", href: "/applications" },
-  { label: "Tasks", href: "/tasks" },
-  { label: "Inbox", href: "/inbox" },
-  { label: "Notifications", href: "/notifications" },
-  { label: "Analytics", href: "/analytics" },
-  { label: "Settings", href: "/settings" },
+  { label: "Today", href: "/", icon: "today" },
+  { label: "Companies", href: "/companies", icon: "companies" },
+  { label: "Contacts", href: "/contacts", icon: "contacts" },
+  {
+    label: "Opportunities",
+    href: "/opportunities",
+    icon: "opportunities",
+  },
+  { label: "Referrals", href: "/referrals", icon: "referrals" },
+  { label: "Applications", href: "/applications", icon: "applications" },
+  { label: "Tasks", href: "/tasks", icon: "tasks" },
+  { label: "Inbox", href: "/inbox", icon: "inbox" },
+  {
+    label: "Notifications",
+    href: "/notifications",
+    icon: "notifications",
+  },
+  { label: "Analytics", href: "/analytics", icon: "analytics" },
+  { label: "Settings", href: "/settings", icon: "settings" },
 ] as const;
 
 export const mobileItems = [

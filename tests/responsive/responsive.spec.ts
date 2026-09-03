@@ -168,6 +168,50 @@ test("loading and error states announce their status", () => {
   }
 });
 
+test("desktop rail pairs every destination with a decorative icon", async ({ browser }) => {
+  const expectedLabels = [
+    "Today",
+    "Companies",
+    "Contacts",
+    "Opportunities",
+    "Referrals",
+    "Applications",
+    "Tasks",
+    "Inbox",
+    "Notifications",
+    "Analytics",
+    "Settings",
+  ];
+
+  for (const theme of THEMES) {
+    const context = await browser.newContext({
+      colorScheme: theme,
+      viewport: VIEWPORTS[2],
+    });
+    await signIn(context);
+    const page = await context.newPage();
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.evaluate((value) => localStorage.setItem("theme", value), theme);
+
+    const links = page
+      .getByRole("navigation", { name: "Primary navigation" })
+      .getByRole("link");
+    await expect(links).toHaveCount(expectedLabels.length);
+    expect(
+      await links.evaluateAll((elements) =>
+        elements.map((link) => ({
+          iconCount: link.querySelectorAll("svg.rail-icon[aria-hidden='true']")
+            .length,
+          label: link.textContent?.trim(),
+        })),
+      ),
+    ).toEqual(
+      expectedLabels.map((label) => ({ iconCount: 1, label })),
+    );
+    await context.close();
+  }
+});
+
 test("every page fits three widths in both themes", async ({ browser }) => {
   for (const theme of THEMES) {
     for (const viewport of VIEWPORTS) {

@@ -1,5 +1,19 @@
 "use client";
 
+import {
+  Bell,
+  BriefcaseBusiness,
+  Building2,
+  CalendarDays,
+  ChartNoAxesCombined,
+  FileCheck2,
+  Handshake,
+  Inbox,
+  ListTodo,
+  Settings,
+  UsersRound,
+  type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
@@ -14,6 +28,25 @@ import { SignOutButton } from "./sign-out-button";
 import { ThemeToggle } from "./theme-toggle";
 import { QuickAdd, type QuickAddAction, type QuickAddReferenceData } from "./quick-add";
 import { QUICK_ADD_OPEN_EVENT } from "./quick-add-launch";
+
+const railIcons: Record<(typeof railItems)[number]["icon"], LucideIcon> = {
+  analytics: ChartNoAxesCombined,
+  applications: FileCheck2,
+  companies: Building2,
+  contacts: UsersRound,
+  inbox: Inbox,
+  notifications: Bell,
+  opportunities: BriefcaseBusiness,
+  referrals: Handshake,
+  settings: Settings,
+  tasks: ListTodo,
+  today: CalendarDays,
+};
+
+function RailIcon({ icon }: { icon: (typeof railItems)[number]["icon"] }) {
+  const Icon = railIcons[icon];
+  return <Icon aria-hidden="true" className="rail-icon" />;
+}
 
 function MobileIcon({ icon }: { icon: (typeof mobileItems)[number]["icon"] }) {
   if (icon === "today") {
@@ -174,7 +207,8 @@ export function AppShell({
                 href={item.href}
                 key={item.href}
               >
-                {item.label}
+                <RailIcon icon={item.icon} />
+                <span>{item.label}</span>
               </Link>
             );
           })}
