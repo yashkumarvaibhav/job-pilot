@@ -10,7 +10,7 @@ import { savedSearchHref } from "../../domain/saved-search";
 import { createTenantTestFixture } from "../../test/tenant-fixture";
 import { applyToOpportunity, listApplications } from "./applications";
 import { getAnalyticsSnapshot } from "./analytics";
-import { createCompany, getCompany, listCompanies } from "./companies";
+import { getCompany, listCompanies } from "./companies";
 import { getContact, listContacts } from "./contacts";
 import { buildWorkspaceExport } from "./export";
 import { executeImport, planImport } from "../imports/import-service";
@@ -124,6 +124,10 @@ describe("P03 walkthrough", () => {
       mapping: { name: "Name", email: "Email", company: "Company" },
       createMissingCompanies: true,
     });
+    expect(exportReimport.dryRun).toBe(false);
+    if (exportReimport.dryRun) {
+      throw new Error("expected apply result");
+    }
     expect(exportReimport.summary.created).toBe(0);
     expect(exportReimport.summary.skipped).toBeGreaterThan(0);
     expect(listContacts(db, a).filter((row) => row.name === "Ami Shah")).toHaveLength(
