@@ -25,6 +25,7 @@ import {
 } from "@/lib/navigation";
 import { CommandPaletteHost } from "./command-palette-host";
 import { SignOutButton } from "./sign-out-button";
+import { BrandMark } from "./brand-mark";
 import { ThemeToggle } from "./theme-toggle";
 import { QuickAdd, type QuickAddAction, type QuickAddReferenceData } from "./quick-add";
 import { QUICK_ADD_OPEN_EVENT } from "./quick-add-launch";
@@ -161,10 +162,9 @@ export function AppShell({
     <div className="app-shell">
       <header className="topbar">
         <Link aria-label="Job Pilot home" className="brand-lockup" href="/">
-          <span aria-hidden="true" className="brand-mark" />
+          <BrandMark />
           <span className="brand-wordmark">
             <strong>Job Pilot</strong>
-            <small>Off-campus</small>
           </span>
         </Link>
         <div className="topbar-actions">

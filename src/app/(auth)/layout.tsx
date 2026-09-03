@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { BrandMark } from "@/components/brand-mark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { currentTenant } from "@/server/auth/current-session";
 
@@ -21,10 +22,9 @@ export default async function AccountAccessLayout({
     <div className="auth-shell">
       <header className="auth-topbar">
         <span className="brand-lockup">
-          <span aria-hidden="true" className="brand-mark" />
+          <BrandMark />
           <span className="brand-wordmark">
             <strong>Job Pilot</strong>
-            <small>Off-campus</small>
           </span>
         </span>
         <ThemeToggle />

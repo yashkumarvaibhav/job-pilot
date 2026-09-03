@@ -417,11 +417,13 @@ main:focus {
   text-decoration: none;
 }
 
+/* The monogram is wider than it is tall, so height drives the size and the
+   width follows the glyph rather than a box. --brand only, per brand-kit. */
 .brand-mark {
-  width: var(--shell-brand-mark);
+  width: auto;
   height: var(--shell-brand-mark);
-  border-radius: var(--radius-md);
-  background: var(--brand);
+  flex: 0 0 auto;
+  color: var(--brand);
 }
 
 .brand-wordmark {
@@ -434,14 +436,6 @@ main:focus {
   font-family: var(--font-serif);
   font-size: 1.15rem;
   font-weight: 500;
-}
-
-.brand-wordmark small {
-  color: var(--faint);
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
 }
 
 .theme-toggle {
@@ -2212,7 +2206,6 @@ main:focus {
   }
 
   .brand-mark {
-    width: calc(var(--shell-brand-mark) - var(--space-1));
     height: calc(var(--shell-brand-mark) - var(--space-1));
   }
 
