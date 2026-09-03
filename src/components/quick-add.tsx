@@ -36,7 +36,6 @@ export const QUICK_ADD_ACTIONS = [
     key: "compose",
     label: "Compose email",
     shortcut: "e",
-    disabled: "Connect Gmail in Settings to compose email.",
   },
   { key: "reminder", label: "Create reminder", shortcut: "r" },
 ] as const;
@@ -121,7 +120,10 @@ function ActionMenu({ onSelect }: { onSelect: (action: QuickAddAction) => void }
   return (
     <div className="quick-add-action-list" onKeyDown={onKeyDown}>
       {QUICK_ADD_ACTIONS.map((action, index) => {
-        const disabled = "disabled" in action ? action.disabled : null;
+        const disabled =
+          "disabled" in action && typeof action.disabled === "string"
+            ? action.disabled
+            : null;
         const descriptionId = disabled ? `quick-add-${action.key}-note` : undefined;
         return (
           <div className="quick-add-action" key={action.key}>
@@ -576,6 +578,16 @@ export function QuickAdd({
   const [action, setAction] = useState<QuickAddAction | null>(initialAction);
   const selected = QUICK_ADD_ACTIONS.find((item) => item.key === action);
   const enabledAction = selected && !("disabled" in selected) ? selected.key : null;
+  const formAction = enabledAction === "compose" ? null : enabledAction;
+
+  function chooseAction(next: QuickAddAction) {
+    if (next === "compose") {
+      onClose();
+      router.push("/compose");
+      return;
+    }
+    setAction(next);
+  }
 
   function saved(path: string) {
     onClose();
@@ -589,13 +601,13 @@ export function QuickAdd({
       returnFocusTo={returnFocusTo}
       title={selected?.label ?? "Add to Job Pilot"}
     >
-      {enabledAction ? (
+      {formAction ? (
         <div className="quick-add-panel">
           <button className="quick-add-back" onClick={() => setAction(null)} type="button">← All quick-add actions</button>
-          <QuickAddForm action={enabledAction} data={data} onSaved={saved} />
+          <QuickAddForm action={formAction} data={data} onSaved={saved} />
         </div>
       ) : (
-        <ActionMenu onSelect={setAction} />
+        <ActionMenu onSelect={chooseAction} />
       )}
     </QuickAddDialog>
   );

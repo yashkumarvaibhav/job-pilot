@@ -113,14 +113,18 @@ export function AppShell({
     if (pathname === "/add") router.replace("/");
   }, [pathname, router]);
 
-  function openQuickAdd(
+  const openQuickAdd = useCallback((
     trigger: HTMLElement | null,
     action: QuickAddAction | null = null,
-  ) {
+  ) => {
+    if (action === "compose") {
+      router.push("/compose");
+      return;
+    }
     setQuickAddTrigger(trigger);
     setQuickAddAction(action);
     setQuickAddOpen(true);
-  }
+  }, [router]);
 
   useEffect(() => {
     function onOpenRequest() {
@@ -156,7 +160,7 @@ export function AppShell({
       document.removeEventListener("keydown", onKeyDown);
       window.removeEventListener(QUICK_ADD_OPEN_EVENT, onOpenRequest);
     };
-  }, [quickAddOpen]);
+  }, [openQuickAdd, quickAddOpen]);
 
   return (
     <div className="app-shell">

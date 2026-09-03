@@ -69,7 +69,7 @@ describe("global quick add", () => {
     expect(rail.match(/aria-hidden="true"/g) ?? []).toHaveLength(11);
   });
 
-  it("lists all nine actions and explains the remaining disabled action", () => {
+  it("lists all nine actions with the composer enabled", () => {
     const html = renderToStaticMarkup(
       <QuickAdd data={data} onClose={() => undefined} returnFocusTo={null} />,
     );
@@ -85,8 +85,8 @@ describe("global quick add", () => {
       "Compose email",
       "Create reminder",
     ]) expect(html).toContain(label);
-    expect(html).toContain("Connect Gmail in Settings to compose email.");
-    expect(html.match(/disabled=""/g)).toHaveLength(1);
+    expect(html).not.toContain("Connect Gmail in Settings to compose email.");
+    expect(html.match(/disabled=""/g) ?? []).toHaveLength(0);
     expect(html).not.toContain("Available after interview tracking lands.");
   });
 

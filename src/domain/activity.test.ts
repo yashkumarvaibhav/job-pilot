@@ -50,6 +50,13 @@ describe("activity copy", () => {
     ).toBe("WhatsApp sent → Rahul Sharma");
     expect(
       formatActivityHeadline({
+        kind: "EMAIL_SENT",
+        entityLabel: "Rahul Sharma",
+        payload: { senderEmail: "second@invalid.test" },
+      }),
+    ).toBe("Email sent from second@invalid.test → Rahul Sharma");
+    expect(
+      formatActivityHeadline({
         kind: "TAG_ATTACHED",
         entityLabel: "Microsoft",
         payload: { label: "Dream Company" },

@@ -377,6 +377,137 @@ body {
   }
 }
 
+/* Gmail composer — explicit account choice and literal final review. */
+
+.compose-page,
+.compose-form {
+  display: grid;
+  gap: var(--space-6);
+  align-content: start;
+}
+
+.compose-panel {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--pad-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--raised);
+}
+
+.compose-panel__heading {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.compose-panel__heading .eyebrow {
+  margin: 0;
+}
+
+.compose-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.compose-warning,
+.compose-block {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--warning) 8%, transparent);
+  color: var(--warning);
+  font-weight: 700;
+}
+
+.compose-block {
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  color: var(--danger);
+}
+
+.compose-warning svg,
+.compose-block svg,
+.compose-send svg {
+  width: var(--space-5);
+  height: var(--space-5);
+  flex: none;
+}
+
+.compose-warning p,
+.compose-block p {
+  margin: 0;
+}
+
+.compose-review__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-6);
+  margin: 0;
+}
+
+.compose-review__facts div {
+  min-width: 0;
+}
+
+.compose-review__facts dt {
+  color: var(--faint);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.compose-review__facts dd {
+  margin: var(--space-1) 0 0;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+}
+
+.compose-preview {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--sidebar);
+}
+
+.compose-preview pre {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--body);
+  font: inherit;
+  white-space: pre-wrap;
+}
+
+.compose-send {
+  justify-self: start;
+  gap: var(--space-2);
+}
+
+.detail-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+@media (max-width: 767px) {
+  .compose-grid,
+  .compose-review__facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .detail-header__actions {
+    justify-content: flex-start;
+  }
+}
+
 body {
   min-width: 0;
   overflow-x: hidden;

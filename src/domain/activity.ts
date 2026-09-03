@@ -48,6 +48,9 @@ export function activityVerb(
   kind: string,
   payload: Record<string, unknown> = {},
 ): string {
+  if (kind === "EMAIL_SENT" && typeof payload.senderEmail === "string") {
+    return `Email sent from ${payload.senderEmail}`;
+  }
   if (kind === "INTERACTION_SENT" || kind === "INTERACTION_REPLIED") {
     const channel = payload.channel;
     if (typeof channel === "string" && channelByValue.has(channel)) {

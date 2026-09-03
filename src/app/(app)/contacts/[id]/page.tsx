@@ -114,8 +114,13 @@ export default async function ContactDetailPage({
           <p className="eyebrow">Contact</p>
           <h1>{contact.name}</h1>
         </div>
-        <ContactStatusChip status={contact.networkingStatus} />
-        <StaleFlag reasons={stale.contact.get(contact.id) ?? []} />
+        <div className="detail-header__actions">
+          <ContactStatusChip status={contact.networkingStatus} />
+          <StaleFlag reasons={stale.contact.get(contact.id) ?? []} />
+          <Link className="btn" href={`/compose?contactId=${contact.id}`}>
+            Compose email
+          </Link>
+        </div>
       </header>
 
       <section aria-labelledby="contact-identity" className="detail-section">

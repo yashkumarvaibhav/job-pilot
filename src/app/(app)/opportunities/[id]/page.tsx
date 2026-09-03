@@ -193,6 +193,9 @@ export default async function OpportunityDetailPage({ params }: Props) {
           <p className="stage-machine">
             {stageMachineLabel(row.application?.stage)}
           </p>
+          <Link className="btn" href={`/compose?opportunityId=${row.id}`}>
+            Compose email
+          </Link>
         </div>
       </header>
       {health ? <OpportunityHealthBanner health={health} score={row.score} /> : null}

@@ -101,8 +101,16 @@ export default async function ReferralDetailPage({ params }: Props) {
             {interactionChannelLabel(row.channel)}
           </p>
         </div>
-        <ReferralStageChip stage={row.stage} />
-        <StaleFlag reasons={staleReasons} />
+        <div className="detail-header__actions">
+          <ReferralStageChip stage={row.stage} />
+          <StaleFlag reasons={staleReasons} />
+          <Link
+            className="btn"
+            href={`/compose?contactId=${row.contactId}&opportunityId=${row.opportunityId ?? ""}&referralId=${row.id}`}
+          >
+            Compose email
+          </Link>
+        </div>
       </header>
       <section aria-labelledby="referral-interactions" className="detail-section">
         <h2 id="referral-interactions">Interactions</h2>
