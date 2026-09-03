@@ -5,11 +5,18 @@ import { connectEmailAccount, disconnectEmailAccount } from "./email-accounts";
 import {
   EmailContentInputError,
   createEmailTemplate,
+  deleteEmailTemplate,
+  ensureEmailTemplateShells,
   getEmailThread,
   listEmailTemplates,
   recordEmailMessage,
+  updateEmailTemplate,
   upsertEmailThread,
 } from "./email-content";
+import {
+  EMAIL_TEMPLATE_SHELL_PLACEHOLDER,
+  EMAIL_TEMPLATE_SHELL_TITLES,
+} from "../../domain/mail-template";
 
 const TOKEN_KEY = Buffer.alloc(32, 7).toString("base64");
 
@@ -106,6 +113,71 @@ describe("email content repository", () => {
     ).toThrowError(new EmailContentInputError("Gmail account not found."));
     expect(fixture.rowCount("email_template")).toBe(0);
     expect(fixture.rowCount("activity_event")).toBe(beforeEvents);
+  });
+
+  it("seeds exactly the thirteen §16 titles as idempotent owner-written shells", () => {
+    const fixture = newFixture();
+
+    expect(ensureEmailTemplateShells(fixture.client.db, fixture.tenantA)).toBe(13);
+    expect(ensureEmailTemplateShells(fixture.client.db, fixture.tenantA)).toBe(0);
+    expect(listEmailTemplates(fixture.client.db, fixture.tenantA)).toEqual(
+      expect.arrayContaining(
+        EMAIL_TEMPLATE_SHELL_TITLES.map((title) =>
+          expect.objectContaining({
+            title,
+            subject: "",
+            body: EMAIL_TEMPLATE_SHELL_PLACEHOLDER,
+            variablesJson: [],
+          }),
+        ),
+      ),
+    );
+    expect(fixture.rowCount("email_template")).toBe(13);
+    expect(listEmailTemplates(fixture.client.db, fixture.tenantB)).toEqual([]);
+  });
+
+  it("updates and deletes only an owned template", () => {
+    const fixture = newFixture();
+    const template = createEmailTemplate(fixture.client.db, fixture.tenantA, {
+      id: "editable",
+      title: "Editable",
+    });
+    const beforeForeignEvents = fixture.rowCount("activity_event");
+
+    expect(
+      updateEmailTemplate(fixture.client.db, fixture.tenantB, template.id, {
+        subject: "Stolen",
+      }),
+    ).toBeUndefined();
+    expect(
+      deleteEmailTemplate(fixture.client.db, fixture.tenantB, template.id),
+    ).toBe(false);
+    expect(fixture.rowCount("activity_event")).toBe(beforeForeignEvents);
+
+    expect(
+      updateEmailTemplate(fixture.client.db, fixture.tenantA, template.id, {
+        subject: "Hello {{first_name}}",
+        body: "About {{company}}",
+        variables: ["first_name", "company"],
+        defaultEmailAccountId: fixture.accountA.id,
+        defaultFollowUpDays: 4,
+        tags: ["Referral"],
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        id: template.id,
+        subject: "Hello {{first_name}}",
+        body: "About {{company}}",
+        variablesJson: ["first_name", "company"],
+        defaultEmailAccountId: fixture.accountA.id,
+        defaultFollowUpDays: 4,
+        tagsJson: ["Referral"],
+      }),
+    );
+    expect(
+      deleteEmailTemplate(fixture.client.db, fixture.tenantA, template.id),
+    ).toBe(true);
+    expect(fixture.rowCount("email_template")).toBe(0);
   });
 
   it("keeps the same Gmail thread id separate for each connected account", () => {

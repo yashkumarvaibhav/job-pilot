@@ -3,6 +3,10 @@ import { randomUUID } from "node:crypto";
 import { and, asc, desc, eq } from "drizzle-orm";
 
 import { normalizeEmail } from "../auth/email";
+import {
+  EMAIL_TEMPLATE_SHELL_PLACEHOLDER,
+  EMAIL_TEMPLATE_SHELL_TITLES,
+} from "../../domain/mail-template";
 import { logEvent } from "../db/activity";
 import type { AppDatabase, AppTransaction } from "../db/client";
 import {
@@ -35,6 +39,10 @@ export type CreateEmailTemplateInput = {
   tags?: string[];
   now?: Date;
 };
+
+export type UpdateEmailTemplateInput = Partial<
+  Omit<CreateEmailTemplateInput, "id" | "now">
+> & { now?: Date };
 
 export type EmailThreadSource = "sent" | "sync" | "manual_import";
 
@@ -259,6 +267,184 @@ export function listEmailTemplates(
     .where(eq(emailTemplate.workspaceId, tenant.workspaceId))
     .orderBy(asc(emailTemplate.title), asc(emailTemplate.id))
     .all();
+}
+
+export function ensureEmailTemplateShells(
+  database: AppDatabase,
+  tenant: TenantContext,
+  now = new Date(),
+): number {
+  return database.transaction((transaction) => {
+    const existing = new Set(
+      transaction
+        .select({ title: emailTemplate.title })
+        .from(emailTemplate)
+        .where(eq(emailTemplate.workspaceId, tenant.workspaceId))
+        .all()
+        .map((row) => row.title),
+    );
+    let inserted = 0;
+    for (const title of EMAIL_TEMPLATE_SHELL_TITLES) {
+      if (existing.has(title)) continue;
+      transaction
+        .insert(emailTemplate)
+        .values({
+          id: randomUUID(),
+          workspaceId: tenant.workspaceId,
+          title,
+          subject: "",
+          body: EMAIL_TEMPLATE_SHELL_PLACEHOLDER,
+          variablesJson: [],
+          defaultEmailAccountId: null,
+          defaultDocumentVersionId: null,
+          defaultFollowUpDays: null,
+          tagsJson: [],
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      inserted += 1;
+    }
+    return inserted;
+  });
+}
+
+export function updateEmailTemplate(
+  database: AppDatabase,
+  tenant: TenantContext,
+  id: string,
+  input: UpdateEmailTemplateInput,
+): EmailTemplate | undefined {
+  const now = input.now ?? new Date();
+  return database.transaction((transaction) => {
+    const existing = transaction
+      .select()
+      .from(emailTemplate)
+      .where(
+        and(
+          eq(emailTemplate.workspaceId, tenant.workspaceId),
+          eq(emailTemplate.id, id),
+        ),
+      )
+      .get();
+    if (!existing) return undefined;
+
+    const defaultEmailAccountId =
+      input.defaultEmailAccountId === undefined
+        ? existing.defaultEmailAccountId
+        : optionalId(input.defaultEmailAccountId);
+    const defaultDocumentVersionId =
+      input.defaultDocumentVersionId === undefined
+        ? existing.defaultDocumentVersionId
+        : optionalId(input.defaultDocumentVersionId);
+    if (defaultEmailAccountId !== null) {
+      const account = requireOwnedAccount(
+        transaction,
+        tenant,
+        defaultEmailAccountId,
+      );
+      if (account.status !== "connected") {
+        throw new EmailContentInputError("Choose a connected Gmail account.");
+      }
+    }
+    requireOwnedDocumentVersion(
+      transaction,
+      tenant,
+      defaultDocumentVersionId,
+    );
+    const defaultFollowUpDays =
+      input.defaultFollowUpDays === undefined
+        ? existing.defaultFollowUpDays
+        : input.defaultFollowUpDays;
+    if (
+      defaultFollowUpDays !== null &&
+      (!Number.isInteger(defaultFollowUpDays) ||
+        defaultFollowUpDays < 0 ||
+        defaultFollowUpDays > 365)
+    ) {
+      throw new EmailContentInputError(
+        "Default follow-up delay must be a whole number from 0 to 365.",
+      );
+    }
+
+    const row = transaction
+      .update(emailTemplate)
+      .set({
+        title:
+          input.title === undefined
+            ? existing.title
+            : requiredText(input.title, "Template title"),
+        subject:
+          input.subject === undefined
+            ? existing.subject
+            : input.subject.trim(),
+        body: input.body === undefined ? existing.body : input.body.trim(),
+        variablesJson:
+          input.variables === undefined
+            ? existing.variablesJson
+            : uniqueText(input.variables),
+        defaultEmailAccountId,
+        defaultDocumentVersionId,
+        defaultFollowUpDays,
+        tagsJson:
+          input.tags === undefined ? existing.tagsJson : uniqueText(input.tags),
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(emailTemplate.workspaceId, tenant.workspaceId),
+          eq(emailTemplate.id, id),
+        ),
+      )
+      .returning()
+      .get();
+    logEvent(transaction, tenant, {
+      at: now,
+      kind: "EMAIL_TEMPLATE_UPDATED",
+      entityType: "email_template",
+      entityId: id,
+      payload: { title: row.title },
+    });
+    return row;
+  });
+}
+
+export function deleteEmailTemplate(
+  database: AppDatabase,
+  tenant: TenantContext,
+  id: string,
+  now = new Date(),
+): boolean {
+  return database.transaction((transaction) => {
+    const existing = transaction
+      .select({ id: emailTemplate.id, title: emailTemplate.title })
+      .from(emailTemplate)
+      .where(
+        and(
+          eq(emailTemplate.workspaceId, tenant.workspaceId),
+          eq(emailTemplate.id, id),
+        ),
+      )
+      .get();
+    if (!existing) return false;
+    transaction
+      .delete(emailTemplate)
+      .where(
+        and(
+          eq(emailTemplate.workspaceId, tenant.workspaceId),
+          eq(emailTemplate.id, id),
+        ),
+      )
+      .run();
+    logEvent(transaction, tenant, {
+      at: now,
+      kind: "EMAIL_TEMPLATE_DELETED",
+      entityType: "email_template",
+      entityId: id,
+      payload: { title: existing.title },
+    });
+    return true;
+  });
 }
 
 export function upsertEmailThread(

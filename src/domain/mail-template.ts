@@ -12,6 +12,25 @@ export const EMAIL_TEMPLATE_VARIABLES = [
 
 export type EmailTemplateVariable = (typeof EMAIL_TEMPLATE_VARIABLES)[number];
 
+export const EMAIL_TEMPLATE_SHELL_TITLES = [
+  "Employee referral request",
+  "Alumni referral request",
+  "Friend opening inquiry",
+  "Recruiter cold email",
+  "Hiring manager cold email",
+  "Referral follow-up",
+  "Opening inquiry follow-up",
+  "Recruiter follow-up",
+  "Post-OA follow-up",
+  "Post-interview thank-you",
+  "Application status follow-up",
+  "Resume requested response",
+  "Keep-in-touch message",
+] as const;
+
+export const EMAIL_TEMPLATE_SHELL_PLACEHOLDER =
+  "Write this template in your own words.";
+
 export type EmailTemplateWarning = {
   variable: string;
   reason: "missing" | "unsupported";

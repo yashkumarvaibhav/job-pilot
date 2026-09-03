@@ -9,7 +9,10 @@ import { DEFAULT_TIME_ZONE } from "@/server/db/timezone";
 import { getContact, listContacts } from "@/server/repos/contacts";
 import { listVersionChoices } from "@/server/repos/documents";
 import { listEmailAccounts } from "@/server/repos/email-accounts";
-import { listEmailTemplates } from "@/server/repos/email-content";
+import {
+  ensureEmailTemplateShells,
+  listEmailTemplates,
+} from "@/server/repos/email-content";
 import { listOpportunities } from "@/server/repos/opportunities";
 import { listReferrals } from "@/server/repos/referrals";
 
@@ -25,6 +28,7 @@ export default async function ComposePage({ searchParams }: Props) {
   const tenant = await requireTenant();
   const database = getDatabase();
   const settings = getWorkspaceSettings(database, tenant, tenant.workspaceId);
+  ensureEmailTemplateShells(database, tenant);
   const timeZone = settings?.timezone ?? DEFAULT_TIME_ZONE;
   const accounts = listEmailAccounts(database, tenant)
     .filter((account) => account.status === "connected")
