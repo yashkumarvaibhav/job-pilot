@@ -1,10 +1,12 @@
 import { normalizeEmail } from "../auth/email";
 import {
-  GMAIL_SYNC_LIMITS,
   GmailHistoryGapError,
   type GmailMessageSnapshot,
   type GmailReadPort,
   type GmailThreadSnapshot,
+} from "./gmail-read-port";
+import {
+  GMAIL_SYNC_LIMITS,
 } from "./inbox-sync";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
