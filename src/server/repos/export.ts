@@ -16,6 +16,8 @@ import { listActivity } from "./activity";
 import { listApplications } from "./applications";
 import { listCompanies } from "./companies";
 import { listContacts, type ContactMethod } from "./contacts";
+import { listEmailAccounts } from "./email-accounts";
+import { getInboxThread, listInboxThreads } from "./inbox-content";
 import { listOpportunities } from "./opportunities";
 import { listReferrals } from "./referrals";
 import { readWorkspaceSettings } from "./settings";
@@ -95,6 +97,40 @@ function snapshot(
   now: Date,
 ) {
   const settings = exportSettings(database, tenant);
+  const emailAccounts = listEmailAccounts(database, tenant).map((account) => ({
+    id: account.id,
+    email: account.email,
+    senderName: account.senderName,
+    signature: account.signature,
+    replyTo: account.replyTo,
+    status: account.status,
+    isDefault: account.isDefault,
+    lastHistoryId: account.lastHistoryId,
+    lastSyncAt: account.lastSyncAt,
+    sequenceSafeAt: account.sequenceSafeAt,
+    createdAt: account.createdAt,
+    updatedAt: account.updatedAt,
+  }));
+  const emailThreads = listInboxThreads(database, tenant).map((thread) => ({
+    ...thread,
+    messages: (getInboxThread(database, tenant, thread.id)?.messages ?? []).map(
+      (message) => ({
+        id: message.id,
+        threadId: message.threadId,
+        accountId: message.accountId,
+        gmailId: message.gmailId,
+        rfcMessageId: message.rfcMessageId,
+        direction: message.direction,
+        fromEmail: message.fromEmail,
+        to: message.toJson,
+        subject: message.subject,
+        body: message.body,
+        classification: message.classification,
+        sentAt: message.sentAt,
+        createdAt: message.createdAt,
+      }),
+    ),
+  }));
   return {
     exportedAt: now.toISOString(),
     settings,
@@ -105,6 +141,8 @@ function snapshot(
     referrals: listReferrals(database, tenant, {
       asOfOn: calendarDateInZone(settings.timezone, now),
     }),
+    emailAccounts,
+    emailThreads,
     activity: listActivity(database, tenant, { timeZone: settings.timezone }),
   };
 }

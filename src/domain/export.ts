@@ -4,7 +4,7 @@ export const EXPORT_CONTACTS_CSV_LABEL = "Export contacts CSV";
 export const EXPORT_APPLICATIONS_CSV_LABEL = "Export applications CSV";
 export const EXPORT_ACTIVITY_CSV_LABEL = "Export activity CSV";
 export const EXPORT_HELP =
-  "JSON is this workspace's companies, contacts, jobs, applications, referrals and activity. Each CSV is one table with a header row. Password hashes and account tokens are not included.";
+  "JSON is this workspace's companies, contacts, jobs, applications, referrals, safe Gmail account metadata, Job Inbox threads and activity. Each CSV is one table with a header row. Password hashes and account tokens are not included.";
 
 export const EXPORT_FORMATS = ["json", "csv"] as const;
 export const EXPORT_SETS = [

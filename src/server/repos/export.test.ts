@@ -6,6 +6,8 @@ import { createTenantTestFixture } from "../../test/tenant-fixture";
 import { applyToOpportunity } from "./applications";
 import { createCompany } from "./companies";
 import { createContact } from "./contacts";
+import { connectEmailAccount } from "./email-accounts";
+import { recordEmailMessage, upsertEmailThread } from "./email-content";
 import { buildWorkspaceExport } from "./export";
 import { createOpportunity } from "./opportunities";
 
@@ -121,6 +123,105 @@ describe("workspace export", () => {
       } else {
         process.env.APP_PASSWORD = previous;
       }
+    }
+  });
+
+  it("includes owned Gmail thread metadata and bodies without credentials or foreign mail", () => {
+    const { fixture, now } = seed();
+    const tokenKey = Buffer.alloc(32, 18).toString("base64");
+    const account = connectEmailAccount(
+      fixture.client.db,
+      fixture.tenantA,
+      {
+        googleSub: "private-google-sub-a",
+        email: "owner@invalid.test",
+        refreshToken: "private-refresh-token-a",
+        now,
+      },
+      tokenKey,
+    );
+    const thread = upsertEmailThread(fixture.client.db, fixture.tenantA, {
+      accountId: account.id,
+      gmailThreadId: "gmail-thread-a",
+      subject: "Referral reply",
+      contactId: "rahul",
+      source: "manual_import",
+      matchStatus: "manual",
+      matchReason: "Linked manually",
+      lastMessageAt: now,
+      now,
+    });
+    recordEmailMessage(fixture.client.db, fixture.tenantA, {
+      threadId: thread.id,
+      accountId: account.id,
+      gmailId: "gmail-message-a",
+      direction: "inbound",
+      fromEmail: "rahul@invalid.test",
+      to: [account.email],
+      subject: "Referral reply",
+      body: "Safe exported message body",
+      sentAt: now,
+      now,
+    });
+    const foreignAccount = connectEmailAccount(
+      fixture.client.db,
+      fixture.tenantB,
+      {
+        googleSub: "private-google-sub-b",
+        email: "foreign-owner@invalid.test",
+        refreshToken: "private-refresh-token-b",
+        now,
+      },
+      tokenKey,
+    );
+    const foreignThread = upsertEmailThread(fixture.client.db, fixture.tenantB, {
+      accountId: foreignAccount.id,
+      gmailThreadId: "foreign-gmail-thread",
+      subject: "Foreign private mail",
+      source: "manual_import",
+      lastMessageAt: now,
+      now,
+    });
+    recordEmailMessage(fixture.client.db, fixture.tenantB, {
+      threadId: foreignThread.id,
+      accountId: foreignAccount.id,
+      gmailId: "foreign-message",
+      direction: "inbound",
+      fromEmail: "other@invalid.test",
+      to: [foreignAccount.email],
+      body: "foreign-private-body",
+      sentAt: now,
+      now,
+    });
+
+    const exported = buildWorkspaceExport(
+      fixture.client.db,
+      fixture.tenantA,
+      parseExportQuery(new URLSearchParams("format=json&set=all")),
+      now,
+    );
+    const payload = JSON.parse(exported.body) as {
+      emailAccounts: Array<{ email: string }>;
+      emailThreads: Array<{ gmailThreadId: string; messages: Array<{ body: string }> }>;
+    };
+    expect(payload.emailAccounts).toEqual([
+      expect.objectContaining({ email: "owner@invalid.test" }),
+    ]);
+    expect(payload.emailThreads).toEqual([
+      expect.objectContaining({
+        gmailThreadId: "gmail-thread-a",
+        messages: [expect.objectContaining({ body: "Safe exported message body" })],
+      }),
+    ]);
+    for (const secret of [
+      "private-refresh-token-a",
+      "private-refresh-token-b",
+      "private-google-sub-a",
+      "private-google-sub-b",
+      "tokenBlob",
+      "foreign-private-body",
+    ]) {
+      expect(exported.body).not.toContain(secret);
     }
   });
 });
