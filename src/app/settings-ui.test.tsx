@@ -136,6 +136,7 @@ describe("settings screen", () => {
     expect(html).toContain("Add Gmail account");
     expect(html).toContain("GOOGLE_CLIENT_ID");
     expect(html).toContain("GOOGLE_CLIENT_SECRET");
+    expect(html).toContain("GOOGLE_REDIRECT_URI");
     expect(html).toContain("TOKEN_KEY");
     expect(html).toContain("Opportunity scoring");
     expect(html).toContain('name="score.targetCompany"');
@@ -152,6 +153,10 @@ describe("settings screen", () => {
   it("offers Add Gmail account only when every OAuth secret is configured", async () => {
     vi.stubEnv("GOOGLE_CLIENT_ID", "test-client-id");
     vi.stubEnv("GOOGLE_CLIENT_SECRET", "test-client-secret");
+    vi.stubEnv(
+      "GOOGLE_REDIRECT_URI",
+      "https://jobpilot.invalid.test/api/gmail/callback",
+    );
     vi.stubEnv("TOKEN_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
     newFixture();
 

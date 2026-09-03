@@ -22,7 +22,7 @@ export class TokenEncryptionError extends Error {
   }
 }
 
-function decodeKey(encodedKey: string): Buffer {
+export function decodeTokenKey(encodedKey: string): Buffer {
   const normalized = encodedKey.trim();
   if (!/^[A-Za-z0-9+/]+={0,2}$/.test(normalized)) {
     throw new TokenEncryptionError(
@@ -47,7 +47,7 @@ export function encryptRefreshToken(
   encodedKey: string,
   context = "",
 ): string {
-  const key = decodeKey(encodedKey);
+  const key = decodeTokenKey(encodedKey);
   if (refreshToken.length === 0) {
     throw new TokenEncryptionError("A refresh token is required.");
   }
@@ -73,7 +73,7 @@ export function decryptRefreshToken(
   encodedKey: string,
   context = "",
 ): string {
-  const key = decodeKey(encodedKey);
+  const key = decodeTokenKey(encodedKey);
 
   try {
     const envelope = JSON.parse(stored) as Partial<TokenEnvelope>;

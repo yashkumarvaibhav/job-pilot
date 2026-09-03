@@ -266,6 +266,23 @@ export function readEmailAccountRefreshToken(
       );
 }
 
+export function readEmailAccountGoogleSubject(
+  database: AppDatabase,
+  tenant: TenantContext,
+  accountId: string,
+): string | undefined {
+  return database
+    .select({ googleSub: emailAccount.googleSub })
+    .from(emailAccount)
+    .where(
+      and(
+        eq(emailAccount.workspaceId, tenant.workspaceId),
+        eq(emailAccount.id, accountId),
+      ),
+    )
+    .get()?.googleSub;
+}
+
 export function setDefaultEmailAccount(
   database: AppDatabase,
   tenant: TenantContext,
