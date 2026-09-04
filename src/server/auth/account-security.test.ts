@@ -115,7 +115,7 @@ describe("TOTP account security", () => {
           username: "owner_name",
           password: NEXT_PASSWORD,
         }),
-      ).toEqual({ userId: created.tenant.userId });
+      ).toEqual({ userId: created.tenant.userId, signupComplete: true });
 
       expect(
         await resetPasswordWithTotp(
@@ -151,7 +151,7 @@ describe("TOTP account security", () => {
           username: "owner_name",
           password: RESET_PASSWORD,
         }),
-      ).toEqual({ userId: created.tenant.userId });
+      ).toEqual({ userId: created.tenant.userId, signupComplete: true });
     } finally {
       fixture.dispose();
     }
