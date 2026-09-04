@@ -3,7 +3,12 @@
 import { useRouter } from "next/navigation";
 import { type FormEvent, useRef, useState } from "react";
 
-import { PASSWORD_MIN_LENGTH, REQUEST_FAILED_MESSAGE } from "@/lib/account";
+import {
+  PASSWORD_MIN_LENGTH,
+  REQUEST_FAILED_MESSAGE,
+  USERNAME_MAX_LENGTH,
+  USERNAME_MIN_LENGTH,
+} from "@/lib/account";
 
 type Mode = "login" | "signup";
 
@@ -35,7 +40,6 @@ export function AccountForm({ mode }: { mode: Mode }) {
   const passwordRef = useRef<HTMLInputElement>(null);
   const confirmRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const isSignup = mode === "signup";
 
@@ -55,7 +59,7 @@ export function AccountForm({ mode }: { mode: Mode }) {
 
     const form = event.currentTarget;
     const data = new FormData(form);
-    const email = String(data.get("email") ?? "");
+    const username = String(data.get("username") ?? "");
     const password = String(data.get("password") ?? "");
 
     if (isSignup && password !== String(data.get("confirm") ?? "")) {
@@ -72,13 +76,12 @@ export function AccountForm({ mode }: { mode: Mode }) {
 
     setPending(true);
     setError(null);
-    setNotice(null);
 
     try {
       const response = await fetch(`/api/auth/${mode}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       });
 
       const body: unknown = await response.json().catch(() => null);
@@ -96,17 +99,13 @@ export function AccountForm({ mode }: { mode: Mode }) {
       }
 
       form.reset();
-      const message =
+      const redirect =
         body &&
         typeof body === "object" &&
-        typeof (body as { message?: unknown }).message === "string"
-          ? (body as { message: string }).message
+        typeof (body as { redirect?: unknown }).redirect === "string"
+          ? (body as { redirect: string }).redirect
           : null;
-      if (isSignup && message) {
-        setNotice(message);
-        return;
-      }
-      router.replace("/");
+      router.replace(isSignup ? (redirect ?? "/setup-totp") : "/");
       router.refresh();
     } catch {
       setError(REQUEST_FAILED_MESSAGE);
@@ -124,22 +123,25 @@ export function AccountForm({ mode }: { mode: Mode }) {
           <span>{error}</span>
         </p>
       ) : null}
-      {notice ? (
-        <p className="form-notice" role="status">
-          <StatusIcon />
-          <span>{notice}</span>
-        </p>
-      ) : null}
-
       <div className="field">
-        <label htmlFor="email">Email</label>
+        <label htmlFor="username">Username</label>
         <input
-          autoComplete="email"
-          id="email"
-          name="email"
+          autoCapitalize="none"
+          autoComplete="username"
+          id="username"
+          maxLength={isSignup ? USERNAME_MAX_LENGTH : 254}
+          minLength={isSignup ? USERNAME_MIN_LENGTH : undefined}
+          name="username"
+          pattern={isSignup ? "[A-Za-z0-9][A-Za-z0-9._-]*[A-Za-z0-9]" : undefined}
           required
-          type="email"
+          spellCheck={false}
+          type="text"
         />
+        {isSignup ? (
+          <p className="field-hint" id="username-hint">
+            3–32 characters: letters, numbers, dot, underscore or hyphen.
+          </p>
+        ) : null}
       </div>
 
       <div className="field">
@@ -178,25 +180,5 @@ export function AccountForm({ mode }: { mode: Mode }) {
         {isSignup ? "Create account" : "Sign in"}
       </button>
     </form>
-  );
-}
-
-function StatusIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="16"
-      viewBox="0 0 24 24"
-      width="16"
-    >
-      <path
-        d="m5 12 4 4L19 6"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-      />
-    </svg>
   );
 }

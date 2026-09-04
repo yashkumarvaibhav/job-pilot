@@ -1,5 +1,4 @@
-export const USERNAME_MIN_LENGTH = 3;
-export const USERNAME_MAX_LENGTH = 32;
+import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH } from "../../lib/account";
 
 const USERNAME_PATTERN = /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])$/;
 

@@ -31,10 +31,10 @@ function stateFiles(directory: string, filename: "error.tsx" | "loading.tsx"): s
 
 async function signIn(
   context: BrowserContext,
-  email: string = FIXTURE.accountA.email,
+  username: string = FIXTURE.accountA.username,
 ) {
   const response = await context.request.post(`${BASE_URL}/api/auth/login`, {
-    data: { email, password: ACCOUNT_PASSWORD },
+    data: { username, password: ACCOUNT_PASSWORD },
     headers: { Origin: BASE_URL },
   });
   expect(response.status()).toBe(200);
@@ -243,7 +243,7 @@ test("empty and not-found states fit mobile in both themes", async ({ browser })
       colorScheme: theme,
       viewport: VIEWPORTS[0],
     });
-    await signIn(context, FIXTURE.accountEmpty.email);
+    await signIn(context, FIXTURE.accountEmpty.username);
     const page = await context.newPage();
     await page.goto("/");
     await page.evaluate((value) => localStorage.setItem("theme", value), theme);
@@ -306,7 +306,7 @@ test("foreign workspace pages, search, export and files reveal nothing", async (
   expect(file.status()).toBe(404);
 
   const b = await browser.newContext({ viewport: VIEWPORTS[2] });
-  await signIn(b, FIXTURE.accountB.email);
+  await signIn(b, FIXTURE.accountB.username);
   const pageB = await b.newPage();
   await pageB.goto(`/companies/${FIXTURE.b.companyId}`);
   await expect(pageB.getByRole("heading", { name: "Private Labs" })).toBeVisible();

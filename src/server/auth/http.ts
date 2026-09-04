@@ -64,35 +64,6 @@ export async function readTotpPasswordChange(
     : null;
 }
 
-export async function readEmail(
-  request: Request,
-): Promise<{ email: string } | null> {
-  const body = await readJsonObject(request);
-  return body && typeof body.email === "string"
-    ? { email: body.email }
-    : null;
-}
-
-export async function readToken(
-  request: Request,
-): Promise<{ token: string } | null> {
-  const body = await readJsonObject(request);
-  return body && typeof body.token === "string"
-    ? { token: body.token }
-    : null;
-}
-
-export async function readPasswordReset(
-  request: Request,
-): Promise<{ token: string; password: string } | null> {
-  const body = await readJsonObject(request);
-  return body &&
-    typeof body.token === "string" &&
-    typeof body.password === "string"
-    ? { token: body.token, password: body.password }
-    : null;
-}
-
 async function readJsonObject(
   request: Request,
 ): Promise<Record<string, unknown> | null> {

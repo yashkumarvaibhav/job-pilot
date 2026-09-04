@@ -5,17 +5,17 @@ export const FIXTURE = {
   accountA: {
     userId: "responsive-user-a",
     workspaceId: "responsive-workspace-a",
-    email: "responsive-a@invalid.test",
+    username: "responsive_a",
   },
   accountB: {
     userId: "responsive-user-b",
     workspaceId: "responsive-workspace-b",
-    email: "responsive-b@invalid.test",
+    username: "responsive_b",
   },
   accountEmpty: {
     userId: "responsive-user-empty",
     workspaceId: "responsive-workspace-empty",
-    email: "responsive-empty@invalid.test",
+    username: "responsive_empty",
   },
   a: {
     companyId: "responsive-company-a",

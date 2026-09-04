@@ -1,4 +1,5 @@
 import { ActivityTimeline } from "@/components/activity-timeline";
+import { TotpSkippedWarning } from "@/components/account-security";
 import { DueItemCollection } from "@/components/due-list";
 import {
   TODAY_EMPTY,
@@ -9,9 +10,14 @@ import { requireTenant } from "@/server/auth/current-session";
 import { getDatabase } from "@/server/db/runtime";
 import { getTodaySnapshot } from "@/server/repos/today";
 
-export default async function Home() {
+export default async function Home({
+  searchParams = Promise.resolve({}),
+}: {
+  searchParams?: Promise<{ totp?: string }>;
+} = {}) {
   const tenant = await requireTenant();
   const snapshot = getTodaySnapshot(getDatabase(), tenant);
+  const showTotpWarning = (await searchParams).totp === "skipped";
 
   return (
     <section className="today-page">
@@ -25,6 +31,8 @@ export default async function Home() {
           </p>
         </div>
       </header>
+
+      {showTotpWarning ? <TotpSkippedWarning /> : null}
 
       <div className="tiles today-stat-tiles">
         {TODAY_STAT_TILES.map((tile) => (

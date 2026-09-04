@@ -86,13 +86,13 @@ export function startTotpEnrollment(
 export function readAccountSecurity(
   database: AppDatabase,
   tenant: TenantContext,
-  tokenKey: string,
+  tokenKey: string | null,
 ): AccountSecurityView | null {
   const account = accountForTenant(database, tenant);
   if (!account) return null;
   const totpEnabled = account.totpEnabledAt !== null;
   const secret =
-    !totpEnabled && account.totpSecretBlob
+    !totpEnabled && account.totpSecretBlob && tokenKey
       ? decryptTotpSecret(account.totpSecretBlob, tokenKey, account.id)
       : null;
 

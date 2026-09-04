@@ -3612,6 +3612,92 @@ main:focus {
   min-width: 0;
 }
 
+.account-setup-page {
+  display: grid;
+  gap: var(--space-6);
+  align-content: start;
+  min-width: 0;
+}
+
+.account-setup-page > .settings-section {
+  max-width: var(--measure-copy);
+}
+
+.account-security {
+  gap: var(--space-4);
+}
+
+.account-security-status {
+  justify-self: start;
+  border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
+  background: transparent;
+  color: var(--warning);
+}
+
+.account-security-status--enabled {
+  border-color: color-mix(in srgb, var(--success) 40%, transparent);
+  color: var(--success);
+}
+
+.account-security-status svg,
+.security-warning svg {
+  flex: none;
+}
+
+.security-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  max-width: var(--measure-copy);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--warning) 8%, transparent);
+  color: var(--warning);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.totp-setup,
+.totp-key-block,
+.security-form {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.totp-secret {
+  display: block;
+  max-width: 100%;
+  padding: var(--space-3);
+  overflow-wrap: anywhere;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--code);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+}
+
+.security-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.security-actions .btn,
+.security-form > .btn,
+.totp-setup > .btn {
+  justify-self: start;
+  min-height: var(--target-min);
+}
+
+.security-form h3 {
+  margin-top: var(--space-2);
+}
+
 .settings-form {
   display: grid;
   gap: var(--space-8);
@@ -3723,6 +3809,9 @@ main:focus {
   }
 
   .settings-actions .btn,
+  .security-actions .btn,
+  .security-form > .btn,
+  .totp-setup > .btn,
   .settings-export-actions .btn {
     width: 100%;
     justify-content: center;

@@ -1,4 +1,5 @@
 import { AutomationRulesPanel } from "@/components/automation-rules-panel";
+import { AccountSecurityPanel } from "@/components/account-security";
 import { ExportPanel } from "@/components/export-panel";
 import {
   GmailAccountsPanel,
@@ -12,6 +13,8 @@ import {
   selectableTimeZones,
 } from "@/domain/settings";
 import { requireTenant } from "@/server/auth/current-session";
+import { configuredAccountSecretKey } from "@/server/auth/account-secret-key";
+import { readAccountSecurity } from "@/server/auth/account-security";
 import { getDatabase } from "@/server/db/runtime";
 import { readGmailOAuthAvailability } from "@/server/mail/google-config";
 import { readWorkspaceSettings } from "@/server/repos/settings";
@@ -22,6 +25,12 @@ export default async function SettingsPage() {
   const tenant = await requireTenant();
   const database = getDatabase();
   const view = readWorkspaceSettings(database, tenant);
+  const accountSecretKey = configuredAccountSecretKey();
+  const accountSecurity = readAccountSecurity(
+    database,
+    tenant,
+    accountSecretKey,
+  );
   const gmailAvailability = readGmailOAuthAvailability();
   const gmailAccounts: GmailAccountCard[] = listEmailAccounts(database, tenant).map(
     (account) => ({
@@ -57,6 +66,15 @@ export default async function SettingsPage() {
           </p>
         </div>
       </header>
+
+      {accountSecurity ? (
+        <AccountSecurityPanel
+          available={accountSecretKey !== null}
+          initialSetup={accountSecurity.setup}
+          totpEnabled={accountSecurity.totpEnabled}
+          username={accountSecurity.username}
+        />
+      ) : null}
 
       <SettingsForm
         quietState={quietState}

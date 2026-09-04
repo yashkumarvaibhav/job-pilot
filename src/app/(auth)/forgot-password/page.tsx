@@ -1,27 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { AccountLifecycleForm } from "@/components/account-lifecycle-form";
-import { ACCOUNT_MAIL_UNAVAILABLE_MESSAGE } from "@/lib/account";
-import { configuredAccountMailPort } from "@/server/auth/account-mail";
+import { PasswordRecoveryForm } from "@/components/password-recovery-form";
 
 export const metadata: Metadata = {
   title: "Reset password · Job Pilot",
 };
 
 export default function ForgotPasswordPage() {
-  const available = configuredAccountMailPort() !== null;
-
   return (
     <section className="auth-card">
       <p className="eyebrow">Account recovery</p>
       <h1>Reset password</h1>
       <p className="auth-lede">
-        {available
-          ? "Enter your email. The response is the same whether or not an account matches."
-          : ACCOUNT_MAIL_UNAVAILABLE_MESSAGE}
+        Enter your username, a current code from the authenticator you previously set up,
+        and a new password. Without that authenticator, this account cannot be recovered.
       </p>
-      {available ? <AccountLifecycleForm mode="request-recovery" /> : null}
+      <PasswordRecoveryForm />
       <p className="auth-switch">
         Return to <Link href="/login">Sign in</Link>
       </p>

@@ -53,7 +53,7 @@ describe("demo authentication surfaces", () => {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          email: "another@invalid.test",
+          username: "another_owner",
           password: "synthetic-password",
         }),
       }),
@@ -78,9 +78,10 @@ describe("demo authentication surfaces", () => {
     expect(loginHtml).not.toContain("Demo environment");
 
     expect(signupHtml).toContain("Create account");
-    expect(signupHtml).toContain("Email");
+    expect(signupHtml).toContain("Username");
     expect(signupHtml).toContain("Password");
     expect(signupHtml).toContain("Confirm password");
+    expect(signupHtml).not.toContain('type="email"');
     expect(signupHtml).not.toContain("Public account creation is closed");
   });
 });

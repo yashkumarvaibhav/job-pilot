@@ -94,6 +94,13 @@ describe("settings screen", () => {
     expect(html).toContain(QUIET_HOURS_HELP);
     expect(html).toContain(AUTOMATION_RULES_TITLE);
     expect(html).toContain(AUTOMATION_RULES_HELP);
+    expect(html).toContain("Account security");
+    expect(html).toContain("tenant-a");
+    expect(html).toContain("Authenticator not set up");
+    expect(html).toContain("Set up authenticator");
+    expect(html).toContain(
+      "Password recovery and password changes are unavailable until you set up an authenticator.",
+    );
     expect(html).toContain("No activity");
     // The saved zone, not the server zone, decides whether now is quiet.
     expect(html).toContain("in Asia/Kolkata,");

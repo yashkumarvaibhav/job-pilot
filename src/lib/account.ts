@@ -9,6 +9,8 @@
  */
 export const PASSWORD_MIN_LENGTH = 12;
 export const PASSWORD_MAX_LENGTH = 200;
+export const USERNAME_MIN_LENGTH = 3;
+export const USERNAME_MAX_LENGTH = 32;
 
 export const SIGNUP_FAILED_MESSAGE =
   "Could not create that account. Check your details and try again.";
