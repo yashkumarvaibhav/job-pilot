@@ -9,10 +9,11 @@ import {
   LockKeyhole,
   MailCheck,
   ShieldCheck,
+  TriangleAlert,
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { TotpSetup } from "@/server/auth/totp";
 import { AccountForm } from "./account-form";
@@ -48,6 +49,7 @@ const FOCUSABLE_SELECTOR = [
 function AuthDialog({
   demoAccount,
   mode,
+  onAbandoned,
   onClose,
   onNavigate,
   setupAvailable,
@@ -56,6 +58,7 @@ function AuthDialog({
 }: {
   demoAccount: string | null;
   mode: LandingAuthMode;
+  onAbandoned: () => void;
   onClose: () => void;
   onNavigate: (mode: LandingAuthMode, replace?: boolean) => void;
   setupAvailable: boolean;
@@ -64,7 +67,36 @@ function AuthDialog({
 }) {
   const dialogRef = useRef<HTMLElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  const [confirmAbandon, setConfirmAbandon] = useState(false);
+  const [abandonPending, setAbandonPending] = useState(false);
+  const [abandonError, setAbandonError] = useState<string | null>(null);
   const dismissible = mode !== "setup-totp";
+
+  async function abandonSignup() {
+    setAbandonPending(true);
+    setAbandonError(null);
+
+    try {
+      const response = await fetch("/api/auth/signup/abandon", { method: "POST" });
+      const body: unknown = await response.json().catch(() => null);
+      if (!response.ok) {
+        const message =
+          body &&
+          typeof body === "object" &&
+          typeof (body as { error?: unknown }).error === "string"
+            ? (body as { error: string }).error
+            : "Could not delete the incomplete account. Please retry.";
+        setAbandonError(message);
+        return;
+      }
+
+      onAbandoned();
+    } catch {
+      setAbandonError("Could not reach Job Pilot. Check the connection and retry.");
+    } finally {
+      setAbandonPending(false);
+    }
+  }
 
   useEffect(() => {
     const landing = document.querySelector<HTMLElement>(".landing-surface");
@@ -95,7 +127,7 @@ function AuthDialog({
       first?.focus();
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [mode]);
+  }, [confirmAbandon, mode]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -127,16 +159,28 @@ function AuthDialog({
         ref={dialogRef}
         role="dialog"
       >
-        {dismissible ? (
-          <button
-            aria-label="Close account access"
-            className="auth-dialog-close"
-            onClick={onClose}
-            type="button"
-          >
-            <X aria-hidden="true" />
-          </button>
-        ) : null}
+        <button
+          aria-label={
+            mode === "setup-totp"
+              ? confirmAbandon
+                ? "Return to authenticator setup"
+                : "Cancel account setup"
+              : "Close account access"
+          }
+          className="auth-dialog-close"
+          disabled={mode === "setup-totp" && confirmAbandon && abandonPending}
+          onClick={() => {
+            if (mode !== "setup-totp") {
+              onClose();
+              return;
+            }
+            setAbandonError(null);
+            setConfirmAbandon((current) => !current);
+          }}
+          type="button"
+        >
+          <X aria-hidden="true" />
+        </button>
 
         <div className="auth-dialog-content" key={mode}>
           {mode === "sign-in" ? (
@@ -240,19 +284,73 @@ function AuthDialog({
           ) : null}
 
           {mode === "setup-totp" ? (
-            <section className="auth-card auth-card--wide">
-              <SignupProgress currentStep={2} />
-              <p className="eyebrow">Step 2 of 2</p>
-              <h2 id="account-dialog-title">Protect your account</h2>
-              <p className="auth-lede">
-                Scan once, confirm the current code, and your private workspace is
-                ready. This step cannot be skipped.
-              </p>
-              <TotpSetupPanel
-                available={setupAvailable}
-                initialSetup={totpSetup}
-                onboarding
-              />
+            <section
+              className={`auth-card auth-card--wide${confirmAbandon ? " auth-card--abandon" : ""}`}
+            >
+              {confirmAbandon ? (
+                <>
+                  <p className="eyebrow">Leave signup</p>
+                  <h2 id="account-dialog-title">Delete incomplete account?</h2>
+                  <p className="auth-lede">
+                    You have not finished creating this account. You can return to
+                    the authenticator step, or permanently delete this incomplete
+                    account and its empty private workspace.
+                  </p>
+                  <div className="auth-abandon-warning" data-tone="danger">
+                    <TriangleAlert aria-hidden="true" />
+                    <div>
+                      <strong>This cannot be undone</strong>
+                      <p>
+                        The username becomes available again. No completed account
+                        can be deleted from this popup.
+                      </p>
+                    </div>
+                  </div>
+                  {abandonError ? (
+                    <p className="form-alert" role="alert">
+                      <TriangleAlert aria-hidden="true" />
+                      <span>{abandonError}</span>
+                    </p>
+                  ) : null}
+                  <div className="auth-abandon-actions">
+                    <button
+                      className="btn"
+                      data-dialog-initial-focus
+                      disabled={abandonPending}
+                      onClick={() => {
+                        setAbandonError(null);
+                        setConfirmAbandon(false);
+                      }}
+                      type="button"
+                    >
+                      Keep setting up
+                    </button>
+                    <button
+                      className="btn btn--danger"
+                      disabled={abandonPending}
+                      onClick={abandonSignup}
+                      type="button"
+                    >
+                      {abandonPending ? "Deleting…" : "Delete incomplete account"}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <SignupProgress currentStep={2} />
+                  <p className="eyebrow">Step 2 of 2</p>
+                  <h2 id="account-dialog-title">Protect your account</h2>
+                  <p className="auth-lede">
+                    Scan once, confirm the current code, and your private workspace is
+                    ready. This step cannot be skipped.
+                  </p>
+                  <TotpSetupPanel
+                    available={setupAvailable}
+                    initialSetup={totpSetup}
+                    onboarding
+                  />
+                </>
+              )}
             </section>
           ) : null}
         </div>
@@ -283,6 +381,10 @@ export function LandingExperience({
     [router],
   );
   const close = useCallback(() => router.replace("/"), [router]);
+  const abandoned = useCallback(() => {
+    router.replace("/");
+    router.refresh();
+  }, [router]);
 
   return (
     <>
@@ -476,6 +578,7 @@ export function LandingExperience({
         <AuthDialog
           demoAccount={demoAccount}
           mode={authMode}
+          onAbandoned={abandoned}
           onClose={close}
           onNavigate={navigate}
           setupAvailable={setupAvailable}

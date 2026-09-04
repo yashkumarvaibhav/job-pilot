@@ -51,7 +51,7 @@ describe("public landing experience", () => {
     expect(signUp).toContain("Continue to authenticator");
   });
 
-  it("keeps recovery in the dialog and makes mandatory setup non-dismissible", () => {
+  it("keeps recovery in the dialog and makes mandatory setup cancellable without a skip", () => {
     const recovery = render("forgot-password");
     const setup = render("setup-totp");
 
@@ -59,7 +59,7 @@ describe("public landing experience", () => {
     expect(recovery).toContain("Authenticator code");
     expect(setup).toContain("Step 2 of 2");
     expect(setup).toContain("Authenticator setup QR code");
-    expect(setup).not.toContain("Close account access");
+    expect(setup).toContain("Cancel account setup");
     expect(setup).not.toContain("Skip for now");
   });
 });

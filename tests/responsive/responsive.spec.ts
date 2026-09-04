@@ -384,7 +384,7 @@ test("signup setup cannot reach workspace data and confirmation promotes it", as
   await expect(page.getByText("Step 2 of 2", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Authenticator setup QR code")).toBeVisible();
   await expect(page.getByText("Skip for now", { exact: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Close account access" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Cancel account setup" })).toBeVisible();
 
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toBeVisible();
@@ -416,4 +416,60 @@ test("signup setup cannot reach workspace data and confirmation promotes it", as
   const after = await context.request.get(`${BASE_URL}/api/companies`);
   expect(after.status()).toBe(200);
   await context.close();
+});
+
+test("incomplete signup can be kept or explicitly deleted at mobile width", async ({ browser }) => {
+  for (const theme of THEMES) {
+    const username = `abandon_check_${theme}`;
+    const context = await browser.newContext({
+      colorScheme: theme,
+      viewport: VIEWPORTS[0],
+    });
+    const page = await context.newPage();
+
+    async function beginSignup() {
+      await page.goto("/");
+      await page.evaluate((value) => localStorage.setItem("theme", value), theme);
+      await page.reload();
+      await page.getByRole("button", { name: "Create your workspace" }).click();
+      await page.getByLabel("Username").fill(username);
+      await page.getByLabel("Password", { exact: true }).fill(ACCOUNT_PASSWORD);
+      await page.getByLabel("Confirm password").fill(ACCOUNT_PASSWORD);
+      await page.getByRole("button", { name: "Continue to authenticator" }).click();
+      await expect(page).toHaveURL(/\/?\?auth=setup-totp$/u);
+      await expect(page.getByText("Step 2 of 2", { exact: true })).toBeVisible();
+    }
+
+    await beginSignup();
+    const qrPath = await page
+      .getByLabel("Authenticator setup QR code")
+      .locator("path")
+      .getAttribute("d");
+    await page.getByRole("button", { name: "Cancel account setup" }).click();
+    await expect(page.getByRole("heading", { name: "Delete incomplete account?" })).toBeVisible();
+    await expect(page.getByText("This cannot be undone", { exact: true })).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.locator(".auth-dialog-backdrop").click({ position: { x: 2, y: 2 } });
+    await expect(page.getByRole("heading", { name: "Delete incomplete account?" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Keep setting up" }).click();
+    await expect(page.getByText("Step 2 of 2", { exact: true })).toBeVisible();
+    await expect(
+      page.getByLabel("Authenticator setup QR code").locator("path"),
+    ).toHaveAttribute("d", qrPath ?? "");
+
+    await page.getByRole("button", { name: "Cancel account setup" }).click();
+    await page.getByRole("button", { name: "Delete incomplete account" }).click();
+    await expect(page).toHaveURL(`${BASE_URL}/`);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    expect((await context.request.get(`${BASE_URL}/api/companies`)).status()).toBe(401);
+
+    await beginSignup();
+    await page.getByRole("button", { name: "Cancel account setup" }).click();
+    await page.getByRole("button", { name: "Delete incomplete account" }).click();
+    await expect(page).toHaveURL(`${BASE_URL}/`);
+    await context.close();
+  }
 });
