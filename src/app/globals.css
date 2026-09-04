@@ -3667,6 +3667,46 @@ main:focus {
   min-width: 0;
 }
 
+.totp-scan-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(10rem, 14rem);
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-5);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--sidebar);
+}
+
+.totp-scan-copy {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.totp-scan-copy p,
+.totp-key-block p {
+  margin: 0;
+}
+
+.authenticator-qr {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--qr-paper);
+}
+
+.authenticator-qr__paper {
+  fill: var(--qr-paper);
+}
+
+.authenticator-qr__modules {
+  fill: var(--qr-ink);
+}
+
 .totp-secret {
   display: block;
   max-width: 100%;
@@ -3804,6 +3844,15 @@ main:focus {
 }
 
 @media (max-width: 767px) {
+  .totp-scan-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .authenticator-qr {
+    width: min(100%, 15rem);
+    justify-self: center;
+  }
+
   .settings-grid {
     grid-template-columns: minmax(0, 1fr);
   }

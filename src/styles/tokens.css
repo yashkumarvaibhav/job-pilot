@@ -72,6 +72,11 @@
   --code: #f4f6f6;
   --hover: rgba(51, 51, 51, 0.05);
 
+  /* Machine-readable setup codes stay fixed across themes. Inverting or tinting
+     QR modules reduces scanner reliability, so these are not palette roles. */
+  --qr-ink: #111111;
+  --qr-paper: #ffffff;
+
   /* Lines — structure comes from hairlines, not shadows */
   --line: rgba(51, 51, 51, 0.10);
   --line-strong: rgba(39, 122, 117, 0.35);

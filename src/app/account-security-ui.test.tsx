@@ -32,18 +32,22 @@ describe("username and authenticator UI", () => {
     expect(signup).toContain("3–32 characters");
   });
 
-  it("shows the post-signup setup key, code field and explicit skip path", () => {
+  it("shows a local QR, manual key and code field without a signup skip path", () => {
     const html = renderToStaticMarkup(
       <TotpSetupPanel available initialSetup={SETUP} onboarding />,
     );
 
-    expect(html).toContain("Authenticator setup key");
+    expect(html).toContain("Scan with your authenticator app");
+    expect(html).toContain('aria-label="Authenticator setup QR code"');
+    expect(html).toContain('viewBox="0 0 49 49"');
+    expect(html).toContain("Can’t scan it?");
+    expect(html).toContain("Manual setup key");
     expect(html).toContain(SETUP.secret);
     expect(html).toContain("Open authenticator app");
     expect(html).toContain("Six-digit code");
     expect(html).toContain("Enable authenticator");
-    expect(html).toContain("Skip for now");
-    expect(html).toContain("/?totp=skipped");
+    expect(html).not.toContain("Skip for now");
+    expect(html).not.toContain("totp=skipped");
   });
 
   it("renders the skip warning with an icon and exact consequence", () => {

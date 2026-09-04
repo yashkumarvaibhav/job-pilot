@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useRef, useState } from "react";
 
@@ -10,6 +9,7 @@ import {
   TOTP_SKIPPED_WARNING,
 } from "@/lib/account";
 import type { TotpSetup } from "@/server/auth/totp";
+import { AuthenticatorQrCode } from "./authenticator-qr-code";
 
 function StateIcon({ success = false }: { success?: boolean }) {
   return (
@@ -170,8 +170,22 @@ export function TotpSetupPanel({
 
       {setup ? (
         <>
+          <div className="totp-scan-panel">
+            <div className="totp-scan-copy">
+              <span className="eyebrow">Authenticator setup</span>
+              <h3>Scan with your authenticator app</h3>
+              <p>
+                Open your authenticator app, add a new account, then scan this QR code.
+              </p>
+            </div>
+            <AuthenticatorQrCode uri={setup.uri} />
+          </div>
           <div className="totp-key-block">
-            <span className="eyebrow">Authenticator setup key</span>
+            <h3>Can’t scan it?</h3>
+            <p className="settings-help">
+              Enter this manual setup key in your authenticator app instead.
+            </p>
+            <span className="eyebrow">Manual setup key</span>
             <code className="totp-secret">{setup.secret}</code>
             <div className="security-actions">
               <button className="btn btn--ghost" onClick={copySecret} type="button">
@@ -213,11 +227,6 @@ export function TotpSetupPanel({
         </button>
       )}
 
-      {onboarding ? (
-        <p className="auth-switch">
-          <Link href="/?totp=skipped">Skip for now</Link>
-        </p>
-      ) : null}
     </div>
   );
 }
