@@ -12,7 +12,11 @@ import {
 } from "@/domain/sequence";
 
 export type SequenceEnrollOption = { id: string; name: string };
-export type SequenceAccountOption = { id: string; email: string };
+export type SequenceAccountOption = {
+  id: string;
+  email: string;
+  isDefault?: boolean;
+};
 export type SequenceEnrollmentRow = {
   id: string;
   sequenceName: string;
@@ -212,10 +216,17 @@ export function SequenceEnrollForm({
           ) : null}
           <div className="field">
             <label htmlFor="sequence-enroll-account">Gmail account</label>
-            <select id="sequence-enroll-account" name="accountId" required>
+            <select
+              defaultValue={
+                accounts.find((account) => account.isDefault)?.id ?? accounts[0]?.id
+              }
+              id="sequence-enroll-account"
+              name="accountId"
+              required
+            >
               {accounts.map((account) => (
                 <option key={account.id} value={account.id}>
-                  {account.email}
+                  {account.isDefault ? `${account.email} — default` : account.email}
                 </option>
               ))}
             </select>

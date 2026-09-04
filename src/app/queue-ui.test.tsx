@@ -73,6 +73,7 @@ describe("queue UI", () => {
     expect(source).toContain("I checked Gmail Sent and want to approve a new attempt.");
     expect(source).toContain("uncertainDeliveryAcknowledged");
     expect(source).not.toContain("Approve all");
+    expect(source).not.toContain("Select all");
     expect(source).not.toContain("Send anyway");
   });
 
@@ -87,5 +88,10 @@ describe("queue UI", () => {
     expect(queue).toContain("overflow-x: auto");
     expect(queue).toContain("@media (max-width: 767px)");
     expect(queue).not.toMatch(/#[0-9a-f]{3,8}/i);
+    const resting = queue.slice(0, queue.indexOf(".queue-dialog"));
+    expect(resting).toContain(".queue-usage");
+    expect(resting).toContain(".queue-table-wrap");
+    expect(resting).toContain(".suppression-panel");
+    expect(resting).not.toContain("box-shadow");
   });
 });

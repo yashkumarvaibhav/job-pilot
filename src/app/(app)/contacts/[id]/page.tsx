@@ -120,7 +120,11 @@ export default async function ContactDetailPage({
   }));
   const connectedAccounts = listEmailAccounts(database, tenant)
     .filter((account) => account.status === "connected")
-    .map((account) => ({ id: account.id, email: account.email }));
+    .map((account) => ({
+      id: account.id,
+      email: account.email,
+      isDefault: account.isDefault,
+    }));
   return (
     <article className="contact-detail">
       <Link className="back-link" href="/contacts">

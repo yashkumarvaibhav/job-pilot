@@ -144,7 +144,11 @@ export default async function OpportunityDetailPage({ params }: Props) {
   }));
   const connectedAccounts = listEmailAccounts(database, tenant)
     .filter((account) => account.status === "connected")
-    .map((account) => ({ id: account.id, email: account.email }));
+    .map((account) => ({
+      id: account.id,
+      email: account.email,
+      isDefault: account.isDefault,
+    }));
   const interviews = listInterviews(database, tenant, row.id);
   const assessments = listAssessments(database, tenant, row.id);
   const health = opportunityHealth(

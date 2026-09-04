@@ -46,7 +46,10 @@ describe("sequence UI", () => {
   it("shows stop on an active enrollment and lists cancel reasons", () => {
     const html = renderToStaticMarkup(
       <SequenceEnrollForm
-        accounts={[{ id: "account-a", email: "sender@invalid.test" }]}
+        accounts={[
+          { id: "account-default", email: "default@invalid.test", isDefault: true },
+          { id: "account-a", email: "sender@invalid.test" },
+        ]}
         defaultContactId="contact-priya"
         enrollments={[
           {
@@ -61,6 +64,8 @@ describe("sequence UI", () => {
       />,
     );
     expect(html).toContain(SEQUENCE_ENROLLMENT_COPY);
+    expect(html).toContain("default@invalid.test — default");
+    expect(html).toContain("sender@invalid.test");
     expect(html).toContain("Stop");
     expect(html).toContain("Enroll");
     for (const reason of SEQUENCE_STOP_REASON_COPY) {
@@ -110,6 +115,8 @@ describe("sequence UI", () => {
     const styles = css.slice(css.indexOf("/* Owner-written template library"));
     expect(styles).toContain(".sequence-manager");
     expect(styles).toContain("var(--raised)");
+    expect(styles).toContain("var(--line)");
     expect(styles).not.toMatch(/#[0-9a-f]{3,8}/i);
+    expect(styles.slice(0, styles.indexOf("@media"))).not.toContain("box-shadow");
   });
 });
