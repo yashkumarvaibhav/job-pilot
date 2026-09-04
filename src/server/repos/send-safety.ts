@@ -927,3 +927,44 @@ export function removeManualSuppression(
     .get();
   return deleted !== undefined;
 }
+
+export function removeSuppressionEntry(
+  database: AppDatabase,
+  tenant: TenantContext,
+  id: string,
+): { removed: true } | { removed: false; status: 404 | 409; error: string } {
+  const existing = database
+    .select({ id: suppressionEntry.id, reason: suppressionEntry.reason })
+    .from(suppressionEntry)
+    .where(
+      and(
+        eq(suppressionEntry.workspaceId, tenant.workspaceId),
+        eq(suppressionEntry.id, id),
+      ),
+    )
+    .get();
+  if (!existing) {
+    return {
+      removed: false,
+      status: 404,
+      error: "Removable suppression entry not found.",
+    };
+  }
+  if (existing.reason !== "manual") {
+    return {
+      removed: false,
+      status: 409,
+      error:
+        existing.reason === "bounced"
+          ? "Bounced addresses cannot be un-suppressed."
+          : "This suppression cannot be removed.",
+    };
+  }
+  return removeManualSuppression(database, tenant, id)
+    ? { removed: true }
+    : {
+        removed: false,
+        status: 404,
+        error: "Removable suppression entry not found.",
+      };
+}

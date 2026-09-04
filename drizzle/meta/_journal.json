@@ -204,6 +204,13 @@
       "when": 1788540000000,
       "tag": "0028_sequences",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1788552600000,
+      "tag": "0029_bounce",
+      "breakpoints": true
     }
   ]
 }

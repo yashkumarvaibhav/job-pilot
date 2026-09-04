@@ -25,6 +25,7 @@ import type {
   GmailThreadSnapshot,
 } from "../mail/gmail-read-port";
 import { readEmailAccountRefreshToken } from "./email-accounts";
+import { applyBouncesFromSnapshot } from "./bounce";
 import {
   getEmailThread,
   listEmailThreads,
@@ -521,6 +522,7 @@ export function ingestSyncedThreadSnapshot(
   source: "sync" | "manual_import" = "sync",
 ): EmailThread | undefined {
   const account = ownedAccount(database, tenant, accountId, "syncing");
+  applyBouncesFromSnapshot(database, tenant, account.id, snapshot, now);
   const match = matchInboxThread(database, tenant, accountId, snapshot);
   const existing = database
     .select({ id: emailThread.id })
@@ -620,6 +622,13 @@ export async function importGmailThread(
   if (snapshot.gmailThreadId !== gmailThreadId) {
     throw new InboxContentError("Gmail thread not found.");
   }
+  applyBouncesFromSnapshot(
+    database,
+    tenant,
+    account.id,
+    snapshot,
+    dependencies.now?.() ?? new Date(),
+  );
   const existing = database
     .select()
     .from(emailThread)

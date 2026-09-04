@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { currentTenant } from "@/server/auth/current-session";
 import { getDatabase } from "@/server/db/runtime";
-import { removeManualSuppression } from "@/server/repos/send-safety";
+import { removeSuppressionEntry } from "@/server/repos/send-safety";
 
 export const runtime = "nodejs";
 
@@ -14,14 +14,11 @@ export async function DELETE(
   if (!tenant) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }
-  return removeManualSuppression(
+  const result = removeSuppressionEntry(
     getDatabase(),
     tenant,
     (await context.params).id,
-  )
-    ? NextResponse.json({ ok: true })
-    : NextResponse.json(
-        { error: "Removable suppression entry not found." },
-        { status: 404 },
-      );
+  );
+  if (result.removed) return NextResponse.json({ ok: true });
+  return NextResponse.json({ error: result.error }, { status: result.status });
 }

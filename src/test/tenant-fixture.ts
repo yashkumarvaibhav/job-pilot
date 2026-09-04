@@ -25,6 +25,7 @@ type FoundationTable =
   | "gmail_recovery_thread"
   | "send_queue"
   | "suppression_entry"
+  | "bounce_event"
   | "company"
   | "contact"
   | "contact_method"

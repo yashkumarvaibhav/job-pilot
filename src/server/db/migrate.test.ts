@@ -77,13 +77,14 @@ describe("migrateDatabase", () => {
           "sequence_enrollment",
           "sequence_step",
           "suppression_entry",
+          "bounce_event",
         ]),
       );
       expect(
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 29 });
+      ).toEqual({ count: 30 });
 
       const accountColumns = client.sqlite
         .prepare("select name from pragma_table_info('user_account') order by cid")
@@ -417,6 +418,7 @@ describe("migrateDatabase", () => {
         "value_normalized",
         "is_primary",
         "created_at",
+        "invalid_at",
       ]);
       const contactMethodForeignKeys = client.sqlite
         .prepare(
@@ -900,6 +902,27 @@ describe("migrateDatabase", () => {
       expect(settingsColumns.map((column) => column.name)).toContain(
         "default_email_account_id",
       );
+      expect(settingsColumns.map((column) => column.name)).toContain(
+        "contact_cooldown_days",
+      );
+      expect(settingsColumns.map((column) => column.name)).toContain(
+        "max_outreach_per_opportunity",
+      );
+
+      const bounceEventColumns = client.sqlite
+        .prepare("select name from pragma_table_info('bounce_event') order by cid")
+        .all() as { name: string }[];
+      expect(bounceEventColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "account_id",
+        "email",
+        "gmail_message_id",
+        "kind",
+        "smtp_status",
+        "diagnostic",
+        "at",
+      ]);
 
       const emailAccountColumns = client.sqlite
         .prepare(

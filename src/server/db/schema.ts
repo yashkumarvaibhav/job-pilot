@@ -212,6 +212,10 @@ export const settings = sqliteTable(
     quietEnd: integer("quiet_end"),
     digestHour: integer("digest_hour"),
     defaultEmailAccountId: text("default_email_account_id"),
+    contactCooldownDays: integer("contact_cooldown_days").notNull().default(30),
+    maxOutreachPerOpportunity: integer("max_outreach_per_opportunity")
+      .notNull()
+      .default(10),
   },
   (table) => [
     index("settings_workspace_idx").on(table.workspaceId),
@@ -230,6 +234,14 @@ export const settings = sqliteTable(
     check(
       "settings_digest_hour_range",
       sql`${table.digestHour} is null or ${table.digestHour} between 0 and 23`,
+    ),
+    check(
+      "settings_contact_cooldown_days_range",
+      sql`${table.contactCooldownDays} between 1 and 365`,
+    ),
+    check(
+      "settings_max_outreach_per_opportunity_range",
+      sql`${table.maxOutreachPerOpportunity} between 1 and 100`,
     ),
     sameWorkspaceForeignKey(
       "settings_default_email_account_workspace_fk",
@@ -441,6 +453,7 @@ export const contactMethod = sqliteTable(
     isPrimary: integer("is_primary", { mode: "boolean" })
       .notNull()
       .default(false),
+    invalidAt: utcInstant("invalid_at"),
     createdAt: utcInstant("created_at").notNull(),
   },
   (table) => [
@@ -1624,6 +1637,53 @@ export const suppressionEntry = sqliteTable(
     check(
       "suppression_entry_reason_valid",
       sql`${table.reason} in ('do_not_contact', 'invalid_email', 'unsubscribed', 'bounced', 'asked_not_to_follow_up', 'manual')`,
+    ),
+  ],
+);
+
+export const bounceEvent = sqliteTable(
+  "bounce_event",
+  {
+    ...workspaceOwnedEntityColumns(),
+    accountId: text("account_id").notNull(),
+    email: text("email").notNull(),
+    gmailMessageId: text("gmail_message_id").notNull(),
+    kind: text("kind", { enum: ["hard", "soft"] }).notNull(),
+    smtpStatus: text("smtp_status"),
+    diagnostic: text("diagnostic"),
+    at: utcInstant("at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("bounce_event", table),
+    uniqueIndex("bounce_event_workspace_account_gmail_unique").on(
+      table.workspaceId,
+      table.accountId,
+      table.gmailMessageId,
+    ),
+    index("bounce_event_workspace_email_idx").on(
+      table.workspaceId,
+      table.email,
+    ),
+    index("bounce_event_workspace_account_idx").on(
+      table.workspaceId,
+      table.accountId,
+    ),
+    sameWorkspaceForeignKey(
+      "bounce_event_account_fk",
+      { workspaceId: table.workspaceId, parentId: table.accountId },
+      emailAccount,
+    ),
+    check(
+      "bounce_event_email_not_blank",
+      sql`length(trim(${table.email})) > 0`,
+    ),
+    check(
+      "bounce_event_gmail_message_id_not_blank",
+      sql`length(trim(${table.gmailMessageId})) > 0`,
+    ),
+    check(
+      "bounce_event_kind_valid",
+      sql`${table.kind} in ('hard', 'soft')`,
     ),
   ],
 );
