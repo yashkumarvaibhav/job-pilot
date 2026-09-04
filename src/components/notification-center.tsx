@@ -9,6 +9,7 @@ import {
   ClipboardCheck,
   Handshake,
   ListTodo,
+  Mail,
   MessagesSquare,
   type LucideIcon,
 } from "lucide-react";
@@ -46,6 +47,7 @@ const kindVisuals: Record<
   interview: { icon: MessagesSquare, tone: "info" },
   assessment_deadline: { icon: ClipboardCheck, tone: "warning" },
   offer_deadline: { icon: Handshake, tone: "warning" },
+  sequence_follow_up: { icon: Mail, tone: "info" },
   task: { icon: ListTodo, tone: "muted" },
 };
 

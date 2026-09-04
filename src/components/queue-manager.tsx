@@ -34,11 +34,12 @@ export type QueueSummary = {
   lastError: string | null;
 };
 
-type QueueDetail = QueueSummary & {
+export type QueueDetail = QueueSummary & {
   recipient: string;
   body: string;
   attachments: { id: string; name: string }[];
   deliveryUncertain: boolean;
+  sendAnywayAvailable?: boolean;
 };
 
 export type QueueUsage = {
@@ -90,11 +91,13 @@ function responseError(value: unknown): string {
 }
 
 export function QueueManager({
+  initialReviewId,
   items,
   suppression,
   timeZone,
   usage,
 }: {
+  initialReviewId?: string | null;
   items: QueueSummary[];
   suppression: SuppressionListItem[];
   timeZone: string;
@@ -115,6 +118,7 @@ export function QueueManager({
     useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const openedReview = useRef<string | null>(null);
 
   useEffect(() => {
     if (selectedId && dialog.current && !dialog.current.open) {
@@ -122,8 +126,8 @@ export function QueueManager({
     }
   }, [selectedId]);
 
-  async function openReview(id: string, trigger: HTMLButtonElement) {
-    opener.current = trigger;
+  async function openReview(id: string, trigger?: HTMLButtonElement) {
+    opener.current = trigger ?? null;
     setSelectedId(id);
     setDetail(null);
     setLoadingDetail(true);
@@ -137,12 +141,39 @@ export function QueueManager({
         return;
       }
       setDetail(body as QueueDetail);
+      const loaded = body as QueueDetail;
+      if (loaded.sendAt) {
+        const stamp = new Date(loaded.sendAt);
+        if (!Number.isNaN(stamp.valueOf())) {
+          const parts = new Intl.DateTimeFormat("en-CA", {
+            timeZone,
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hourCycle: "h23",
+          }).formatToParts(stamp);
+          const value = (type: Intl.DateTimeFormatPartTypes) =>
+            parts.find((part) => part.type === type)?.value ?? "";
+          setSendAt(
+            `${value("year")}-${value("month")}-${value("day")}T${value("hour")}:${value("minute")}`,
+          );
+        }
+      }
     } catch {
       setError("Could not reach Job Pilot. Check the connection and retry.");
     } finally {
       setLoadingDetail(false);
     }
   }
+
+  useEffect(() => {
+    if (!initialReviewId || openedReview.current === initialReviewId) return;
+    openedReview.current = initialReviewId;
+    void openReview(initialReviewId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- open once for ?review=
+  }, [initialReviewId]);
 
   function closeReview() {
     if (dialog.current?.open) dialog.current.close();

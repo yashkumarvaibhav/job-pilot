@@ -7,6 +7,7 @@ const items = [
   { href: "/settings", label: "Workspace" },
   { href: "/settings/documents", label: "Documents" },
   { href: "/settings/templates", label: "Templates" },
+  { href: "/settings/sequences", label: "Sequences" },
   { href: "/settings/queue", label: "Queue" },
   { href: "/settings/import", label: "Import" },
   { href: "/settings/activity", label: "Activity" },

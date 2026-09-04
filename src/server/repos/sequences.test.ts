@@ -22,7 +22,6 @@ import {
   addSuppressionEntry,
 } from "./send-safety";
 import {
-  SequenceError,
   createSequence,
   enrollSequence,
   listEnrollments,

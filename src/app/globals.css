@@ -5106,14 +5106,17 @@ main:focus {
 /* Owner-written template library. */
 
 .template-page,
+.sequence-page,
 .template-manager,
+.sequence-manager,
 .template-editor {
   display: grid;
   gap: var(--space-6);
   min-width: 0;
 }
 
-.template-manager {
+.template-manager,
+.sequence-manager {
   grid-template-columns: minmax(14rem, 0.7fr) minmax(0, 1.3fr);
   align-items: start;
 }
@@ -5232,6 +5235,7 @@ main:focus {
 
 @media (max-width: 767px) {
   .template-manager,
+  .sequence-manager,
   .template-editor__grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -5239,4 +5243,33 @@ main:focus {
   .template-list {
     max-height: 18rem;
   }
+}
+
+.sequence-step-list,
+.sequence-enrollment-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sequence-enrollment-list li,
+.sequence-enroll-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.sequence-enroll,
+.sequence-enroll-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.sequence-enroll-form {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  align-items: end;
 }

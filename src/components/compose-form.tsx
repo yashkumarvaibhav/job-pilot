@@ -139,10 +139,11 @@ export function ComposeForm({
   const [documentId, setDocumentId] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
-  const [pendingAction, setPendingAction] = useState<ComposeApproval | null>(null);
+  const [pendingAction, setPendingAction] = useState<ComposeApproval | "send_anyway" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<string | null>(null);
   const [customTime, setCustomTime] = useState("");
+  const [sendAnywayRequired, setSendAnywayRequired] = useState(false);
 
   const account = accounts.find((item) => item.id === accountId) ?? defaultAccount;
   const contact = contacts.find((item) => item.id === contactId);
@@ -200,8 +201,8 @@ export function ComposeForm({
     setOpportunityId(referral.opportunityId ?? "");
   }
 
-  async function approve(approval: ComposeApproval) {
-    setPendingAction(approval);
+  async function approve(approval: ComposeApproval, sendAnyway = false) {
+    setPendingAction(sendAnyway ? "send_anyway" : approval);
     setError(null);
     setOutcome(null);
     try {
@@ -218,13 +219,23 @@ export function ComposeForm({
           attachmentVersionIds: documentId ? [documentId] : [],
           approval,
           ...(approval === "custom_time" ? { sendAt: customTime } : {}),
+          ...(sendAnyway ? { sendAnyway: true } : {}),
         }),
       });
       const responseBody: unknown = await response.json().catch(() => null);
       if (!response.ok) {
+        if (
+          typeof responseBody === "object" &&
+          responseBody !== null &&
+          "sendAnywayRequired" in responseBody &&
+          (responseBody as { sendAnywayRequired?: unknown }).sendAnywayRequired === true
+        ) {
+          setSendAnywayRequired(true);
+        }
         setError(responseError(responseBody));
         return;
       }
+      setSendAnywayRequired(false);
       const queued = responseBody as { status?: unknown; sendAt?: unknown } | null;
       setOutcome(
         queued?.status === "sent"
@@ -481,6 +492,17 @@ export function ComposeForm({
               <CalendarClock aria-hidden="true" />
               {pendingAction === "custom_time" ? "Scheduling…" : "Approve custom time"}
             </button>
+            {sendAnywayRequired ? (
+              <button
+                className="btn btn--ghost"
+                disabled={pendingAction !== null}
+                onClick={() => void approve("send_now", true)}
+                type="button"
+              >
+                <Send aria-hidden="true" />
+                {pendingAction === "send_anyway" ? "Sending…" : "Send anyway"}
+              </button>
+            ) : null}
           </div>
         ) : null}
       </section>

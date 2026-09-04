@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 
+import { lastSyncedCopy } from "@/domain/sequence";
 import { currentTenant } from "@/server/auth/current-session";
 import { getDatabase } from "@/server/db/runtime";
 import { flushSendQueue } from "@/server/jobs/send-queue";
-import { getMailSendDependencies } from "@/server/mail/runtime";
+import { syncInboxAccount } from "@/server/mail/inbox-sync";
+import { getMailReadDependencies, getMailSendDependencies } from "@/server/mail/runtime";
+import { listEmailAccounts } from "@/server/repos/email-accounts";
 import {
   SendSafetyError,
   createQueueMessage,
@@ -31,6 +34,7 @@ type ComposeQueueInput = {
   attachmentVersionIds: string[];
   approval: ComposeApproval;
   sendAt?: string;
+  sendAnyway?: boolean;
 };
 
 const ALLOWED_KEYS = new Set([
@@ -43,6 +47,7 @@ const ALLOWED_KEYS = new Set([
   "attachmentVersionIds",
   "approval",
   "sendAt",
+  "sendAnyway",
 ]);
 const APPROVALS = new Set<ComposeApproval>([
   "send_now",
@@ -73,6 +78,7 @@ async function readInput(request: Request): Promise<ComposeQueueInput | null> {
         input.referralId !== null &&
         typeof input.referralId !== "string") ||
       (input.sendAt !== undefined && typeof input.sendAt !== "string") ||
+      (input.sendAnyway !== undefined && typeof input.sendAnyway !== "boolean") ||
       !Array.isArray(input.attachmentVersionIds) ||
       input.attachmentVersionIds.some((id) => typeof id !== "string")
     ) {
@@ -111,6 +117,29 @@ export async function POST(request: Request) {
       { error: "Gmail sending is not configured yet." },
       { status: 503 },
     );
+  }
+  const read = getMailReadDependencies();
+  if (read) {
+    try {
+      await syncInboxAccount(database, tenant, input.accountId, {
+        ...read,
+        now: () => now,
+      });
+    } catch {
+      if (input.sendAnyway !== true) {
+        const account = listEmailAccounts(database, tenant).find(
+          (row) => row.id === input.accountId,
+        );
+        return NextResponse.json(
+          {
+            error: lastSyncedCopy(account?.lastSyncAt ?? null, now),
+            lastSyncedAt: account?.lastSyncAt?.toISOString() ?? null,
+            sendAnywayRequired: true,
+          },
+          { status: 409 },
+        );
+      }
+    }
   }
   try {
     const sendAt =

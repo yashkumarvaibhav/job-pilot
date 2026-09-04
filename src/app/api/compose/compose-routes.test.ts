@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { and, eq } from "drizzle-orm";
 
 import { createTenantTestFixture } from "../../../test/tenant-fixture";
+import { emailAccount } from "../../../server/db/schema";
 import { createContact } from "../../../server/repos/contacts";
 import { connectEmailAccount } from "../../../server/repos/email-accounts";
 import { addSuppressionEntry } from "../../../server/repos/send-safety";
@@ -11,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   database: undefined as unknown,
   tenant: undefined as unknown,
   dependencies: null as unknown,
+  read: null as unknown,
+  syncInboxAccount: vi.fn(async () => ({ historyGap: false })),
 }));
 
 vi.mock("@/server/auth/current-session", () => ({
@@ -21,6 +25,10 @@ vi.mock("@/server/db/runtime", () => ({
 }));
 vi.mock("@/server/mail/runtime", () => ({
   getMailSendDependencies: () => mocks.dependencies,
+  getMailReadDependencies: () => mocks.read,
+}));
+vi.mock("@/server/mail/inbox-sync", () => ({
+  syncInboxAccount: mocks.syncInboxAccount,
 }));
 
 import { POST } from "./route";
@@ -46,6 +54,9 @@ describe("compose route", () => {
     mocks.database = fixture.client.db;
     mocks.tenant = fixture.tenantA;
     mocks.dependencies = null;
+    mocks.read = null;
+    mocks.syncInboxAccount.mockReset();
+    mocks.syncInboxAccount.mockResolvedValue({ historyGap: false });
   });
 
   afterEach(() => {
@@ -258,5 +269,79 @@ describe("compose route", () => {
         )
       ).status,
     ).toBe(400);
+  });
+
+  it("syncs first and only then offers send-anyway for one-off compose", async () => {
+    const fixture = fixtures[0] as ReturnType<typeof createTenantTestFixture>;
+    const account = connectEmailAccount(
+      fixture.client.db,
+      fixture.tenantA,
+      {
+        googleSub: "google-stale",
+        email: "stale@invalid.test",
+        refreshToken: "synthetic-refresh",
+        sendingWindowStart: 0,
+        sendingWindowEnd: 1439,
+      },
+      TOKEN_KEY,
+    );
+    fixture.client.db
+      .update(emailAccount)
+      .set({ lastSyncAt: new Date("2026-09-03T07:00:00.000Z") })
+      .where(
+        and(
+          eq(emailAccount.workspaceId, fixture.tenantA.workspaceId),
+          eq(emailAccount.id, account.id),
+        ),
+      )
+      .run();
+    const contact = createContact(fixture.client.db, fixture.tenantA, {
+      id: "contact-stale",
+      name: "Stale Mailbox",
+      methods: [{ kind: "email", value: "stale-recipient@invalid.test" }],
+    });
+    const mailPort: MailPort = {
+      send: vi.fn(async (input) => ({
+        gmailMessageId: "gmail-message",
+        gmailThreadId: "gmail-thread",
+        rfcMessageId: input.rfcMessageId!,
+        sentAt: new Date("2026-09-03T10:00:00.000Z"),
+      })),
+    };
+    mocks.dependencies = { mailPort, tokenKey: TOKEN_KEY };
+    mocks.read = { port: {}, tokenKey: TOKEN_KEY };
+    mocks.syncInboxAccount.mockRejectedValue(new Error("sync unavailable"));
+
+    const blocked = await POST(
+      request({
+        accountId: account.id,
+        contactId: contact.id,
+        subject: "Stale subject",
+        body: "Stale body",
+        attachmentVersionIds: [],
+        approval: "send_now",
+      }),
+    );
+    expect(blocked.status).toBe(409);
+    expect(await blocked.json()).toEqual({
+      error: "last synced 3 hours ago",
+      lastSyncedAt: "2026-09-03T07:00:00.000Z",
+      sendAnywayRequired: true,
+    });
+    expect(mailPort.send).not.toHaveBeenCalled();
+
+    const sent = await POST(
+      request({
+        accountId: account.id,
+        contactId: contact.id,
+        subject: "Stale subject",
+        body: "Stale body",
+        attachmentVersionIds: [],
+        approval: "send_now",
+        sendAnyway: true,
+      }),
+    );
+    expect(sent.status).toBe(201);
+    expect(mailPort.send).toHaveBeenCalledOnce();
   });
 });

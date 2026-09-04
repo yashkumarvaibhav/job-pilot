@@ -73,6 +73,7 @@ describe("queue UI", () => {
     expect(source).toContain("I checked Gmail Sent and want to approve a new attempt.");
     expect(source).toContain("uncertainDeliveryAcknowledged");
     expect(source).not.toContain("Approve all");
+    expect(source).not.toContain("Send anyway");
   });
 
   it("uses tokens, an independently scrolling table and a mobile stack", () => {

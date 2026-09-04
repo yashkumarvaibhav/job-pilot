@@ -22,6 +22,7 @@ import { LinkContactForm } from "@/components/opportunity-contact-forms";
 import { OpportunityEditForm } from "@/components/opportunity-form";
 import { OpportunityHealthBanner } from "@/components/opportunity-health";
 import { OpportunityScoreCard } from "@/components/opportunity-score";
+import { SequenceEnrollForm } from "@/components/sequence-enroll-form";
 import { ReferralCreateForm } from "@/components/referral-forms";
 import { ReferralCollection } from "@/components/referral-list";
 import { TagPicker } from "@/components/tag-picker";
@@ -44,6 +45,8 @@ import { listInterviews } from "@/server/repos/interviews";
 import { listAssessments } from "@/server/repos/assessments";
 import { listReferrals } from "@/server/repos/referrals";
 import { listActivity } from "@/server/repos/activity";
+import { listEmailAccounts } from "@/server/repos/email-accounts";
+import { listEnrollments, listSequences } from "@/server/repos/sequences";
 import { listEntityTags, listTags } from "@/server/repos/tags";
 import { formatInterviewWhen } from "@/domain/interview";
 import { isAssessmentStatus } from "@/domain/assessment";
@@ -127,6 +130,21 @@ export default async function OpportunityDetailPage({ params }: Props) {
     entityType: "opportunity",
     entityId: row.id,
   });
+  const sequences = listSequences(database, tenant);
+  const enrollments = listEnrollments(database, tenant, {
+    opportunityId: row.id,
+  }).map((enrollment) => ({
+    id: enrollment.id,
+    sequenceName:
+      sequences.find((sequence) => sequence.id === enrollment.sequenceId)?.name ??
+      "Sequence",
+    status: enrollment.status,
+    cancelReason: enrollment.cancelReason,
+    nextAt: enrollment.nextAt.toISOString(),
+  }));
+  const connectedAccounts = listEmailAccounts(database, tenant)
+    .filter((account) => account.status === "connected")
+    .map((account) => ({ id: account.id, email: account.email }));
   const interviews = listInterviews(database, tenant, row.id);
   const assessments = listAssessments(database, tenant, row.id);
   const health = opportunityHealth(
@@ -263,6 +281,25 @@ export default async function OpportunityDetailPage({ params }: Props) {
           </>
         )}
         <LinkContactForm contacts={linkableContacts} opportunityId={row.id} />
+      </section>
+      <section
+        aria-labelledby="opportunity-sequences"
+        className="detail-section"
+      >
+        <h2 id="opportunity-sequences">Sequences</h2>
+        <SequenceEnrollForm
+          accounts={connectedAccounts}
+          contacts={linkedContacts.map((item) => ({
+            id: item.contactId,
+            name: item.contactName,
+          }))}
+          defaultOpportunityId={row.id}
+          enrollments={enrollments}
+          sequences={sequences.map((sequence) => ({
+            id: sequence.id,
+            name: sequence.name,
+          }))}
+        />
       </section>
       <section
         aria-labelledby="opportunity-referrals"

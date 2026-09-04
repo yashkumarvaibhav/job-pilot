@@ -90,6 +90,7 @@ describe("composer UI", () => {
     expect(html).toContain("Send tomorrow morning");
     expect(html).toContain("Approve custom time");
     expect(html).toContain('type="submit"');
+    expect(html).not.toContain(">Send anyway<");
   });
 
   it("builds the literal §15 values from the chosen CRM context", () => {

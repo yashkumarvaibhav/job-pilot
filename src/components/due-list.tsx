@@ -4,6 +4,7 @@ import { AlarmClock } from "lucide-react";
 import { ConvertDueItemButton, TaskCompleteButton } from "@/components/task-forms";
 import { taskEntityHref } from "@/components/task-status";
 import { isOverdueOn } from "@/domain/assessment";
+import { parseDueSourceKey } from "@/domain/due-source";
 import {
   TODAY_EMPTY,
   todayDoNowHeading,
@@ -18,6 +19,26 @@ function OverdueChip() {
       Overdue
     </span>
   );
+}
+
+function DueItemNextStep({ row }: { row: DueItem }) {
+  if (parseDueSourceKey(row.sourceKey)?.kind === "sequence_follow_up") {
+    return (
+      <Link
+        className="btn"
+        href={`/settings/queue?review=${encodeURIComponent(row.sourceKey)}`}
+      >
+        Review
+      </Link>
+    );
+  }
+  if (row.origin === "derived") {
+    return <ConvertDueItemButton sourceKey={row.sourceKey} title={row.title} />;
+  }
+  if (row.taskId) {
+    return <TaskCompleteButton taskId={row.taskId} />;
+  }
+  return "Open task";
 }
 
 export function DueItemCollection({
@@ -78,16 +99,7 @@ export function DueItemCollection({
                     </span>
                   </td>
                   <td>
-                    {row.origin === "derived" ? (
-                      <ConvertDueItemButton
-                        sourceKey={row.sourceKey}
-                        title={row.title}
-                      />
-                    ) : row.taskId ? (
-                      <TaskCompleteButton taskId={row.taskId} />
-                    ) : (
-                      "Open task"
-                    )}
+                    <DueItemNextStep row={row} />
                   </td>
                 </tr>
               );
@@ -124,14 +136,7 @@ export function DueItemCollection({
               <span className="tnum">
                 {row.dueOn ? `Due ${row.dueOn}` : "No due date"}
               </span>
-              {row.origin === "derived" ? (
-                <ConvertDueItemButton
-                  sourceKey={row.sourceKey}
-                  title={row.title}
-                />
-              ) : row.taskId ? (
-                <TaskCompleteButton taskId={row.taskId} />
-              ) : null}
+              <DueItemNextStep row={row} />
             </li>
           );
         })}

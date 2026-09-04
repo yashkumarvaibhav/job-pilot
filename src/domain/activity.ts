@@ -38,6 +38,10 @@ const KIND_VERBS: Record<string, string> = {
   SAVED_SEARCH_SAVED: "Saved search updated",
   SAVED_SEARCH_DELETED: "Saved search deleted",
   RULE_EXECUTED: "Automation ran",
+  EMAIL_SENT: "Email sent",
+  SEQUENCE_CREATED: "Sequence created",
+  SEQUENCE_ENROLLED: "Sequence enrolled",
+  SEQUENCE_CANCELLED: "Sequence cancelled",
 };
 
 const channelByValue = new Map<string, string>(

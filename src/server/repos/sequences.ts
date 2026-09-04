@@ -38,7 +38,6 @@ import {
   sequenceEnrollment,
   sequenceStep,
   settings,
-  suppressionEntry,
 } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
 import { DEFAULT_TIME_ZONE } from "../db/timezone";
@@ -95,7 +94,7 @@ export type SequenceReview = {
   sendAnywayAvailable: false;
 };
 
-const TERMINAL_OPPORTUNITY = new Set(
+const TERMINAL_OPPORTUNITY = new Set<string>(
   OPPORTUNITY_TERMINAL_STAGES.map((stage) => stage.value),
 );
 
@@ -628,7 +627,7 @@ function latestInboundReplyAt(
 }
 
 export function evaluateEnrollmentCancelInTransaction(
-  transaction: AppTransaction | AppDatabase,
+  transaction: AppTransaction,
   tenant: TenantContext,
   enrollment: SequenceEnrollment,
   claimAt: Date,
@@ -1170,7 +1169,10 @@ export function listOutreachQueue(
     )
     .all()
     .flatMap((enrollment) => {
-      if (evaluateEnrollmentCancelInTransaction(database, tenant, enrollment, now)) {
+      const reason = database.transaction((transaction) =>
+        evaluateEnrollmentCancelInTransaction(transaction, tenant, enrollment, now),
+      );
+      if (reason) {
         return [];
       }
       const key = sequenceDueSourceKey(enrollment.id, enrollment.currentStepId);

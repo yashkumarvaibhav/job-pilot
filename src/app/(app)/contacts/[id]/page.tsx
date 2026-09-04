@@ -15,6 +15,7 @@ import {
   InteractionLogForm,
   MarkRepliedButton,
 } from "@/components/interaction-form";
+import { SequenceEnrollForm } from "@/components/sequence-enroll-form";
 import { FromConversationPanel } from "@/components/opportunity-contact-forms";
 import { ReferralCreateForm } from "@/components/referral-forms";
 import { ReferralCollection } from "@/components/referral-list";
@@ -36,6 +37,8 @@ import { listContactOpportunities, listOpportunities } from "@/server/repos/oppo
 import { listReferrals } from "@/server/repos/referrals";
 import { listEntityTags, listTags } from "@/server/repos/tags";
 import { listActivity } from "@/server/repos/activity";
+import { listEmailAccounts } from "@/server/repos/email-accounts";
+import { listEnrollments, listSequences } from "@/server/repos/sequences";
 import { calendarDateInZone } from "@/domain/referral";
 import { listStaleIndex } from "@/server/repos/rules";
 
@@ -103,6 +106,21 @@ export default async function ContactDetailPage({
     entityType: "contact",
     entityId: contact.id,
   });
+  const sequences = listSequences(database, tenant);
+  const enrollments = listEnrollments(database, tenant, {
+    contactId: contact.id,
+  }).map((enrollment) => ({
+    id: enrollment.id,
+    sequenceName:
+      sequences.find((sequence) => sequence.id === enrollment.sequenceId)?.name ??
+      "Sequence",
+    status: enrollment.status,
+    cancelReason: enrollment.cancelReason,
+    nextAt: enrollment.nextAt.toISOString(),
+  }));
+  const connectedAccounts = listEmailAccounts(database, tenant)
+    .filter((account) => account.status === "connected")
+    .map((account) => ({ id: account.id, email: account.email }));
   return (
     <article className="contact-detail">
       <Link className="back-link" href="/contacts">
@@ -340,6 +358,26 @@ export default async function ContactDetailPage({
             </ul>
           </>
         )}
+      </section>
+
+      <section
+        aria-labelledby="contact-sequences"
+        className="detail-section"
+      >
+        <h2 id="contact-sequences">Sequences</h2>
+        <SequenceEnrollForm
+          accounts={connectedAccounts}
+          defaultContactId={contact.id}
+          enrollments={enrollments}
+          opportunities={opportunityOptions.map((row) => ({
+            id: row.id,
+            name: `${row.companyName} ${row.role}`,
+          }))}
+          sequences={sequences.map((sequence) => ({
+            id: sequence.id,
+            name: sequence.name,
+          }))}
+        />
       </section>
 
       <section
