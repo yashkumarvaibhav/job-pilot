@@ -134,9 +134,8 @@ function alignmentPositions(version: number): number[] {
   if (version === 1) return [];
   const count = Math.floor(version / 7) + 2;
   const size = version * 4 + 17;
-  const step = version === 32
-    ? 26
-    : Math.ceil((version * 4 + count * 2 + 1) / (count * 2 - 2)) * 2;
+  const step =
+    Math.floor((version * 8 + count * 3 + 5) / (count * 4 - 4)) * 2;
   const result = [6];
   for (let position = size - 7; result.length < count; position -= step) {
     result.splice(1, 0, position);

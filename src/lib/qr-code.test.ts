@@ -6,6 +6,24 @@ import { encodeQrCode } from "./qr-code";
 
 const AUTHENTICATOR_URI =
   "otpauth://totp/Job%20Pilot%3Aowner_name?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer=Job+Pilot";
+const PRODUCTION_LENGTH_AUTHENTICATOR_URI =
+  "otpauth://totp/Job%20Pilot%3Aqrcheck_abcdefgh?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer=Job+Pilot&algorithm=SHA1&digits=6&period=30";
+
+function hasAlignmentPattern(
+  matrix: boolean[][],
+  centerX: number,
+  centerY: number,
+): boolean {
+  for (let offsetY = -2; offsetY <= 2; offsetY += 1) {
+    for (let offsetX = -2; offsetX <= 2; offsetX += 1) {
+      const distance = Math.max(Math.abs(offsetX), Math.abs(offsetY));
+      if (matrix[centerY + offsetY][centerX + offsetX] !== (distance !== 1)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
 
 describe("encodeQrCode", () => {
   it("matches an independent byte-mode medium-correction reference matrix", () => {
@@ -28,5 +46,15 @@ describe("encodeQrCode", () => {
     expect(() => encodeQrCode("x".repeat(214))).toThrow(
       "QR code content is too long.",
     );
+  });
+
+  it("places version 8 alignment patterns at their standard centers", () => {
+    const matrix = encodeQrCode(PRODUCTION_LENGTH_AUTHENTICATOR_URI);
+
+    expect(matrix).toHaveLength(49);
+    expect(hasAlignmentPattern(matrix, 24, 24)).toBe(true);
+    expect(hasAlignmentPattern(matrix, 42, 24)).toBe(true);
+    expect(hasAlignmentPattern(matrix, 24, 42)).toBe(true);
+    expect(hasAlignmentPattern(matrix, 42, 42)).toBe(true);
   });
 });
