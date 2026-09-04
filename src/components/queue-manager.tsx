@@ -165,7 +165,7 @@ export function QueueManager({
         setError(responseError(body));
         return;
       }
-      setDetail(body as QueueDetail);
+      if (selectedId) closeReview();
       setMessage(success);
       router.refresh();
     } catch {

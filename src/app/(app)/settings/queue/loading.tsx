@@ -1,6 +1,11 @@
 export default function QueueLoading() {
   return (
-    <section className="settings-content queue-page" role="status">
+    <section
+      aria-busy="true"
+      aria-label="Loading send queue"
+      className="settings-content queue-page"
+      role="status"
+    >
       <header className="settings-heading">
         <p className="eyebrow">Outreach safety</p>
         <h1>Loading send queue…</h1>

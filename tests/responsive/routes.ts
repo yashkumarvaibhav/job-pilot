@@ -32,6 +32,7 @@ export const REGISTERED_PAGES: RegisteredPage[] = [
   { file: "(app)/settings/activity/page.tsx", path: "/settings/activity", access: "signed-in" },
   { file: "(app)/settings/documents/page.tsx", path: "/settings/documents", access: "signed-in" },
   { file: "(app)/settings/import/page.tsx", path: "/settings/import", access: "signed-in" },
+  { file: "(app)/settings/queue/page.tsx", path: "/settings/queue", access: "signed-in" },
   { file: "(app)/settings/templates/page.tsx", path: "/settings/templates", access: "signed-in" },
   { file: "(app)/tasks/page.tsx", path: "/tasks", access: "signed-in" },
 ];

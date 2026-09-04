@@ -99,7 +99,13 @@ describe("queue routes", () => {
     });
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual(
-      expect.objectContaining({ id: queueId, body: "Complete private body" }),
+      expect.objectContaining({
+        id: queueId,
+        accountEmail: "sender@invalid.test",
+        contactName: "Contact A",
+        recipient: "recipient@invalid.test",
+        body: "Complete private body",
+      }),
     );
     const fixture = fixtures[0] as ReturnType<typeof createTenantTestFixture>;
     mocks.tenant = fixture.tenantB;

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTenantTestFixture } from "../../../test/tenant-fixture";
 import { createContact } from "../../../server/repos/contacts";
 import { connectEmailAccount } from "../../../server/repos/email-accounts";
+import { addSuppressionEntry } from "../../../server/repos/send-safety";
 import type { QueueMailPort } from "../../../server/mail/mail-port";
 
 const TOKEN_KEY = Buffer.alloc(32, 13).toString("base64");
@@ -189,6 +190,45 @@ describe("compose route", () => {
       "2026-09-07T03:32:00.000Z",
       "2026-09-07T03:34:00.000Z",
     ]);
+  });
+
+  it("returns conflict when suppression blocks a compose request", async () => {
+    const fixture = fixtures[0] as ReturnType<typeof createTenantTestFixture>;
+    const account = connectEmailAccount(
+      fixture.client.db,
+      fixture.tenantA,
+      {
+        googleSub: "google-suppressed",
+        email: "suppressed-sender@invalid.test",
+        refreshToken: "synthetic-refresh",
+      },
+      TOKEN_KEY,
+    );
+    const contact = createContact(fixture.client.db, fixture.tenantA, {
+      id: "contact-suppressed",
+      name: "Suppressed Contact",
+      methods: [{ kind: "email", value: "suppressed@invalid.test" }],
+    });
+    addSuppressionEntry(fixture.client.db, fixture.tenantA, {
+      email: "suppressed@invalid.test",
+      reason: "manual",
+    });
+
+    const response = await POST(
+      request({
+        accountId: account.id,
+        contactId: contact.id,
+        subject: "Blocked subject",
+        body: "Blocked body",
+        attachmentVersionIds: [],
+        approval: "send_tomorrow",
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: "Email is blocked by manual suppression.",
+    });
   });
 
   it("rejects arrays and extra bulk-shaped approval fields", async () => {

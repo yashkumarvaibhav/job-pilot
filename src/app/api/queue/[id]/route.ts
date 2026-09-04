@@ -9,6 +9,7 @@ import {
   SendSafetyError,
   approveQueueMessage,
   getQueueMessage,
+  listQueueSummaries,
   setQueueMessageState,
 } from "@/server/repos/send-safety";
 
@@ -21,14 +22,31 @@ export async function GET(_request: Request, context: Context) {
   if (!tenant) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }
-  const row = getQueueMessage(getDatabase(), tenant, (await context.params).id);
+  const database = getDatabase();
+  const row = getQueueMessage(database, tenant, (await context.params).id);
+  const summary = row
+    ? listQueueSummaries(database, tenant).find((item) => item.id === row.id)
+    : undefined;
   const attachments = row
-    ? listVersionChoices(getDatabase(), tenant)
+    ? listVersionChoices(database, tenant)
         .filter((version) => row.attachmentVersionIdsJson.includes(version.id))
         .map((version) => ({ id: version.id, name: version.displayName }))
     : [];
-  return row
-    ? NextResponse.json({ ...row, attachments })
+  return row && summary
+    ? NextResponse.json({
+        id: row.id,
+        accountEmail: summary.accountEmail,
+        contactName: summary.contactName,
+        origin: row.origin,
+        status: row.status,
+        recipient: row.recipient,
+        subject: row.subject,
+        body: row.body,
+        attachments,
+        sendAt: row.sendAt,
+        sentAt: row.sentAt,
+        lastError: row.lastError,
+      })
     : NextResponse.json({ error: "Queue row not found." }, { status: 404 });
 }
 
