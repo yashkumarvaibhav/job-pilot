@@ -1435,6 +1435,155 @@ export const emailMessage = sqliteTable(
   ],
 );
 
+export const emailSequence = sqliteTable(
+  "email_sequence",
+  {
+    ...workspaceOwnedEntityColumns(),
+    name: text("name").notNull(),
+    createdAt: utcInstant("created_at").notNull(),
+    updatedAt: utcInstant("updated_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("email_sequence", table),
+    uniqueIndex("email_sequence_workspace_name_unique").on(
+      table.workspaceId,
+      table.name,
+    ),
+    check(
+      "email_sequence_name_not_blank",
+      sql`length(trim(${table.name})) > 0`,
+    ),
+  ],
+);
+
+export const sequenceStep = sqliteTable(
+  "sequence_step",
+  {
+    ...workspaceOwnedEntityColumns(),
+    sequenceId: text("sequence_id").notNull(),
+    offsetDays: integer("offset_days").notNull(),
+    templateId: text("template_id").notNull(),
+    createdAt: utcInstant("created_at").notNull(),
+    updatedAt: utcInstant("updated_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("sequence_step", table),
+    uniqueIndex("sequence_step_workspace_sequence_offset_unique").on(
+      table.workspaceId,
+      table.sequenceId,
+      table.offsetDays,
+    ),
+    index("sequence_step_workspace_sequence_idx").on(
+      table.workspaceId,
+      table.sequenceId,
+    ),
+    sameWorkspaceForeignKey(
+      "sequence_step_sequence_fk",
+      { workspaceId: table.workspaceId, parentId: table.sequenceId },
+      emailSequence,
+    ).onDelete("cascade"),
+    sameWorkspaceForeignKey(
+      "sequence_step_template_fk",
+      { workspaceId: table.workspaceId, parentId: table.templateId },
+      emailTemplate,
+    ),
+    check("sequence_step_offset_nonnegative", sql`${table.offsetDays} >= 0`),
+  ],
+);
+
+export const sequenceEnrollment = sqliteTable(
+  "sequence_enrollment",
+  {
+    ...workspaceOwnedEntityColumns(),
+    sequenceId: text("sequence_id").notNull(),
+    contactId: text("contact_id").notNull(),
+    opportunityId: text("opportunity_id"),
+    accountId: text("account_id").notNull(),
+    currentStepId: text("current_step_id").notNull(),
+    threadId: text("thread_id"),
+    status: text("status", {
+      enum: ["active", "cancelled", "completed"],
+    })
+      .notNull()
+      .default("active"),
+    cancelReason: text("cancel_reason", {
+      enum: [
+        "reply",
+        "bounce",
+        "dnc",
+        "opportunity_closed",
+        "application_rejected",
+        "referral_received",
+        "manual_stop",
+      ],
+    }),
+    nextAt: utcInstant("next_at").notNull(),
+    threadProvenAt: utcInstant("thread_proven_at"),
+    enrolledAt: utcInstant("enrolled_at").notNull(),
+    createdAt: utcInstant("created_at").notNull(),
+    updatedAt: utcInstant("updated_at").notNull(),
+  },
+  (table) => [
+    workspaceEntityKey("sequence_enrollment", table),
+    index("sequence_enrollment_workspace_status_next_idx").on(
+      table.workspaceId,
+      table.status,
+      table.nextAt,
+    ),
+    index("sequence_enrollment_workspace_contact_idx").on(
+      table.workspaceId,
+      table.contactId,
+    ),
+    index("sequence_enrollment_workspace_account_idx").on(
+      table.workspaceId,
+      table.accountId,
+    ),
+    index("sequence_enrollment_workspace_sequence_contact_idx").on(
+      table.workspaceId,
+      table.sequenceId,
+      table.contactId,
+    ),
+    sameWorkspaceForeignKey(
+      "sequence_enrollment_sequence_fk",
+      { workspaceId: table.workspaceId, parentId: table.sequenceId },
+      emailSequence,
+    ),
+    sameWorkspaceForeignKey(
+      "sequence_enrollment_contact_fk",
+      { workspaceId: table.workspaceId, parentId: table.contactId },
+      contact,
+    ),
+    sameWorkspaceForeignKey(
+      "sequence_enrollment_opportunity_fk",
+      { workspaceId: table.workspaceId, parentId: table.opportunityId },
+      opportunity,
+    ),
+    sameWorkspaceForeignKey(
+      "sequence_enrollment_account_fk",
+      { workspaceId: table.workspaceId, parentId: table.accountId },
+      emailAccount,
+    ),
+    sameWorkspaceForeignKey(
+      "sequence_enrollment_step_fk",
+      { workspaceId: table.workspaceId, parentId: table.currentStepId },
+      sequenceStep,
+    ),
+    sameWorkspaceForeignKey(
+      "sequence_enrollment_thread_fk",
+      { workspaceId: table.workspaceId, parentId: table.threadId },
+      emailThread,
+    ),
+    check(
+      "sequence_enrollment_status_valid",
+      sql`${table.status} in ('active', 'cancelled', 'completed')`,
+    ),
+    check(
+      "sequence_enrollment_cancel_reason_valid",
+      sql`${table.cancelReason} is null or ${table.cancelReason} in ('reply', 'bounce', 'dnc', 'opportunity_closed', 'application_rejected', 'referral_received', 'manual_stop')`,
+    ),
+  ],
+);
+
 export const suppressionEntry = sqliteTable(
   "suppression_entry",
   {
@@ -1487,6 +1636,8 @@ export const sendQueue = sqliteTable(
     contactId: text("contact_id"),
     opportunityId: text("opportunity_id"),
     referralId: text("referral_id"),
+    enrollmentId: text("enrollment_id"),
+    stepId: text("step_id"),
     origin: text("origin", {
       enum: ["one_off", "sequence", "self_digest"],
     }).notNull(),
@@ -1561,6 +1712,21 @@ export const sendQueue = sqliteTable(
       "send_queue_referral_fk",
       { workspaceId: table.workspaceId, parentId: table.referralId },
       referralRequest,
+    ),
+    sameWorkspaceForeignKey(
+      "send_queue_enrollment_fk",
+      { workspaceId: table.workspaceId, parentId: table.enrollmentId },
+      sequenceEnrollment,
+    ),
+    sameWorkspaceForeignKey(
+      "send_queue_step_fk",
+      { workspaceId: table.workspaceId, parentId: table.stepId },
+      sequenceStep,
+    ),
+    uniqueIndex("send_queue_workspace_enrollment_step_unique").on(
+      table.workspaceId,
+      table.enrollmentId,
+      table.stepId,
     ),
     check(
       "send_queue_origin_valid",

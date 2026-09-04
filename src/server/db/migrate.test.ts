@@ -70,9 +70,12 @@ describe("migrateDatabase", () => {
           "email_template",
           "email_thread",
           "email_message",
+          "email_sequence",
           "gmail_recovery_generation",
           "gmail_recovery_thread",
           "send_queue",
+          "sequence_enrollment",
+          "sequence_step",
           "suppression_entry",
         ]),
       );
@@ -80,7 +83,7 @@ describe("migrateDatabase", () => {
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 28 });
+      ).toEqual({ count: 29 });
 
       const accountColumns = client.sqlite
         .prepare("select name from pragma_table_info('user_account') order by cid")
@@ -202,8 +205,19 @@ describe("migrateDatabase", () => {
         "email_message_workspace_id_id_unique",
         "email_message_workspace_thread_idx",
         "email_message_workspace_account_sent_idx",
+        "email_sequence_workspace_id_id_unique",
+        "email_sequence_workspace_name_unique",
+        "sequence_step_workspace_id_id_unique",
+        "sequence_step_workspace_sequence_offset_unique",
+        "sequence_step_workspace_sequence_idx",
+        "sequence_enrollment_workspace_id_id_unique",
+        "sequence_enrollment_workspace_status_next_idx",
+        "sequence_enrollment_workspace_contact_idx",
+        "sequence_enrollment_workspace_account_idx",
+        "sequence_enrollment_workspace_sequence_contact_idx",
         "send_queue_workspace_status_send_idx",
         "send_queue_workspace_account_sent_idx",
+        "send_queue_workspace_enrollment_step_unique",
         "suppression_entry_workspace_email_idx",
         "suppression_entry_workspace_source_unique",
       ]) {
@@ -225,6 +239,8 @@ describe("migrateDatabase", () => {
         "contact_id",
         "opportunity_id",
         "referral_id",
+        "enrollment_id",
+        "step_id",
         "origin",
         "status",
         "recipient",
@@ -1007,6 +1023,57 @@ describe("migrateDatabase", () => {
         "classification",
         "sent_at",
         "created_at",
+      ]);
+
+      const sequenceColumns = client.sqlite
+        .prepare(
+          "select name from pragma_table_info('email_sequence') order by cid",
+        )
+        .all() as { name: string }[];
+      expect(sequenceColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "name",
+        "created_at",
+        "updated_at",
+      ]);
+
+      const sequenceStepColumns = client.sqlite
+        .prepare(
+          "select name from pragma_table_info('sequence_step') order by cid",
+        )
+        .all() as { name: string }[];
+      expect(sequenceStepColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "sequence_id",
+        "offset_days",
+        "template_id",
+        "created_at",
+        "updated_at",
+      ]);
+
+      const sequenceEnrollmentColumns = client.sqlite
+        .prepare(
+          "select name from pragma_table_info('sequence_enrollment') order by cid",
+        )
+        .all() as { name: string }[];
+      expect(sequenceEnrollmentColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "sequence_id",
+        "contact_id",
+        "opportunity_id",
+        "account_id",
+        "current_step_id",
+        "thread_id",
+        "status",
+        "cancel_reason",
+        "next_at",
+        "thread_proven_at",
+        "enrolled_at",
+        "created_at",
+        "updated_at",
       ]);
 
       const recoveryGenerationColumns = client.sqlite
