@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { TOTP_CONFIRM_FAILED_MESSAGE } from "@/lib/account";
 import { configuredAccountSecretKey } from "@/server/auth/account-secret-key";
 import { confirmTotpEnrollment } from "@/server/auth/account-security";
-import { currentTenant } from "@/server/auth/current-session";
+import { currentTotpEnrollmentTenant } from "@/server/auth/current-session";
 import { readTotpCode } from "@/server/auth/http";
 import {
   guardAccountAttempt,
@@ -14,7 +14,7 @@ import { getDatabase } from "@/server/db/runtime";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const tenant = await currentTenant();
+  const tenant = await currentTotpEnrollmentTenant();
   if (!tenant) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }
@@ -38,5 +38,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: TOTP_CONFIRM_FAILED_MESSAGE }, { status: 400 });
   }
   guard.recordSuccess();
-  return NextResponse.json({ ok: true, message: "Authenticator enabled." });
+  return NextResponse.json({
+    ok: true,
+    message: "Authenticator enabled.",
+    redirect: "/",
+  });
 }

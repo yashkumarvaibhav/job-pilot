@@ -6,13 +6,13 @@ import {
 } from "@/lib/account";
 import { configuredAccountSecretKey } from "@/server/auth/account-secret-key";
 import { startTotpEnrollment } from "@/server/auth/account-security";
-import { currentTenant } from "@/server/auth/current-session";
+import { currentTotpEnrollmentTenant } from "@/server/auth/current-session";
 import { getDatabase } from "@/server/db/runtime";
 
 export const runtime = "nodejs";
 
 export async function POST() {
-  const tenant = await currentTenant();
+  const tenant = await currentTotpEnrollmentTenant();
   if (!tenant) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }

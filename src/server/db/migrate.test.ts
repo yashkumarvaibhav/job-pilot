@@ -80,7 +80,7 @@ describe("migrateDatabase", () => {
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 27 });
+      ).toEqual({ count: 28 });
 
       const accountColumns = client.sqlite
         .prepare("select name from pragma_table_info('user_account') order by cid")
@@ -96,6 +96,7 @@ describe("migrateDatabase", () => {
         "totp_secret_blob",
         "totp_enabled_at",
         "totp_last_used_counter",
+        "signup_completed_at",
       ]);
 
       for (const indexName of [
@@ -1278,12 +1279,15 @@ describe("migrateDatabase", () => {
       client.sqlite.exec(
         readFileSync(resolve("drizzle/0026_username_totp.sql"), "utf8"),
       );
+      client.sqlite.exec(
+        readFileSync(resolve("drizzle/0027_mandatory_totp_signup.sql"), "utf8"),
+      );
 
       expect(
         client.sqlite
           .prepare(
             `select username_normalized, totp_secret_blob, totp_enabled_at,
-                    totp_last_used_counter
+                    totp_last_used_counter, signup_completed_at
              from user_account where id = 'legacy-user'`,
           )
           .get(),
@@ -1292,6 +1296,7 @@ describe("migrateDatabase", () => {
         totp_secret_blob: null,
         totp_enabled_at: null,
         totp_last_used_counter: null,
+        signup_completed_at: createdAt,
       });
     } finally {
       client.close();

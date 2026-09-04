@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { createTenantTestFixture } from "../../test/tenant-fixture";
 import {
+  resolveEnrollmentSessionTenant,
   resolveSessionTenant,
   revokeAllSessionsForUser,
   revokeSession,
@@ -136,6 +137,21 @@ describe("resolveSessionTenant", () => {
     expect(resolvedA).toEqual(fixture.tenantA);
     expect(resolvedB).toEqual(fixture.tenantB);
     expect(resolvedA?.workspaceId).not.toBe(resolvedB?.workspaceId);
+  });
+
+  it("keeps an incomplete signup out of ordinary tenant authority", () => {
+    const fixture = newFixture();
+    fixture.client.sqlite
+      .prepare("update user_account set signup_completed_at = null where id = ?")
+      .run(fixture.tenantA.userId);
+    const session = startSession(fixture.client.db, fixture.tenantA.userId, {
+      now: START,
+    });
+
+    expect(resolveSessionTenant(fixture.client.db, session.token, START)).toBeNull();
+    expect(
+      resolveEnrollmentSessionTenant(fixture.client.db, session.token, START),
+    ).toEqual(fixture.tenantA);
   });
 
   it("rejects an unknown, empty or expired token", () => {

@@ -57,7 +57,10 @@ export async function POST(request: Request) {
     );
   }
   const database = getDatabase();
-  const created = await registerAccount(database, credentials);
+  const created = await registerAccount(database, {
+    ...credentials,
+    completeSignup: false,
+  });
   if (!created.ok) {
     guard.recordFailure();
     return NextResponse.json({ error: SIGNUP_FAILED_MESSAGE }, { status: 400 });

@@ -24,6 +24,7 @@ export type CreateAccountFoundationInput = {
   university?: string;
   timezone?: string;
   now?: Date;
+  signupCompletedAt?: Date | null;
   ids?: FoundationIds;
 };
 
@@ -46,6 +47,8 @@ export function createAccountFoundation(
         id: tenant.userId,
         usernameNormalized: input.usernameNormalized,
         passwordHash: input.passwordHash,
+        signupCompletedAt:
+          input.signupCompletedAt === undefined ? now : input.signupCompletedAt,
         createdAt: now,
         updatedAt: now,
       })

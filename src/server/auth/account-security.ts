@@ -36,6 +36,7 @@ function accountForTenant(
       totpSecretBlob: userAccount.totpSecretBlob,
       totpEnabledAt: userAccount.totpEnabledAt,
       totpLastUsedCounter: userAccount.totpLastUsedCounter,
+      signupCompletedAt: userAccount.signupCompletedAt,
     })
     .from(userAccount)
     .innerJoin(workspace, eq(workspace.ownerUserId, userAccount.id))
@@ -141,7 +142,11 @@ export function confirmTotpEnrollment(
   return database.transaction((transaction) => {
     const changed = transaction
       .update(userAccount)
-      .set({ totpEnabledAt: now, updatedAt: now })
+      .set({
+        totpEnabledAt: now,
+        signupCompletedAt: account.signupCompletedAt ?? now,
+        updatedAt: now,
+      })
       .where(
         and(
           eq(userAccount.id, account.id),

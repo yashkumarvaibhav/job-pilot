@@ -38,5 +38,8 @@ export async function POST(request: Request) {
   guard.recordSuccess();
   await establishSession(account.userId);
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    ...(account.signupComplete ? {} : { redirect: "/setup-totp" }),
+  });
 }

@@ -18,7 +18,11 @@ import {
 import { registerAccount, authenticateAccount } from "../../../server/auth/accounts";
 import { accountRateLimiter } from "../../../domain/rate-limit";
 import { generateTotpCode } from "../../../server/auth/totp";
-import { resolveSessionTenant, startSession } from "../../../server/auth/session";
+import {
+  resolveEnrollmentSessionTenant,
+  resolveSessionTenant,
+  startSession,
+} from "../../../server/auth/session";
 import { openDatabase, type DatabaseClient } from "../../../server/db/client";
 import { migrateDatabase } from "../../../server/db/migrate";
 import type { TenantContext } from "../../../server/db/tenant";
@@ -46,6 +50,7 @@ vi.mock("@/server/auth/current-session", async (importOriginal) => {
   return {
     ...original,
     currentTenant: async () => mocks.tenant,
+    currentTotpEnrollmentTenant: async () => mocks.tenant,
     establishSession: async (userId: string) => mocks.cookieSet("session", userId),
   };
 });
@@ -152,12 +157,13 @@ describe("username and TOTP account routes", () => {
     expect(mocks.cookieSet).toHaveBeenCalledOnce();
     const row = client.sqlite
       .prepare(
-        "select username_normalized, totp_secret_blob, totp_enabled_at from user_account",
+        "select username_normalized, totp_secret_blob, totp_enabled_at, signup_completed_at from user_account",
       )
       .get() as Record<string, unknown>;
     expect(row.username_normalized).toBe("new_owner");
     expect(typeof row.totp_secret_blob).toBe("string");
     expect(row.totp_enabled_at).toBeNull();
+    expect(row.signup_completed_at).toBeNull();
   });
 
   it("rejects email-shaped signup identifiers without creating an account", async () => {
@@ -191,9 +197,15 @@ describe("username and TOTP account routes", () => {
     const created = await registerAccount(client.db, {
       username: "settings_owner",
       password: PASSWORD,
+      completeSignup: false,
     });
     if (!created.ok) throw new Error("fixture account was not created");
     mocks.tenant = created.tenant;
+    const enrollmentSession = startSession(client.db, created.tenant.userId);
+    expect(resolveSessionTenant(client.db, enrollmentSession.token)).toBeNull();
+    expect(resolveEnrollmentSessionTenant(client.db, enrollmentSession.token)).toEqual(
+      created.tenant,
+    );
 
     const setupResponse = await post(
       setupTotp,
@@ -214,6 +226,8 @@ describe("username and TOTP account routes", () => {
     );
     expect(confirmResponse.status).toBe(200);
     expect(readAccountSecurity(client.db, created.tenant, TOKEN_KEY)?.totpEnabled).toBe(true);
+    expect(resolveSessionTenant(client.db, enrollmentSession.token)).toEqual(created.tenant);
+    expect(resolveEnrollmentSessionTenant(client.db, enrollmentSession.token)).toBeNull();
 
     const repeated = await post(
       confirmTotp,
@@ -248,7 +262,7 @@ describe("username and TOTP account routes", () => {
         username: "existing_owner",
         password: RESET_PASSWORD,
       }),
-    ).toEqual({ userId: account.tenant.userId });
+    ).toEqual({ userId: account.tenant.userId, signupComplete: true });
 
     const replay = await post(
       resetPassword,

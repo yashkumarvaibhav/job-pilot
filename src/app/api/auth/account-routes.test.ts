@@ -197,4 +197,20 @@ describe("account endpoint rate limiting", () => {
       ).status,
     ).toBe(401);
   });
+
+  it("resumes authenticator setup after a correct incomplete-account login", async () => {
+    const created = await registerAccount(client.db, {
+      username: "setup_owner",
+      password: "synthetic-password-27",
+      completeSignup: false,
+    });
+    expect(created.ok).toBe(true);
+
+    const response = await attempt(login, "/api/auth/login", {
+      username: "setup_owner",
+      password: "synthetic-password-27",
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true, redirect: "/setup-totp" });
+  });
 });

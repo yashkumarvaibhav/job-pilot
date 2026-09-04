@@ -148,8 +148,10 @@ describe("authenticateAccount", () => {
       password: PASSWORD,
     });
 
-    expect(created.ok && authenticated?.userId).toBe(
-      created.ok ? created.tenant.userId : undefined,
+    expect(authenticated).toEqual(
+      created.ok
+        ? { userId: created.tenant.userId, signupComplete: true }
+        : null,
     );
   });
 
@@ -193,6 +195,23 @@ describe("authenticateAccount", () => {
         username: " Legacy@Invalid.Test ",
         password: PASSWORD,
       }),
-    ).resolves.toEqual({ userId: created.tenant.userId });
+    ).resolves.toEqual({ userId: created.tenant.userId, signupComplete: true });
+  });
+
+  it("reports an unfinished mandatory enrollment without rejecting the password", async () => {
+    const fixture = newFixture();
+    const created = await registerAccount(fixture.client.db, {
+      username: "setup_owner",
+      password: PASSWORD,
+      completeSignup: false,
+    });
+    if (!created.ok) throw new Error("fixture account was not created");
+
+    await expect(
+      authenticateAccount(fixture.client.db, {
+        username: "setup_owner",
+        password: PASSWORD,
+      }),
+    ).resolves.toEqual({ userId: created.tenant.userId, signupComplete: false });
   });
 });

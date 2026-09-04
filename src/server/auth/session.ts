@@ -1,9 +1,9 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNotNull, isNull } from "drizzle-orm";
 
 import type { AppDatabase } from "../db/client";
-import { authSession, workspace } from "../db/schema";
+import { authSession, userAccount, workspace } from "../db/schema";
 import { createTenantContext, type TenantContext } from "../db/tenant";
 
 export const SESSION_COOKIE_NAME = "job_pilot_session";
@@ -87,9 +87,10 @@ export function startSession(
  * The only path from a bearer value to authority. The workspace comes from the
  * stored row, so no cookie, form field or URL can select a different tenant.
  */
-export function resolveSessionTenant(
+function resolveSessionTenantByCompletion(
   database: AppDatabase,
   token: string | undefined | null,
+  complete: boolean,
   now: Date = new Date(),
 ): TenantContext | null {
   if (!token) {
@@ -102,6 +103,7 @@ export function resolveSessionTenant(
       workspaceId: workspace.id,
     })
     .from(authSession)
+    .innerJoin(userAccount, eq(userAccount.id, authSession.userId))
     .innerJoin(workspace, eq(workspace.ownerUserId, authSession.userId))
     .where(
       and(
@@ -109,11 +111,32 @@ export function resolveSessionTenant(
         isNull(authSession.revokedAt),
         gt(authSession.idleExpiresAt, now),
         gt(authSession.absoluteExpiresAt, now),
+        eq(userAccount.status, "active"),
+        complete
+          ? isNotNull(userAccount.signupCompletedAt)
+          : isNull(userAccount.signupCompletedAt),
       ),
     )
     .get();
 
   return row ? createTenantContext(row.userId, row.workspaceId) : null;
+}
+
+export function resolveSessionTenant(
+  database: AppDatabase,
+  token: string | undefined | null,
+  now: Date = new Date(),
+): TenantContext | null {
+  return resolveSessionTenantByCompletion(database, token, true, now);
+}
+
+/** Restricted authority used only to finish the second signup step. */
+export function resolveEnrollmentSessionTenant(
+  database: AppDatabase,
+  token: string | undefined | null,
+  now: Date = new Date(),
+): TenantContext | null {
+  return resolveSessionTenantByCompletion(database, token, false, now);
 }
 
 /**

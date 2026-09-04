@@ -66,6 +66,7 @@ export const userAccount = sqliteTable("user_account", {
   totpSecretBlob: text("totp_secret_blob"),
   totpEnabledAt: utcInstant("totp_enabled_at"),
   totpLastUsedCounter: integer("totp_last_used_counter"),
+  signupCompletedAt: utcInstant("signup_completed_at"),
   status: text("status").notNull().default("active"),
   createdAt: utcInstant("created_at").notNull(),
   updatedAt: utcInstant("updated_at").notNull(),

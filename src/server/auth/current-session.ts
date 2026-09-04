@@ -5,6 +5,7 @@ import { getDatabase } from "../db/runtime";
 import type { TenantContext } from "../db/tenant";
 import {
   resolveSessionTenant,
+  resolveEnrollmentSessionTenant,
   revokeSession,
   touchSession,
   SESSION_COOKIE_NAME,
@@ -31,6 +32,26 @@ export async function currentTenant(): Promise<TenantContext | null> {
     touchSession(database, token);
   }
 
+  return tenant;
+}
+
+/** Narrow authority for TOTP enrollment; it never opens workspace data APIs. */
+export async function currentTotpEnrollmentTenant(): Promise<TenantContext | null> {
+  const database = getDatabase();
+  const token = await readSessionToken();
+  const tenant =
+    resolveSessionTenant(database, token) ??
+    resolveEnrollmentSessionTenant(database, token);
+  if (tenant) touchSession(database, token);
+  return tenant;
+}
+
+export async function requireIncompleteSignupTenant(): Promise<TenantContext> {
+  const database = getDatabase();
+  const token = await readSessionToken();
+  const tenant = resolveEnrollmentSessionTenant(database, token);
+  if (!tenant) redirect(LOGIN_PATH);
+  touchSession(database, token);
   return tenant;
 }
 

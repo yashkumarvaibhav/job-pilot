@@ -15,6 +15,7 @@ export type RegisterAccountInput = {
   displayName?: string;
   timezone?: string;
   now?: Date;
+  completeSignup?: boolean;
 };
 
 /**
@@ -38,6 +39,7 @@ export async function registerAccount(
   }
 
   const passwordHash = await hashPassword(input.password);
+  const now = input.now ?? new Date();
 
   try {
     const { tenant } = createAccountFoundation(database, {
@@ -45,7 +47,8 @@ export async function registerAccount(
       passwordHash,
       displayName: input.displayName,
       timezone: input.timezone,
-      now: input.now,
+      now,
+      signupCompletedAt: input.completeSignup === false ? null : now,
     });
 
     return { ok: true, tenant };
@@ -77,7 +80,7 @@ function decoy(): Promise<string> {
 export async function authenticateAccount(
   database: AppDatabase,
   input: AuthenticateAccountInput,
-): Promise<{ userId: string } | null> {
+): Promise<{ userId: string; signupComplete: boolean } | null> {
   const usernameNormalized = normalizeAccountIdentifier(input.username);
   const account =
     usernameNormalized === null
@@ -86,6 +89,7 @@ export async function authenticateAccount(
           .select({
             id: userAccount.id,
             passwordHash: userAccount.passwordHash,
+            signupCompletedAt: userAccount.signupCompletedAt,
           })
           .from(userAccount)
           .where(
@@ -101,7 +105,9 @@ export async function authenticateAccount(
     account?.passwordHash ?? (await decoy()),
   );
 
-  return account && matches ? { userId: account.id } : null;
+  return account && matches
+    ? { userId: account.id, signupComplete: account.signupCompletedAt !== null }
+    : null;
 }
 
 function isUniqueViolation(error: unknown): boolean {
