@@ -127,6 +127,9 @@ import {
 const TENANT_ROUTE_FILES = [
   "activity/route.ts",
   "analytics/route.ts",
+  "auth/password/change/route.ts",
+  "auth/totp/confirm/route.ts",
+  "auth/totp/setup/route.ts",
   "applications/[id]/route.ts",
   "applications/route.ts",
   "assessments/[id]/route.ts",
@@ -196,11 +199,8 @@ const TENANT_ROUTE_FILES = [
 const NON_TENANT_ROUTE_FILES = [
   "auth/login/route.ts",
   "auth/logout/route.ts",
-  "auth/recovery/request/route.ts",
   "auth/recovery/reset/route.ts",
   "auth/signup/route.ts",
-  "auth/verification/request/route.ts",
-  "auth/verify/route.ts",
   "cron/tick/route.ts",
   "ready/route.ts",
 ] as const;

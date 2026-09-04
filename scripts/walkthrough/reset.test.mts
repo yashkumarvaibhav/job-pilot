@@ -77,12 +77,12 @@ describe("walkthrough reset", () => {
     const client = openDatabase(databasePath);
     try {
       const walkthrough = createAccountFoundation(client.db, {
-        emailNormalized: "p01-a@invalid.test",
+        usernameNormalized: "p01-a@invalid.test",
         passwordHash: "synthetic-hash-a",
         displayName: "Walkthrough A",
       }).tenant;
       const owner = createAccountFoundation(client.db, {
-        emailNormalized: "owner@example.com",
+        usernameNormalized: "owner@example.com",
         passwordHash: "owner-hash",
         displayName: "Owner",
       }).tenant;
@@ -102,9 +102,9 @@ describe("walkthrough reset", () => {
     const verify = openDatabase(databasePath);
     try {
       const emails = verify.sqlite
-        .prepare("select email_normalized from user_account")
-        .all() as { email_normalized: string }[];
-      expect(emails.map((row) => row.email_normalized)).toEqual([
+        .prepare("select username_normalized from user_account")
+        .all() as { username_normalized: string }[];
+      expect(emails.map((row) => row.username_normalized)).toEqual([
         "owner@example.com",
       ]);
       expect(

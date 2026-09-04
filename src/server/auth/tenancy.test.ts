@@ -30,13 +30,13 @@ describe("a session only reaches its own workspace", () => {
     fixtures.push(fixture);
 
     const a = await registerAccount(fixture.client.db, {
-      email: "a@invalid.test",
+      username: "tenant_a",
       password: PASSWORD,
       displayName: "Account A",
       timezone: "Asia/Kolkata",
     });
     const b = await registerAccount(fixture.client.db, {
-      email: "b@invalid.test",
+      username: "tenant_b",
       password: PASSWORD,
       displayName: "Account B",
       timezone: "America/New_York",

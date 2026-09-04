@@ -51,7 +51,7 @@ function seedTenants(databasePath: string) {
   try {
     for (const tenant of ["a", "b"]) {
       createAccountFoundation(client.db, {
-        emailNormalized: `tenant-${tenant}@invalid.test`,
+        usernameNormalized: `tenant-${tenant}@invalid.test`,
         passwordHash: `synthetic-password-hash-${tenant}`,
         displayName: `Tenant ${tenant.toUpperCase()}`,
         timezone: tenant === "a" ? "Asia/Kolkata" : "America/New_York",

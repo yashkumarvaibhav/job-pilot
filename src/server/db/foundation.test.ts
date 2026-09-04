@@ -16,7 +16,7 @@ describe("account tenancy foundation", () => {
 
     try {
       const result = createAccountFoundation(fixture.client.db, {
-        emailNormalized: "owner@invalid.test",
+        usernameNormalized: "owner_name",
         passwordHash: "synthetic-password-hash",
         displayName: "Owner",
         ids: { userId: "user-owner", workspaceId: "workspace-owner" },
@@ -49,14 +49,14 @@ describe("account tenancy foundation", () => {
 
     try {
       createAccountFoundation(fixture.client.db, {
-        emailNormalized: "first@invalid.test",
+        usernameNormalized: "first_owner",
         passwordHash: "synthetic-password-hash",
         ids: { userId: "user-first", workspaceId: "workspace-shared" },
       });
 
       expect(() =>
         createAccountFoundation(fixture.client.db, {
-          emailNormalized: "rolled-back@invalid.test",
+          usernameNormalized: "rolled_back_owner",
           passwordHash: "synthetic-password-hash",
           ids: { userId: "user-rolled-back", workspaceId: "workspace-shared" },
         }),

@@ -61,9 +61,9 @@ describe("demo provisioning", () => {
     const database = new Database(result.databasePath, { readonly: true });
     try {
       const account = database
-        .prepare("select email_normalized, password_hash from user_account")
-        .get() as { email_normalized: string; password_hash: string };
-      expect(account.email_normalized).toBe("demo@jobpilot.invalid.test");
+        .prepare("select username_normalized, password_hash from user_account")
+        .get() as { username_normalized: string; password_hash: string };
+      expect(account.username_normalized).toBe("demo@jobpilot.invalid.test");
       expect(
         await verifyPassword(
           fixture.env.DEMO_ACCOUNT_PASSWORD!,

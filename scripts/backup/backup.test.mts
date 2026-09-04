@@ -46,7 +46,7 @@ function seedTwoTenants(databasePath: string) {
   const client = openDatabase(databasePath);
   try {
     createAccountFoundation(client.db, {
-      emailNormalized: "tenant-a@invalid.test",
+      usernameNormalized: "tenant-a@invalid.test",
       passwordHash: "synthetic-password-hash-a",
       displayName: "Tenant A",
       timezone: "Asia/Kolkata",
@@ -54,7 +54,7 @@ function seedTwoTenants(databasePath: string) {
       now: new Date("2026-08-31T10:00:00.000Z"),
     });
     createAccountFoundation(client.db, {
-      emailNormalized: "tenant-b@invalid.test",
+      usernameNormalized: "tenant-b@invalid.test",
       passwordHash: "synthetic-password-hash-b",
       displayName: "Tenant B",
       timezone: "America/New_York",
@@ -200,9 +200,9 @@ describe("createBackup — captured snapshot", () => {
     try {
       expect(snapshot.pragma("integrity_check", { simple: true })).toBe("ok");
       const emails = snapshot
-        .prepare("select email_normalized from user_account order by email_normalized")
-        .all() as { email_normalized: string }[];
-      expect(emails.map((row) => row.email_normalized)).toEqual([
+        .prepare("select username_normalized from user_account order by username_normalized")
+        .all() as { username_normalized: string }[];
+      expect(emails.map((row) => row.username_normalized)).toEqual([
         "tenant-a@invalid.test",
         "tenant-b@invalid.test",
       ]);

@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
 
 import {
-  ACCOUNT_MAIL_UNAVAILABLE_MESSAGE,
-  SIGNUP_CHECK_EMAIL_MESSAGE,
+  ACCOUNT_SECURITY_UNAVAILABLE_MESSAGE,
   SIGNUP_FAILED_MESSAGE,
 } from "@/lib/account";
-import { registerAccountWithVerification } from "@/server/auth/account-lifecycle";
-import { configuredAccountMailPort } from "@/server/auth/account-mail";
+import { configuredAccountSecretKey } from "@/server/auth/account-secret-key";
+import { startTotpEnrollment } from "@/server/auth/account-security";
 import { registerAccount } from "@/server/auth/accounts";
 import { establishSession } from "@/server/auth/current-session";
 import { readCredentials } from "@/server/auth/http";
@@ -15,6 +15,7 @@ import {
   RATE_LIMITED_MESSAGE,
 } from "@/server/auth/rate-limit-guard";
 import { getDatabase } from "@/server/db/runtime";
+import { userAccount } from "@/server/db/schema";
 import {
   DEMO_SIGNUP_CLOSED_MESSAGE,
   isDemoMode,
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
   }
 
   const credentials = await readCredentials(request);
-  const guard = guardAccountAttempt("signup", request, credentials?.email);
+  const guard = guardAccountAttempt("signup", request, credentials?.username);
 
   if (guard.limited) {
     return NextResponse.json(
@@ -48,44 +49,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: SIGNUP_FAILED_MESSAGE }, { status: 400 });
   }
 
-  const mail = configuredAccountMailPort();
-  if (!mail) {
-    const created = await registerAccount(getDatabase(), {
-      ...credentials,
-      emailVerifiedAt: null,
-    });
-    if (!created.ok) {
-      guard.recordFailure();
-      return NextResponse.json({ error: SIGNUP_FAILED_MESSAGE }, { status: 400 });
-    }
-    guard.recordSuccess();
-    await establishSession(created.tenant.userId);
-    return NextResponse.json({ ok: true }, { status: 201 });
-  }
-
-  let created;
-  try {
-    created = await registerAccountWithVerification(
-      getDatabase(),
-      credentials,
-      mail,
-      new URL(request.url).origin,
-    );
-  } catch {
+  const tokenKey = configuredAccountSecretKey();
+  if (!tokenKey) {
     return NextResponse.json(
-      { error: ACCOUNT_MAIL_UNAVAILABLE_MESSAGE },
+      { error: ACCOUNT_SECURITY_UNAVAILABLE_MESSAGE },
       { status: 503 },
     );
   }
-
+  const database = getDatabase();
+  const created = await registerAccount(database, credentials);
   if (!created.ok) {
     guard.recordFailure();
     return NextResponse.json({ error: SIGNUP_FAILED_MESSAGE }, { status: 400 });
   }
 
+  try {
+    startTotpEnrollment(database, created.tenant, { tokenKey });
+  } catch {
+    database
+      .delete(userAccount)
+      .where(eq(userAccount.id, created.tenant.userId))
+      .run();
+    return NextResponse.json(
+      { error: ACCOUNT_SECURITY_UNAVAILABLE_MESSAGE },
+      { status: 503 },
+    );
+  }
   guard.recordSuccess();
+  await establishSession(created.tenant.userId);
   return NextResponse.json(
-    { ok: true, message: SIGNUP_CHECK_EMAIL_MESSAGE },
-    { status: 202 },
+    { ok: true, redirect: "/setup-totp" },
+    { status: 201 },
   );
 }

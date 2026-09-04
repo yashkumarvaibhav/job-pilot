@@ -128,10 +128,11 @@ export function confirmTotpEnrollment(
 ): boolean {
   const account = accountForTenant(database, tenant);
   if (!account?.totpSecretBlob || account.totpEnabledAt) return false;
+  const secretBlob = account.totpSecretBlob;
   const now = options.now ?? new Date();
   let secret: string;
   try {
-    secret = decryptTotpSecret(account.totpSecretBlob, options.tokenKey, account.id);
+    secret = decryptTotpSecret(secretBlob, options.tokenKey, account.id);
   } catch {
     return false;
   }
@@ -144,7 +145,7 @@ export function confirmTotpEnrollment(
       .where(
         and(
           eq(userAccount.id, account.id),
-          eq(userAccount.totpSecretBlob, account.totpSecretBlob),
+          eq(userAccount.totpSecretBlob, secretBlob),
           isNull(userAccount.totpEnabledAt),
         ),
       )
@@ -225,6 +226,7 @@ function applyPassword(
   kind: "ACCOUNT_PASSWORD_CHANGED" | "ACCOUNT_PASSWORD_RESET",
 ): boolean {
   if (!account.totpSecretBlob) return false;
+  const secretBlob = account.totpSecretBlob;
   return database.transaction((transaction) => {
     const changed = transaction
       .update(userAccount)
@@ -236,7 +238,7 @@ function applyPassword(
       .where(
         and(
           eq(userAccount.id, account.id),
-          eq(userAccount.totpSecretBlob, account.totpSecretBlob),
+          eq(userAccount.totpSecretBlob, secretBlob),
           isNotNull(userAccount.totpEnabledAt),
           account.totpLastUsedCounter === null
             ? isNull(userAccount.totpLastUsedCounter)

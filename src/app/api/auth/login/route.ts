@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
 import { LOGIN_FAILED_MESSAGE } from "@/lib/account";
-import { configuredAccountMailPort } from "@/server/auth/account-mail";
 import { authenticateAccount } from "@/server/auth/accounts";
 import { establishSession } from "@/server/auth/current-session";
 import { readCredentials } from "@/server/auth/http";
@@ -10,13 +9,12 @@ import {
   RATE_LIMITED_MESSAGE,
 } from "@/server/auth/rate-limit-guard";
 import { getDatabase } from "@/server/db/runtime";
-import { isDemoMode } from "@/server/demo-mode";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const credentials = await readCredentials(request);
-  const guard = guardAccountAttempt("login", request, credentials?.email);
+  const guard = guardAccountAttempt("login", request, credentials?.username);
 
   if (guard.limited) {
     return NextResponse.json(
@@ -29,9 +27,7 @@ export async function POST(request: Request) {
   }
 
   const account = credentials
-    ? await authenticateAccount(getDatabase(), credentials, {
-        allowUnverified: !isDemoMode() && configuredAccountMailPort() === null,
-      })
+    ? await authenticateAccount(getDatabase(), credentials)
     : null;
 
   if (!account) {

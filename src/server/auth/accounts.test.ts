@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { createTenantTestFixture } from "../../test/tenant-fixture";
 import { authenticateAccount, registerAccount } from "./accounts";
+import { hashPassword } from "./password";
+import { createAccountFoundation } from "../db/foundation";
 
 const PASSWORD = "synthetic-owner-password";
 
@@ -24,7 +26,7 @@ describe("registerAccount", () => {
     const fixture = newFixture();
 
     const result = await registerAccount(fixture.client.db, {
-      email: "  Owner@Invalid.TEST ",
+      username: "  Owner_Name ",
       password: PASSWORD,
     });
 
@@ -34,10 +36,10 @@ describe("registerAccount", () => {
     expect(fixture.rowCount("settings")).toBe(1);
 
     const stored = fixture.client.sqlite
-      .prepare("select email_normalized, password_hash from user_account")
-      .get() as { email_normalized: string; password_hash: string };
+      .prepare("select username_normalized, password_hash from user_account")
+      .get() as { username_normalized: string; password_hash: string };
 
-    expect(stored.email_normalized).toBe("owner@invalid.test");
+    expect(stored.username_normalized).toBe("owner_name");
     expect(stored.password_hash).not.toContain(PASSWORD);
     expect(stored.password_hash.startsWith("scrypt$")).toBe(true);
   });
@@ -46,11 +48,11 @@ describe("registerAccount", () => {
     const fixture = newFixture();
 
     const first = await registerAccount(fixture.client.db, {
-      email: "one@invalid.test",
+      username: "owner_one",
       password: PASSWORD,
     });
     const second = await registerAccount(fixture.client.db, {
-      email: "two@invalid.test",
+      username: "owner_two",
       password: PASSWORD,
     });
 
@@ -64,19 +66,19 @@ describe("registerAccount", () => {
     expect(fixture.rowCount("workspace")).toBe(2);
   });
 
-  it("refuses a duplicate address without confirming it exists", async () => {
+  it("refuses a duplicate username without confirming it exists", async () => {
     const fixture = newFixture();
 
     await registerAccount(fixture.client.db, {
-      email: "owner@invalid.test",
+      username: "owner_name",
       password: PASSWORD,
     });
     const duplicate = await registerAccount(fixture.client.db, {
-      email: "OWNER@invalid.test",
+      username: "OWNER_NAME",
       password: PASSWORD,
     });
     const malformed = await registerAccount(fixture.client.db, {
-      email: "not-an-address",
+      username: "owner@example.com",
       password: PASSWORD,
     });
 
@@ -90,7 +92,7 @@ describe("registerAccount", () => {
     const fixture = newFixture();
 
     const result = await registerAccount(fixture.client.db, {
-      email: "owner@invalid.test",
+      username: "owner_name",
       password: "short",
     });
 
@@ -105,13 +107,13 @@ describe("registerAccount", () => {
     const fixture = newFixture();
 
     await registerAccount(fixture.client.db, {
-      email: "owner@invalid.test",
+      username: "owner_name",
       password: PASSWORD,
     });
     const before = fixture.rowCount("activity_event");
 
     await registerAccount(fixture.client.db, {
-      email: "owner@invalid.test",
+      username: "owner_name",
       password: PASSWORD,
     });
 
@@ -137,12 +139,12 @@ describe("authenticateAccount", () => {
   it("returns the account for the right password", async () => {
     const fixture = newFixture();
     const created = await registerAccount(fixture.client.db, {
-      email: "owner@invalid.test",
+      username: "owner_name",
       password: PASSWORD,
     });
 
     const authenticated = await authenticateAccount(fixture.client.db, {
-      email: " Owner@Invalid.test ",
+      username: " Owner_Name ",
       password: PASSWORD,
     });
 
@@ -151,57 +153,46 @@ describe("authenticateAccount", () => {
     );
   });
 
-  it("returns null for a wrong password and for an unknown address", async () => {
+  it("returns null for a wrong password and for an unknown username", async () => {
     const fixture = newFixture();
     await registerAccount(fixture.client.db, {
-      email: "owner@invalid.test",
+      username: "owner_name",
       password: PASSWORD,
     });
 
     await expect(
       authenticateAccount(fixture.client.db, {
-        email: "owner@invalid.test",
+        username: "owner_name",
         password: `${PASSWORD}!`,
       }),
     ).resolves.toBeNull();
     await expect(
       authenticateAccount(fixture.client.db, {
-        email: "nobody@invalid.test",
+        username: "nobody_here",
         password: PASSWORD,
       }),
     ).resolves.toBeNull();
     await expect(
       authenticateAccount(fixture.client.db, {
-        email: "not-an-address",
+        username: "not valid",
         password: PASSWORD,
       }),
     ).resolves.toBeNull();
   });
 
-  it("allows an explicitly unverified account only when its caller opts in", async () => {
+  it("keeps a grandfathered email-shaped identifier usable after migration", async () => {
     const fixture = newFixture();
-    const created = await registerAccount(fixture.client.db, {
-      email: "early-access@invalid.test",
-      password: PASSWORD,
-      emailVerifiedAt: null,
+    const passwordHash = await hashPassword(PASSWORD);
+    const created = createAccountFoundation(fixture.client.db, {
+      usernameNormalized: "legacy@invalid.test",
+      passwordHash,
     });
 
     await expect(
       authenticateAccount(fixture.client.db, {
-        email: "early-access@invalid.test",
+        username: " Legacy@Invalid.Test ",
         password: PASSWORD,
       }),
-    ).resolves.toBeNull();
-    const authenticated = await authenticateAccount(
-      fixture.client.db,
-      {
-        email: "early-access@invalid.test",
-        password: PASSWORD,
-      },
-      { allowUnverified: true },
-    );
-    expect(created.ok && authenticated?.userId).toBe(
-      created.ok ? created.tenant.userId : undefined,
-    );
+    ).resolves.toEqual({ userId: created.tenant.userId });
   });
 });

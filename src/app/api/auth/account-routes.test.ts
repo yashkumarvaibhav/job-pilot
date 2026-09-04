@@ -16,10 +16,6 @@ import { openDatabase, type DatabaseClient } from "../../../server/db/client";
 const mocks = vi.hoisted(() => ({
   database: undefined as unknown,
   cookieSet: vi.fn(),
-  mailPort: {
-    sendVerification: vi.fn(),
-    sendPasswordReset: vi.fn(),
-  },
 }));
 
 vi.mock("next/headers", () => ({
@@ -33,14 +29,11 @@ vi.mock("next/headers", () => ({
 vi.mock("@/server/db/runtime", () => ({
   getDatabase: () => mocks.database,
 }));
-vi.mock("@/server/auth/account-mail", () => ({
-  configuredAccountMailPort: () => mocks.mailPort,
-}));
-
 import { POST as login } from "./login/route";
 import { POST as signup } from "./signup/route";
 
 const HOST = "https://jobpilot.invalid.test";
+const TOKEN_KEY = Buffer.alloc(32, 27).toString("base64");
 
 function attempt(
   handler: (request: Request) => Promise<Response>,
@@ -63,6 +56,7 @@ function attempt(
 describe("account endpoint rate limiting", () => {
   const cleanups: (() => void)[] = [];
   let client: DatabaseClient;
+  const originalKey = process.env.TOKEN_KEY;
 
   beforeEach(async () => {
     const directory = mkdtempSync(join(tmpdir(), "job-pilot-account-"));
@@ -70,23 +64,24 @@ describe("account endpoint rate limiting", () => {
     migrateDatabase(databasePath);
     client = openDatabase(databasePath);
     mocks.database = client.db;
+    process.env.TOKEN_KEY = TOKEN_KEY;
     cleanups.push(() => {
       client.close();
       rmSync(directory, { force: true, recursive: true });
     });
 
     await registerAccount(client.db, {
-      email: "real@invalid.test",
+      username: "real_owner",
       password: "synthetic-password-27",
     });
     // Each test starts from a clean process-wide counter.
     for (const key of [
       "login:ip:198.51.100.7",
       "login:ip:203.0.113.9",
-      "login:account:real@invalid.test",
-      "login:account:missing@invalid.test",
+      "login:account:real_owner",
+      "login:account:missing_owner",
       "signup:ip:198.51.100.7",
-      "signup:account:new@invalid.test",
+      "signup:account:new_owner",
     ]) {
       accountRateLimiter.reset(key);
     }
@@ -95,32 +90,32 @@ describe("account endpoint rate limiting", () => {
   afterEach(() => {
     for (const cleanup of cleanups.splice(0)) cleanup();
     mocks.cookieSet.mockClear();
-    mocks.mailPort.sendVerification.mockClear();
-    mocks.mailPort.sendPasswordReset.mockClear();
+    if (originalKey === undefined) delete process.env.TOKEN_KEY;
+    else process.env.TOKEN_KEY = originalKey;
   });
 
   it("locks the attempt after the limit and says nothing about why", async () => {
     for (let index = 0; index < ACCOUNT_RATE_LIMITS.login.limit; index += 1) {
       const response = await attempt(login, "/api/auth/login", {
-        email: "real@invalid.test",
+        username: "real_owner",
         password: "wrong-password",
       });
       expect(response.status).toBe(401);
     }
 
     const blocked = await attempt(login, "/api/auth/login", {
-      email: "real@invalid.test",
+      username: "real_owner",
       password: "wrong-password",
     });
     expect(blocked.status).toBe(429);
     expect(Number(blocked.headers.get("retry-after"))).toBeGreaterThan(0);
     const body = (await blocked.json()) as { error: string };
     expect(body.error).toBe(RATE_LIMITED_MESSAGE);
-    expect(body.error).not.toContain("real@invalid.test");
+    expect(body.error).not.toContain("real_owner");
 
     // Even the correct password is refused while the lockout stands.
     const correct = await attempt(login, "/api/auth/login", {
-      email: "real@invalid.test",
+      username: "real_owner",
       password: "synthetic-password-27",
     });
     expect(correct.status).toBe(429);
@@ -128,11 +123,11 @@ describe("account endpoint rate limiting", () => {
 
   it("answers a missing account exactly as it answers a wrong password", async () => {
     const missing = await attempt(login, "/api/auth/login", {
-      email: "missing@invalid.test",
+      username: "missing_owner",
       password: "synthetic-password-27",
     });
     const wrong = await attempt(login, "/api/auth/login", {
-      email: "real@invalid.test",
+      username: "real_owner",
       password: "wrong-password",
     });
 
@@ -140,19 +135,19 @@ describe("account endpoint rate limiting", () => {
     expect(await missing.json()).toEqual(await wrong.json());
   });
 
-  it("does not let one address lock out another account", async () => {
+  it("does not let one username lock out another account", async () => {
     for (let index = 0; index < ACCOUNT_RATE_LIMITS.login.limit; index += 1) {
       await attempt(
         login,
         "/api/auth/login",
-        { email: "missing@invalid.test", password: "wrong-password" },
+        { username: "missing_owner", password: "wrong-password" },
         "203.0.113.9",
       );
     }
 
     // Same account key is untouched; a different caller still gets in.
     const ok = await attempt(login, "/api/auth/login", {
-      email: "real@invalid.test",
+      username: "real_owner",
       password: "synthetic-password-27",
     });
     expect(ok.status).toBe(200);
@@ -162,14 +157,14 @@ describe("account endpoint rate limiting", () => {
   it("counts signup attempts too", async () => {
     for (let index = 0; index < ACCOUNT_RATE_LIMITS.signup.limit; index += 1) {
       const response = await attempt(signup, "/api/auth/signup", {
-        email: "real@invalid.test",
+        username: "real_owner",
         password: "synthetic-password-27",
       });
       expect(response.status).toBe(400);
     }
 
     const blocked = await attempt(signup, "/api/auth/signup", {
-      email: "new@invalid.test",
+      username: "new_owner",
       password: "synthetic-password-27",
     });
     expect(blocked.status).toBe(429);
@@ -178,7 +173,7 @@ describe("account endpoint rate limiting", () => {
   it("clears the count when a sign-in succeeds", async () => {
     for (let index = 0; index < ACCOUNT_RATE_LIMITS.login.limit - 1; index += 1) {
       await attempt(login, "/api/auth/login", {
-        email: "real@invalid.test",
+        username: "real_owner",
         password: "wrong-password",
       });
     }
@@ -186,7 +181,7 @@ describe("account endpoint rate limiting", () => {
     expect(
       (
         await attempt(login, "/api/auth/login", {
-          email: "real@invalid.test",
+          username: "real_owner",
           password: "synthetic-password-27",
         })
       ).status,
@@ -196,7 +191,7 @@ describe("account endpoint rate limiting", () => {
     expect(
       (
         await attempt(login, "/api/auth/login", {
-          email: "real@invalid.test",
+          username: "real_owner",
           password: "wrong-password",
         })
       ).status,

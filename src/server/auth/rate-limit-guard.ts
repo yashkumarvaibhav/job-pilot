@@ -4,20 +4,20 @@ import {
   accountRateLimiter,
   type AccountRateLimitCategory,
 } from "../../domain/rate-limit";
-import { normalizeEmail } from "./email";
+import { normalizeAccountIdentifier } from "./username";
 
 /**
- * Two counters per attempt: one for the address being tried and one for the
- * caller. Either alone is easy to walk around — an attacker with many addresses
+ * Two counters per attempt: one for the username being tried and one for the
+ * caller. Either alone is easy to walk around — an attacker with many usernames
  * defeats the account key, and one behind a proxy pool defeats the IP key.
  */
 function keysFor(
   category: AccountRateLimitCategory,
   request: Request,
-  email: string | null | undefined,
+  username: string | null | undefined,
 ): string[] {
   const keys = [`${category}:ip:${clientAddress(request)}`];
-  const normalized = email ? normalizeEmail(email) : null;
+  const normalized = username ? normalizeAccountIdentifier(username) : null;
   if (normalized) {
     keys.push(`${category}:account:${normalized}`);
   }
@@ -48,11 +48,11 @@ export type RateLimitGuard = {
 export function guardAccountAttempt(
   category: AccountRateLimitCategory,
   request: Request,
-  email: string | null | undefined,
+  username: string | null | undefined,
   now: Date = new Date(),
 ): RateLimitGuard {
   const rule = ACCOUNT_RATE_LIMITS[category];
-  const keys = keysFor(category, request, email);
+  const keys = keysFor(category, request, username);
   const verdicts = keys.map((key) => accountRateLimiter.check(key, rule, now));
   const blocked = verdicts.filter((verdict) => !verdict.allowed);
 

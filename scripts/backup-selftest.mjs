@@ -44,7 +44,7 @@ function seedDatabase(databasePath) {
 
     const at = Date.parse("2026-08-31T10:00:00.000Z");
     const insertUser = database.prepare(
-      "insert into user_account (id, email_normalized, password_hash, status, created_at, updated_at) values (?, ?, ?, 'active', ?, ?)",
+      "insert into user_account (id, username_normalized, password_hash, status, created_at, updated_at) values (?, ?, ?, 'active', ?, ?)",
     );
     const insertWorkspace = database.prepare(
       "insert into workspace (id, owner_user_id, created_at) values (?, ?, ?)",

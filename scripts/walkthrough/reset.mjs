@@ -71,10 +71,10 @@ export function resetSyntheticWalkthroughRows({
   try {
     sqlite.pragma("foreign_keys = ON");
     const accounts = sqlite
-      .prepare("select id, email_normalized from user_account")
+      .prepare("select id, username_normalized from user_account")
       .all();
     const synthetic = accounts.filter((account) =>
-      isSyntheticAccountEmail(account.email_normalized),
+      isSyntheticAccountEmail(account.username_normalized),
     );
     const remove = sqlite.prepare("delete from user_account where id = ?");
     sqlite.transaction(() => {

@@ -3,7 +3,7 @@
  * `src/lib/account.ts` so the forms and the routes cannot drift apart.
  */
 export type Credentials = {
-  email: string;
+  username: string;
   password: string;
 };
 
@@ -18,10 +18,49 @@ export async function readCredentials(
   const body = await readJsonObject(request);
   if (!body) return null;
 
-  const { email, password } = body;
+  const { username, password } = body;
 
-  return typeof email === "string" && typeof password === "string"
-    ? { email, password }
+  return typeof username === "string" && typeof password === "string"
+    ? { username, password }
+    : null;
+}
+
+export async function readTotpCode(
+  request: Request,
+): Promise<{ code: string } | null> {
+  const body = await readJsonObject(request);
+  return body && typeof body.code === "string" ? { code: body.code } : null;
+}
+
+export async function readTotpPasswordReset(
+  request: Request,
+): Promise<{ username: string; code: string; password: string } | null> {
+  const body = await readJsonObject(request);
+  return body &&
+    typeof body.username === "string" &&
+    typeof body.code === "string" &&
+    typeof body.password === "string"
+    ? { username: body.username, code: body.code, password: body.password }
+    : null;
+}
+
+export async function readTotpPasswordChange(
+  request: Request,
+): Promise<{
+  currentPassword: string;
+  code: string;
+  newPassword: string;
+} | null> {
+  const body = await readJsonObject(request);
+  return body &&
+    typeof body.currentPassword === "string" &&
+    typeof body.code === "string" &&
+    typeof body.newPassword === "string"
+    ? {
+        currentPassword: body.currentPassword,
+        code: body.code,
+        newPassword: body.newPassword,
+      }
     : null;
 }
 
