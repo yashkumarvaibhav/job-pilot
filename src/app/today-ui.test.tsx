@@ -27,9 +27,9 @@ vi.mock("@/server/db/runtime", () => ({
   getDatabase: () => mocks.database,
 }));
 
-import Home from "./(app)/(today)/page";
-import TodayError from "./(app)/(today)/error";
-import TodayLoading from "./(app)/(today)/loading";
+import TodayPage from "./(app)/today/page";
+import TodayError from "./(app)/today/error";
+import TodayLoading from "./(app)/today/loading";
 
 describe("Today screen", () => {
   const fixtures: { dispose: () => void }[] = [];
@@ -53,7 +53,7 @@ describe("Today screen", () => {
 
   it("renders the empty sentence, count tiles, and one pipeline block", async () => {
     newFixture();
-    const html = renderToStaticMarkup(await Home());
+    const html = renderToStaticMarkup(await TodayPage());
     expect(html).toContain(TODAY_EMPTY);
     expect(html).toContain("Follow-ups");
     expect(html).toContain("Need reply");
@@ -82,7 +82,7 @@ describe("Today screen", () => {
       followUpOn: asOfOn,
     });
 
-    const html = renderToStaticMarkup(await Home());
+    const html = renderToStaticMarkup(await TodayPage());
     expect(html).toContain("Follow up with Rahul Sharma");
     expect(html).toContain("Follow up about Microsoft openings");
     expect(html).toContain("Create task");
@@ -109,7 +109,7 @@ describe("Today screen", () => {
       time: "11:00",
     });
 
-    const html = renderToStaticMarkup(await Home());
+    const html = renderToStaticMarkup(await TodayPage());
     expect(html).toContain("Interviews today");
     expect(html).toContain("Interviews today</span><strong class=\"tnum\">1</strong>");
     expect(html).toContain("Round 1 · Coding");
@@ -149,7 +149,7 @@ describe("Today screen", () => {
       offerDeadlineOn: yesterday,
     });
 
-    const html = renderToStaticMarkup(await Home());
+    const html = renderToStaticMarkup(await TodayPage());
     expect(html).toContain("Complete Google assessment");
     expect(html).toContain("offer deadline");
     expect(html).toContain("Overdue");
@@ -183,7 +183,7 @@ describe("Today screen", () => {
       requestedOn: shiftCalendarDate(asOfOn, -6),
     });
 
-    const html = renderToStaticMarkup(await Home());
+    const html = renderToStaticMarkup(await TodayPage());
     expect(html).toContain("Follow up on referral");
   });
 

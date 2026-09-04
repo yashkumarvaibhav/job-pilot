@@ -15,7 +15,7 @@ export default async function AccountAccessLayout({
   children: ReactNode;
 }) {
   if (await currentTenant()) {
-    redirect("/");
+    redirect("/today");
   }
 
   return (

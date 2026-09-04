@@ -110,7 +110,7 @@ export function AppShell({
   const closeQuickAdd = useCallback(() => {
     setQuickAddOpen(false);
     setQuickAddAction(null);
-    if (pathname === "/add") router.replace("/");
+    if (pathname === "/add") router.replace("/today");
   }, [pathname, router]);
 
   const openQuickAdd = useCallback((
@@ -165,7 +165,7 @@ export function AppShell({
   return (
     <div className="app-shell">
       <header className="topbar">
-        <Link aria-label="Job Pilot home" className="brand-lockup" href="/">
+        <Link aria-label="Job Pilot home" className="brand-lockup" href="/today">
           <BrandMark />
           <span className="brand-wordmark">
             <strong>Job Pilot</strong>

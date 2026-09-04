@@ -9,7 +9,7 @@ import {
 describe("shell navigation", () => {
   it("keeps the authoritative rail names and routes in order", () => {
     expect(railItems).toEqual([
-      { label: "Today", href: "/", icon: "today" },
+      { label: "Today", href: "/today", icon: "today" },
       { label: "Companies", href: "/companies", icon: "companies" },
       { label: "Contacts", href: "/contacts", icon: "contacts" },
       { label: "Opportunities", href: "/opportunities", icon: "opportunities" },
@@ -24,9 +24,9 @@ describe("shell navigation", () => {
   });
 
   it("marks entity descendants without treating every route as Today", () => {
-    expect(routeIsActive("/", "/")).toBe(true);
+    expect(routeIsActive("/today", "/today")).toBe(true);
     expect(routeIsActive("/contacts/person-1", "/contacts")).toBe(true);
-    expect(routeIsActive("/contacts", "/")).toBe(false);
+    expect(routeIsActive("/contacts", "/today")).toBe(false);
   });
 
   it("keeps five mobile destinations and groups secondary routes under More", () => {

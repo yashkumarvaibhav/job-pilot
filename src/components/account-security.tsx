@@ -132,7 +132,7 @@ export function TotpSetupPanel({
           typeof body === "object" &&
           typeof (body as { redirect?: unknown }).redirect === "string"
             ? (body as { redirect: string }).redirect
-            : "/";
+            : "/today";
         router.replace(redirect);
         router.refresh();
         return;
@@ -282,7 +282,7 @@ function PasswordChangeForm() {
         return;
       }
       formRef.current?.reset();
-      router.replace("/login");
+      router.replace("/?auth=sign-in");
       router.refresh();
     } catch {
       setError(REQUEST_FAILED_MESSAGE);

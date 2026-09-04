@@ -211,6 +211,6 @@ describe("account endpoint rate limiting", () => {
       password: "synthetic-password-27",
     });
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ ok: true, redirect: "/setup-totp" });
+    expect(await response.json()).toEqual({ ok: true, redirect: "/?auth=setup-totp" });
   });
 });

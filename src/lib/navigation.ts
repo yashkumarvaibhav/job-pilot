@@ -1,5 +1,5 @@
 export const railItems = [
-  { label: "Today", href: "/", icon: "today" },
+  { label: "Today", href: "/today", icon: "today" },
   { label: "Companies", href: "/companies", icon: "companies" },
   { label: "Contacts", href: "/contacts", icon: "contacts" },
   {
@@ -21,7 +21,7 @@ export const railItems = [
 ] as const;
 
 export const mobileItems = [
-  { label: "Today", href: "/", icon: "today" },
+  { label: "Today", href: "/today", icon: "today" },
   { label: "Contacts", href: "/contacts", icon: "contacts" },
   {
     label: "Opportunities",

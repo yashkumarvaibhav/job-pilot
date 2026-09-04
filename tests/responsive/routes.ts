@@ -7,11 +7,12 @@ export type RegisteredPage = {
 };
 
 export const REGISTERED_PAGES: RegisteredPage[] = [
+  { file: "page.tsx", path: "/", access: "signed-out" },
   { file: "(auth)/login/page.tsx", path: "/login", access: "signed-out" },
   { file: "(auth)/signup/page.tsx", path: "/signup", access: "signed-out" },
   { file: "(auth)/setup-totp/page.tsx", path: "/setup-totp", access: "setup" },
   { file: "(auth)/forgot-password/page.tsx", path: "/forgot-password", access: "signed-out" },
-  { file: "(app)/(today)/page.tsx", path: "/", access: "signed-in" },
+  { file: "(app)/today/page.tsx", path: "/today", access: "signed-in" },
   { file: "(app)/add/page.tsx", path: "/add", access: "signed-in" },
   { file: "(app)/analytics/page.tsx", path: "/analytics", access: "signed-in" },
   { file: "(app)/applications/page.tsx", path: "/applications", access: "signed-in" },

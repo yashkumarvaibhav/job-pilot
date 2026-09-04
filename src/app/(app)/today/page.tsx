@@ -10,7 +10,7 @@ import { requireTenant } from "@/server/auth/current-session";
 import { getDatabase } from "@/server/db/runtime";
 import { getTodaySnapshot } from "@/server/repos/today";
 
-export default async function Home({
+export default async function TodayPage({
   searchParams = Promise.resolve({}),
 }: {
   searchParams?: Promise<{ totp?: string }>;

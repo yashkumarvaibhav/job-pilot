@@ -28,7 +28,7 @@ vi.mock("@/server/db/runtime", () => ({
 import NotificationsPage from "./(app)/notifications/page";
 import NotificationsError from "./(app)/notifications/error";
 import NotificationsLoading from "./(app)/notifications/loading";
-import Home from "./(app)/(today)/page";
+import Home from "./(app)/today/page";
 
 describe("notification screen", () => {
   const fixtures: { dispose: () => void }[] = [];

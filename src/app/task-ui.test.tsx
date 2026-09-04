@@ -21,7 +21,7 @@ vi.mock("@/server/db/runtime", () => ({
   getDatabase: () => mocks.database,
 }));
 
-import Home from "./(app)/(today)/page";
+import Home from "./(app)/today/page";
 import TasksPage from "./(app)/tasks/page";
 
 describe("task screens", () => {

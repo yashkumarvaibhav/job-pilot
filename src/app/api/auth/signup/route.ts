@@ -81,7 +81,7 @@ export async function POST(request: Request) {
   guard.recordSuccess();
   await establishSession(created.tenant.userId);
   return NextResponse.json(
-    { ok: true, redirect: "/setup-totp" },
+    { ok: true, redirect: "/?auth=setup-totp" },
     { status: 201 },
   );
 }

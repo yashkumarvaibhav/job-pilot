@@ -14,7 +14,7 @@ import {
   startSession,
 } from "./session";
 
-export const LOGIN_PATH = "/login";
+export const LOGIN_PATH = "/?auth=sign-in";
 
 export async function readSessionToken(): Promise<string | undefined> {
   return (await cookies()).get(SESSION_COOKIE_NAME)?.value;
@@ -46,6 +46,15 @@ export async function currentTotpEnrollmentTenant(): Promise<TenantContext | nul
   return tenant;
 }
 
+/** Setup-only session identity for the public landing page's forced dialog. */
+export async function currentIncompleteSignupTenant(): Promise<TenantContext | null> {
+  const database = getDatabase();
+  const token = await readSessionToken();
+  const tenant = resolveEnrollmentSessionTenant(database, token);
+  if (tenant) touchSession(database, token);
+  return tenant;
+}
+
 export async function requireIncompleteSignupTenant(): Promise<TenantContext> {
   const database = getDatabase();
   const token = await readSessionToken();
@@ -62,7 +71,7 @@ export async function requireTenant(): Promise<TenantContext> {
     const database = getDatabase();
     const token = await readSessionToken();
     if (resolveEnrollmentSessionTenant(database, token)) {
-      redirect("/setup-totp");
+      redirect("/?auth=setup-totp");
     }
     redirect(LOGIN_PATH);
   }

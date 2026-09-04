@@ -153,7 +153,7 @@ describe("username and TOTP account routes", () => {
     );
 
     expect(response.status).toBe(201);
-    expect(await response.json()).toEqual({ ok: true, redirect: "/setup-totp" });
+    expect(await response.json()).toEqual({ ok: true, redirect: "/?auth=setup-totp" });
     expect(mocks.cookieSet).toHaveBeenCalledOnce();
     const row = client.sqlite
       .prepare(

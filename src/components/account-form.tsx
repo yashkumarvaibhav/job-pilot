@@ -105,7 +105,9 @@ export function AccountForm({ mode }: { mode: Mode }) {
         typeof (body as { redirect?: unknown }).redirect === "string"
           ? (body as { redirect: string }).redirect
           : null;
-      router.replace(redirect ?? (isSignup ? "/setup-totp" : "/"));
+      router.replace(
+        redirect ?? (isSignup ? "/?auth=setup-totp" : "/today"),
+      );
       router.refresh();
     } catch {
       setError(REQUEST_FAILED_MESSAGE);

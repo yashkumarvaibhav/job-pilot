@@ -40,6 +40,6 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    ...(account.signupComplete ? {} : { redirect: "/setup-totp" }),
+    ...(account.signupComplete ? {} : { redirect: "/?auth=setup-totp" }),
   });
 }
