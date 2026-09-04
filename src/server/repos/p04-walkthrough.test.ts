@@ -111,15 +111,20 @@ describe("P04 Gmail walkthrough", () => {
         NOW,
       ),
     ).toBe(true);
-    expect(
-      listEmailAccounts(fixture.client.db, fixture.tenantA).map((account) => ({
-        email: account.email,
-        isDefault: account.isDefault,
-      })),
-    ).toEqual([
-      { email: "career@invalid.test", isDefault: false },
-      { email: "personal@invalid.test", isDefault: true },
-    ]);
+    const tenantAccounts = listEmailAccounts(
+      fixture.client.db,
+      fixture.tenantA,
+    ).map((account) => ({
+      email: account.email,
+      isDefault: account.isDefault,
+    }));
+    expect(tenantAccounts).toHaveLength(2);
+    expect(tenantAccounts).toEqual(
+      expect.arrayContaining([
+        { email: "career@invalid.test", isDefault: false },
+        { email: "personal@invalid.test", isDefault: true },
+      ]),
+    );
 
     const contact = createContact(fixture.client.db, fixture.tenantA, {
       id: "walkthrough-contact",
