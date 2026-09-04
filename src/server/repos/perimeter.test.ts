@@ -200,6 +200,7 @@ const NON_TENANT_ROUTE_FILES = [
   "auth/login/route.ts",
   "auth/logout/route.ts",
   "auth/recovery/reset/route.ts",
+  "auth/signup/abandon/route.ts",
   "auth/signup/route.ts",
   "cron/tick/route.ts",
   "ready/route.ts",
