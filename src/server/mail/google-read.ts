@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { normalizeEmail } from "../auth/email";
 import {
   GmailHistoryGapError,
@@ -13,7 +15,7 @@ const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GMAIL_BASE_URL = "https://gmail.googleapis.com/gmail/v1/users/me";
 
 type GoogleClient = { clientId: string; clientSecret: string };
-type GoogleGmailReadOptions = { fetcher?: typeof fetch };
+type GoogleGmailReadOptions = { fetcher?: typeof fetch; now?: () => Date };
 
 type JsonObject = Record<string, unknown>;
 
@@ -59,6 +61,24 @@ function arrayObjects(value: unknown): JsonObject[] {
   return Array.isArray(value)
     ? value.map(object).filter((item): item is JsonObject => item !== null)
     : [];
+}
+
+function retryableGoogleResponse(response: Response, body: JsonObject): boolean {
+  if (response.status === 429 || response.status >= 500) return true;
+  if (response.status !== 403) return false;
+  const error = object(body.error);
+  const reasons = arrayObjects(error?.errors)
+    .map((item) => stringValue(item.reason))
+    .filter((reason): reason is string => reason !== null);
+  return reasons.some((reason) =>
+    ["rateLimitExceeded", "userRateLimitExceeded", "quotaExceeded"].includes(
+      reason,
+    ),
+  );
+}
+
+function refreshTokenCacheKey(refreshToken: string): string {
+  return createHash("sha256").update(refreshToken, "utf8").digest("hex");
 }
 
 function decodeBase64url(value: unknown): string {
@@ -115,7 +135,13 @@ function parseMessage(value: JsonObject): GmailMessageSnapshot | null {
   if (!gmailId || !payload) return null;
   const fields = headers(payload);
   const fromEmail = emailFromHeader(fields.get("from"));
-  const to = emailsFromHeader(fields.get("to"));
+  const to = [
+    ...new Set(
+      ["to", "cc", "bcc", "delivered-to"].flatMap((name) =>
+        emailsFromHeader(fields.get(name)),
+      ),
+    ),
+  ];
   const milliseconds = Number(stringValue(value.internalDate));
   const sentAt = new Date(milliseconds);
   if (!fromEmail || to.length === 0 || Number.isNaN(sentAt.valueOf())) return null;
@@ -132,15 +158,24 @@ function parseMessage(value: JsonObject): GmailMessageSnapshot | null {
 
 export class GoogleGmailReadPort implements GmailReadPort {
   private readonly fetcher: typeof fetch;
+  private readonly now: () => Date;
+  private readonly accessTokens = new Map<
+    string,
+    { token: string; expiresAt: number }
+  >();
 
   constructor(
     private readonly client: GoogleClient,
     options: GoogleGmailReadOptions = {},
   ) {
     this.fetcher = options.fetcher ?? fetch;
+    this.now = options.now ?? (() => new Date());
   }
 
   private async accessToken(refreshToken: string, signal?: AbortSignal) {
+    const cacheKey = refreshTokenCacheKey(refreshToken);
+    const cached = this.accessTokens.get(cacheKey);
+    if (cached && cached.expiresAt > this.now().valueOf()) return cached.token;
     const response = await this.fetcher(TOKEN_URL, {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -156,8 +191,16 @@ export class GoogleGmailReadPort implements GmailReadPort {
     const body = await responseObject(response);
     const token = stringValue(body.access_token);
     if (!response.ok || token === null) {
-      throw new GoogleGmailReadError(response.status === 429 || response.status >= 500);
+      throw new GoogleGmailReadError(retryableGoogleResponse(response, body));
     }
+    const expiresIn = Number(body.expires_in);
+    const lifetimeSeconds =
+      Number.isFinite(expiresIn) && expiresIn > 0 ? expiresIn : 3600;
+    this.accessTokens.set(cacheKey, {
+      token,
+      expiresAt:
+        this.now().valueOf() + Math.max(1, lifetimeSeconds - 60) * 1_000,
+    });
     return token;
   }
 
@@ -187,7 +230,7 @@ export class GoogleGmailReadPort implements GmailReadPort {
     );
     const historyId = stringValue(body.historyId);
     if (!response.ok || historyId === null) {
-      throw new GoogleGmailReadError(response.status === 429 || response.status >= 500);
+      throw new GoogleGmailReadError(retryableGoogleResponse(response, body));
     }
     return historyId;
   }
@@ -212,7 +255,7 @@ export class GoogleGmailReadPort implements GmailReadPort {
     if (response.status === 404) throw new GmailHistoryGapError();
     const historyId = stringValue(body.historyId);
     if (!response.ok || historyId === null) {
-      throw new GoogleGmailReadError(response.status === 429 || response.status >= 500);
+      throw new GoogleGmailReadError(retryableGoogleResponse(response, body));
     }
     const threadIds = arrayObjects(body.history).flatMap((history) =>
       arrayObjects(history.messagesAdded)
@@ -244,7 +287,7 @@ export class GoogleGmailReadPort implements GmailReadPort {
       input.signal,
     );
     if (!response.ok) {
-      throw new GoogleGmailReadError(response.status === 429 || response.status >= 500);
+      throw new GoogleGmailReadError(retryableGoogleResponse(response, body));
     }
     return {
       threadIds: arrayObjects(body.threads)
@@ -271,7 +314,7 @@ export class GoogleGmailReadPort implements GmailReadPort {
       .map(parseMessage)
       .filter((message): message is GmailMessageSnapshot => message !== null);
     if (!response.ok || gmailThreadId === null || historyId === null || messages.length === 0) {
-      throw new GoogleGmailReadError(response.status === 429 || response.status >= 500);
+      throw new GoogleGmailReadError(retryableGoogleResponse(response, body));
     }
     return { gmailThreadId, historyId, messages };
   }

@@ -18,11 +18,13 @@ describe("Google Gmail readonly adapter", () => {
   it("reads profile, history and bounded thread search with a deadline", async () => {
     const requests: URL[] = [];
     const signals: (AbortSignal | null | undefined)[] = [];
+    let tokenRequests = 0;
     const fetcher = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       const url = new URL(input.toString());
       signals.push(init?.signal);
       if (url.hostname === "oauth2.googleapis.com") {
-        return json({ access_token: "access" });
+        tokenRequests += 1;
+        return json({ access_token: "access", expires_in: 3600 });
       }
       requests.push(url);
       if (url.pathname.endsWith("/profile")) return json({ historyId: "99" });
@@ -71,8 +73,34 @@ describe("Google Gmail readonly adapter", () => {
     expect(requests[1].searchParams.get("pageToken")).toBe("page-1");
     expect(requests[2].searchParams.get("q")).toBe("from:jobs@example.com");
     expect(requests[2].searchParams.get("maxResults")).toBe("50");
-    expect(signals).toHaveLength(6);
+    expect(tokenRequests).toBe(1);
+    expect(signals).toHaveLength(4);
     expect(signals.every((signal) => signal instanceof AbortSignal)).toBe(true);
+  });
+
+  it("reuses a token until its safe expiry margin, then refreshes it", async () => {
+    let now = new Date("2026-09-04T10:00:00.000Z");
+    let tokenRequests = 0;
+    const fetcher = vi.fn(async (input: string | URL | Request) => {
+      const url = new URL(input.toString());
+      if (url.hostname === "oauth2.googleapis.com") {
+        tokenRequests += 1;
+        return json({ access_token: `access-${tokenRequests}`, expires_in: 120 });
+      }
+      return json({ historyId: "99" });
+    });
+    const reader = new GoogleGmailReadPort(
+      { clientId: "client", clientSecret: "secret" },
+      { fetcher, now: () => now },
+    );
+
+    await reader.getProfileHistoryId({ refreshToken: "refresh" });
+    now = new Date(now.valueOf() + 30_000);
+    await reader.getProfileHistoryId({ refreshToken: "refresh" });
+    expect(tokenRequests).toBe(1);
+    now = new Date(now.valueOf() + 31_000);
+    await reader.getProfileHistoryId({ refreshToken: "refresh" });
+    expect(tokenRequests).toBe(2);
   });
 
   it("maps an expired history cursor to the dedicated gap error", async () => {
@@ -163,6 +191,48 @@ describe("Google Gmail readonly adapter", () => {
     expect(JSON.stringify(thread)).not.toContain("HTML answer");
   });
 
+  it("uses Cc, Bcc and Delivered-To when To has no address", async () => {
+    const fetcher = vi.fn(async (input: string | URL | Request) => {
+      const url = new URL(input.toString());
+      if (url.hostname === "oauth2.googleapis.com") {
+        return json({ access_token: "access" });
+      }
+      return json({
+        id: "thread-2",
+        historyId: "223",
+        messages: [
+          {
+            id: "message-2",
+            internalDate: "1788440000000",
+            payload: {
+              headers: [
+                { name: "From", value: "Sender <sender@example.com>" },
+                { name: "To", value: "undisclosed-recipients:;" },
+                { name: "Cc", value: "Copy <copy@example.com>" },
+                { name: "Bcc", value: "Blind <blind@example.com>" },
+                { name: "Delivered-To", value: "owner@example.com" },
+              ],
+            },
+          },
+        ],
+      });
+    });
+    const reader = new GoogleGmailReadPort(
+      { clientId: "client", clientSecret: "secret" },
+      { fetcher },
+    );
+
+    const thread = await reader.getThread({
+      refreshToken: "refresh",
+      gmailThreadId: "thread-2",
+    });
+    expect(thread.messages[0].to).toEqual([
+      "copy@example.com",
+      "blind@example.com",
+      "owner@example.com",
+    ]);
+  });
+
   it("fails closed on token, rate-limit and malformed Gmail responses", async () => {
     const tokenFailure = new GoogleGmailReadPort(
       { clientId: "client", clientSecret: "secret" },
@@ -189,5 +259,26 @@ describe("Google Gmail readonly adapter", () => {
         pageToken: null,
       }),
     ).rejects.toBeInstanceOf(GoogleGmailReadError);
+
+    const quotaLimited = new GoogleGmailReadPort(
+      { clientId: "client", clientSecret: "secret" },
+      {
+        fetcher: async (input) =>
+          new URL(input.toString()).hostname === "oauth2.googleapis.com"
+            ? json({ access_token: "access" })
+            : json(
+                { error: { errors: [{ reason: "userRateLimitExceeded" }] } },
+                403,
+              ),
+      },
+    );
+    await expect(
+      quotaLimited.listThreads({
+        refreshToken: "refresh",
+        query: "jobs",
+        maxResults: 10,
+        pageToken: null,
+      }),
+    ).rejects.toMatchObject({ retryable: true });
   });
 });
