@@ -234,6 +234,15 @@ describe("opportunity screens", () => {
     expect(html).toContain('aria-hidden="true"');
     expect(html).toContain('aria-label="Priority score 8"');
     expect(html).toContain('class="tnum opportunity-health__score"');
+    const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
+    const healthCss = css.slice(
+      css.indexOf(".opportunity-health {"),
+      css.indexOf(".opportunity-health h2"),
+    );
+    expect(healthCss).toContain("var(--warning)");
+    expect(healthCss).toContain("var(--danger)");
+    expect(healthCss).not.toContain("box-shadow");
+    expect(healthCss).not.toMatch(/#[0-9a-f]{3,8}/i);
   });
 
   it("shows the numeric score, fired terms, and a saved weight change", async () => {

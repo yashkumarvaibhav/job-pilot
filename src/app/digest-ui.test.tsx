@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -80,5 +83,23 @@ describe("morning digest preview screen", () => {
     expect(html).not.toContain("Someone Else");
     expect(html).not.toContain(DIGEST_EMAIL_LABEL);
     expect(today.stats.followUps).toBe(1);
+  });
+
+  it("styles the preview as a hairline settings card without a resting shadow", () => {
+    const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
+    const section = css.slice(
+      css.indexOf(".settings-section {"),
+      css.indexOf(".settings-help,"),
+    );
+    const preview = css.slice(
+      css.indexOf(".digest-preview-list"),
+      css.indexOf(".digest-preview-body") + 280,
+    );
+    expect(section).toContain("1px solid var(--line)");
+    expect(section).not.toContain("box-shadow");
+    expect(preview).toContain("var(--line)");
+    expect(preview).toContain("tabular-nums");
+    expect(preview).not.toContain("box-shadow");
+    expect(preview).not.toMatch(/#[0-9a-f]{3,8}/i);
   });
 });

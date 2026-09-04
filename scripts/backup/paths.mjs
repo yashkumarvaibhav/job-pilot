@@ -9,6 +9,11 @@ export const DEFAULT_DATABASE_PATH = "./var/job-pilot.sqlite";
 export const DEFAULT_BACKUPS_DIRECTORY = "./var/backups";
 export const DEFAULT_UPLOADS_DIRECTORY = "./var/uploads";
 
+function resolvedRelative(root, configured, fallback) {
+  const trimmed = typeof configured === "string" ? configured.trim() : "";
+  return resolve(root, trimmed.length > 0 ? trimmed : fallback);
+}
+
 /**
  * Resolve every path the tools touch, relative to the application root.
  * Deployment-specific roots are explicit env overrides so a synthetic demo
@@ -17,23 +22,23 @@ export const DEFAULT_UPLOADS_DIRECTORY = "./var/uploads";
 export function resolveBackupPaths(options = {}) {
   const { appRoot = process.cwd(), env = process.env } = options;
   const root = resolve(appRoot);
-  const databasePath = resolve(
-    root,
-    options.databasePath ?? env.DATABASE_PATH?.trim() ?? DEFAULT_DATABASE_PATH,
-  );
 
   return {
     appRoot: root,
-    databasePath,
-    backupsRoot: resolve(
+    databasePath: resolvedRelative(
       root,
-      options.backupsRoot ??
-        env.BACKUPS_ROOT?.trim() ??
-        DEFAULT_BACKUPS_DIRECTORY,
+      options.databasePath ?? env.DATABASE_PATH,
+      DEFAULT_DATABASE_PATH,
     ),
-    uploadsRoot: resolve(
+    backupsRoot: resolvedRelative(
       root,
-      options.uploadsRoot ?? env.UPLOADS_ROOT?.trim() ?? DEFAULT_UPLOADS_DIRECTORY,
+      options.backupsRoot ?? env.BACKUPS_ROOT,
+      DEFAULT_BACKUPS_DIRECTORY,
+    ),
+    uploadsRoot: resolvedRelative(
+      root,
+      options.uploadsRoot ?? env.UPLOADS_ROOT,
+      DEFAULT_UPLOADS_DIRECTORY,
     ),
   };
 }

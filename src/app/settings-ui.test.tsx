@@ -145,6 +145,10 @@ describe("settings screen", () => {
   });
 
   it("keeps Gmail honest when OAuth configuration is missing and renders all six scoring weights", async () => {
+    vi.stubEnv("GOOGLE_CLIENT_ID", "");
+    vi.stubEnv("GOOGLE_CLIENT_SECRET", "");
+    vi.stubEnv("GOOGLE_REDIRECT_URI", "");
+    vi.stubEnv("TOKEN_KEY", "");
     newFixture();
 
     const html = renderToStaticMarkup(await SettingsPage());
@@ -290,6 +294,7 @@ describe("settings screen", () => {
     const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
 
     expect(css).toContain(".settings-section");
+    expect(css).toContain(".digest-preview-list");
     expect(css).toContain(".settings-export-actions");
     expect(css).toContain("min-height: var(--target-min)");
     expect(css).toContain("@media (max-width: 767px)");

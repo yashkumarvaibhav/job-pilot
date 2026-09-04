@@ -20,4 +20,22 @@ describe("resolveBackupPaths", () => {
       backupsRoot: "/srv/job-pilot/app/var/demo/backups",
     });
   });
+
+  it("treats blank environment overrides as missing", () => {
+    expect(
+      resolveBackupPaths({
+        appRoot: "/srv/job-pilot/app",
+        env: {
+          DATABASE_PATH: "  ",
+          UPLOADS_ROOT: "",
+          BACKUPS_ROOT: "",
+        },
+      }),
+    ).toEqual({
+      appRoot: "/srv/job-pilot/app",
+      databasePath: "/srv/job-pilot/app/var/job-pilot.sqlite",
+      uploadsRoot: "/srv/job-pilot/app/var/uploads",
+      backupsRoot: "/srv/job-pilot/app/var/backups",
+    });
+  });
 });

@@ -10,5 +10,6 @@ export default defineConfig({
   },
   test: {
     include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.mts"],
+    setupFiles: ["./src/test/isolate-storage-env.ts"],
   },
 });
