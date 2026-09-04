@@ -123,16 +123,20 @@ describe("account lifecycle routes", () => {
     for (const cleanup of cleanups.splice(0)) cleanup();
   });
 
-  it("fails account-mail entry points closed without changing global readiness", async () => {
+  it("opens account access while mail-only entry points remain closed", async () => {
     mocks.mailPort = null;
 
-    const responses = await Promise.all([
-      post(
-        signup,
-        "/api/auth/signup",
-        { email: "new@invalid.test", password: PASSWORD },
-        "198.51.100.20",
-      ),
+    const signupResponse = await post(
+      signup,
+      "/api/auth/signup",
+      { email: "new@invalid.test", password: PASSWORD },
+      "198.51.100.20",
+    );
+    expect(signupResponse.status).toBe(201);
+    expect(await signupResponse.json()).toEqual({ ok: true });
+    expect(mocks.cookieSet).toHaveBeenCalledOnce();
+
+    const mailResponses = await Promise.all([
       post(
         requestVerification,
         "/api/auth/verification/request",
@@ -147,7 +151,7 @@ describe("account lifecycle routes", () => {
       ),
     ]);
 
-    for (const response of responses) {
+    for (const response of mailResponses) {
       expect(response.status).toBe(503);
       expect(await response.json()).toEqual({
         error: ACCOUNT_MAIL_UNAVAILABLE_MESSAGE,
@@ -155,10 +159,23 @@ describe("account lifecycle routes", () => {
     }
     expect(
       client.sqlite.prepare("select count(*) as count from user_account").get(),
-    ).toEqual({ count: 1 });
+    ).toEqual({ count: 2 });
     expect(
       client.sqlite.prepare("select count(*) as count from account_token").get(),
     ).toEqual({ count: 0 });
+    expect(
+      client.sqlite
+        .prepare("select email_verified_at from user_account where email_normalized = ?")
+        .get("new@invalid.test"),
+    ).toEqual({ email_verified_at: null });
+
+    const loginResponse = await post(
+      login,
+      "/api/auth/login",
+      { email: "new@invalid.test", password: PASSWORD },
+      "198.51.100.25",
+    );
+    expect(loginResponse.status).toBe(200);
   });
 
   it("creates an unverified account, verifies once, then permits login", async () => {

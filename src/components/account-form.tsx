@@ -96,13 +96,13 @@ export function AccountForm({ mode }: { mode: Mode }) {
       }
 
       form.reset();
-      if (isSignup) {
-        const message =
-          body &&
-          typeof body === "object" &&
-          typeof (body as { message?: unknown }).message === "string"
-            ? (body as { message: string }).message
-            : REQUEST_FAILED_MESSAGE;
+      const message =
+        body &&
+        typeof body === "object" &&
+        typeof (body as { message?: unknown }).message === "string"
+          ? (body as { message: string }).message
+          : null;
+      if (isSignup && message) {
         setNotice(message);
         return;
       }

@@ -7,6 +7,8 @@ import {
 } from "@/lib/account";
 import { registerAccountWithVerification } from "@/server/auth/account-lifecycle";
 import { configuredAccountMailPort } from "@/server/auth/account-mail";
+import { registerAccount } from "@/server/auth/accounts";
+import { establishSession } from "@/server/auth/current-session";
 import { readCredentials } from "@/server/auth/http";
 import {
   guardAccountAttempt,
@@ -48,10 +50,17 @@ export async function POST(request: Request) {
 
   const mail = configuredAccountMailPort();
   if (!mail) {
-    return NextResponse.json(
-      { error: ACCOUNT_MAIL_UNAVAILABLE_MESSAGE },
-      { status: 503 },
-    );
+    const created = await registerAccount(getDatabase(), {
+      ...credentials,
+      emailVerifiedAt: null,
+    });
+    if (!created.ok) {
+      guard.recordFailure();
+      return NextResponse.json({ error: SIGNUP_FAILED_MESSAGE }, { status: 400 });
+    }
+    guard.recordSuccess();
+    await establishSession(created.tenant.userId);
+    return NextResponse.json({ ok: true }, { status: 201 });
   }
 
   let created;

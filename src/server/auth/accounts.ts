@@ -66,6 +66,10 @@ export type AuthenticateAccountInput = {
   password: string;
 };
 
+export type AuthenticateAccountOptions = {
+  allowUnverified?: boolean;
+};
+
 let decoyHash: Promise<string> | null = null;
 
 /**
@@ -80,6 +84,7 @@ function decoy(): Promise<string> {
 export async function authenticateAccount(
   database: AppDatabase,
   input: AuthenticateAccountInput,
+  options: AuthenticateAccountOptions = {},
 ): Promise<{ userId: string } | null> {
   const emailNormalized = normalizeEmail(input.email);
   const account =
@@ -95,7 +100,9 @@ export async function authenticateAccount(
             and(
               eq(userAccount.emailNormalized, emailNormalized),
               eq(userAccount.status, "active"),
-              isNotNull(userAccount.emailVerifiedAt),
+              options.allowUnverified
+                ? undefined
+                : isNotNull(userAccount.emailVerifiedAt),
             ),
           )
           .get();

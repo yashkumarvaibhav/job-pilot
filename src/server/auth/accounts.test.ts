@@ -177,4 +177,31 @@ describe("authenticateAccount", () => {
       }),
     ).resolves.toBeNull();
   });
+
+  it("allows an explicitly unverified account only when its caller opts in", async () => {
+    const fixture = newFixture();
+    const created = await registerAccount(fixture.client.db, {
+      email: "early-access@invalid.test",
+      password: PASSWORD,
+      emailVerifiedAt: null,
+    });
+
+    await expect(
+      authenticateAccount(fixture.client.db, {
+        email: "early-access@invalid.test",
+        password: PASSWORD,
+      }),
+    ).resolves.toBeNull();
+    const authenticated = await authenticateAccount(
+      fixture.client.db,
+      {
+        email: "early-access@invalid.test",
+        password: PASSWORD,
+      },
+      { allowUnverified: true },
+    );
+    expect(created.ok && authenticated?.userId).toBe(
+      created.ok ? created.tenant.userId : undefined,
+    );
+  });
 });
