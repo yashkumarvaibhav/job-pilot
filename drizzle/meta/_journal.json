@@ -211,6 +211,13 @@
       "when": 1788552600000,
       "tag": "0029_bounce",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1788558000000,
+      "tag": "0030_digest",
+      "breakpoints": true
     }
   ]
 }

@@ -36,6 +36,9 @@ describe("settings repository", () => {
       quietStart: null,
       quietEnd: null,
       digestHour: null,
+      digestEmailEnabled: false,
+      digestAccountId: null,
+      digestAccountEmail: null,
       scoringWeights: DEFAULT_SCORING_WEIGHTS,
       mutedNotificationKinds: [],
     });

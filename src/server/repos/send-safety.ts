@@ -8,6 +8,7 @@ import {
   queueMessageId,
   tomorrowMorningSlot,
 } from "../../domain/send-safety";
+import { canUseSelfDigestPolicy } from "../../domain/digest";
 import { calendarDateInZone } from "../../domain/referral";
 import { zonedInterviewAt } from "../../domain/interview";
 import { normalizeEmail } from "../auth/email";
@@ -274,7 +275,7 @@ function currentPayload(row: QueueMessage) {
 }
 
 export function createQueueMessage(
-  database: AppDatabase,
+  database: AppDatabase | AppTransaction,
   tenant: TenantContext,
   input: CreateQueueMessageInput,
 ): QueueMessage {
@@ -292,10 +293,16 @@ export function createQueueMessage(
     if (input.origin !== "self_digest" && !contactId) {
       throw new SendSafetyError("Contact is required for third-party mail.");
     }
-    if (input.origin === "self_digest" && recipient !== account.email) {
-      throw new SendSafetyError("A self digest can only be sent to its Gmail account.");
+    const policyOk = canUseSelfDigestPolicy({
+      origin: input.origin,
+      recipient,
+      accountEmail: account.email,
+    });
+    let approvalKind = input.approvalKind ?? null;
+    if (approvalKind === "self_digest_policy" && !policyOk) {
+      approvalKind = null;
     }
-    if (input.origin === "sequence" && input.approvalKind) {
+    if (input.origin === "sequence" && approvalKind) {
       throw new SendSafetyError("Sequence messages begin awaiting approval.");
     }
     const opportunityId = input.opportunityId?.trim() || null;
@@ -317,7 +324,7 @@ export function createQueueMessage(
       attachmentVersionIds: attachments,
       sendAt,
     });
-    const approved = input.approvalKind !== undefined;
+    const approved = approvalKind !== null;
     const row = transaction
       .insert(sendQueue)
       .values({
@@ -339,7 +346,7 @@ export function createQueueMessage(
         payloadHash,
         approvalHash: approved ? payloadHash : null,
         approvedAt: approved ? now : null,
-        approvalKind: input.approvalKind ?? null,
+        approvalKind,
         messageId: queueMessageId(id, account.email),
         claimedAt: null,
         attempts: 0,

@@ -78,13 +78,14 @@ describe("migrateDatabase", () => {
           "sequence_step",
           "suppression_entry",
           "bounce_event",
+          "digest_run",
         ]),
       );
       expect(
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 30 });
+      ).toEqual({ count: 31 });
 
       const accountColumns = client.sqlite
         .prepare("select name from pragma_table_info('user_account') order by cid")
@@ -221,6 +222,9 @@ describe("migrateDatabase", () => {
         "send_queue_workspace_enrollment_step_unique",
         "suppression_entry_workspace_email_idx",
         "suppression_entry_workspace_source_unique",
+        "digest_run_workspace_id_id_unique",
+        "digest_run_workspace_local_date_unique",
+        "digest_run_workspace_at_idx",
       ]) {
         const columns = client.sqlite
           .prepare(
@@ -908,6 +912,15 @@ describe("migrateDatabase", () => {
       expect(settingsColumns.map((column) => column.name)).toContain(
         "max_outreach_per_opportunity",
       );
+      expect(settingsColumns.map((column) => column.name)).toContain(
+        "digest_email_enabled",
+      );
+      expect(settingsColumns.map((column) => column.name)).toContain(
+        "digest_account_id",
+      );
+      expect(settingsColumns.map((column) => column.name)).toContain(
+        "digest_account_email",
+      );
 
       const bounceEventColumns = client.sqlite
         .prepare("select name from pragma_table_info('bounce_event') order by cid")
@@ -922,6 +935,22 @@ describe("migrateDatabase", () => {
         "smtp_status",
         "diagnostic",
         "at",
+      ]);
+
+      const digestRunColumns = client.sqlite
+        .prepare("select name from pragma_table_info('digest_run') order by cid")
+        .all() as { name: string }[];
+      expect(digestRunColumns.map((column) => column.name)).toEqual([
+        "id",
+        "workspace_id",
+        "local_date",
+        "at",
+        "outcome",
+        "account_id",
+        "recipient",
+        "queue_id",
+        "counts_json",
+        "body",
       ]);
 
       const emailAccountColumns = client.sqlite
@@ -965,10 +994,20 @@ describe("migrateDatabase", () => {
 
       const settingsEmailAccountForeignKeys = client.sqlite
         .prepare(
-          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('settings') where \"table\" = 'email_account' order by seq",
+          "select \"table\", \"from\", \"to\" from pragma_foreign_key_list('settings') where \"table\" = 'email_account' order by id, seq",
         )
         .all();
       expect(settingsEmailAccountForeignKeys).toEqual([
+        {
+          table: "email_account",
+          from: "workspace_id",
+          to: "workspace_id",
+        },
+        {
+          table: "email_account",
+          from: "digest_account_id",
+          to: "id",
+        },
         {
           table: "email_account",
           from: "workspace_id",

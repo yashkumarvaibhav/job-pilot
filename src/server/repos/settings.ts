@@ -24,6 +24,9 @@ export type WorkspaceSettingsView = {
   quietStart: number | null;
   quietEnd: number | null;
   digestHour: number | null;
+  digestEmailEnabled: boolean;
+  digestAccountId: string | null;
+  digestAccountEmail: string | null;
   scoringWeights: ScoringWeights;
   mutedNotificationKinds: string[];
 };
@@ -67,6 +70,9 @@ function toView(row: typeof settings.$inferSelect): WorkspaceSettingsView {
     quietStart: row.quietStart ?? null,
     quietEnd: row.quietEnd ?? null,
     digestHour: row.digestHour ?? null,
+    digestEmailEnabled: row.digestEmailEnabled,
+    digestAccountId: row.digestAccountId ?? null,
+    digestAccountEmail: row.digestAccountEmail ?? null,
     scoringWeights: resolveScoringWeights(row.scoringWeightsJson),
     mutedNotificationKinds: row.mutedNotificationKindsJson ?? [],
   };

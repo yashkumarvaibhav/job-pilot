@@ -5,6 +5,7 @@ import { workspace } from "../db/schema";
 import { createTenantContext } from "../db/tenant";
 import { syncInboxAccount, type InboxSyncDependencies } from "../mail/inbox-sync";
 import { listAccountsWithDueApprovedSequence } from "../repos/sequences";
+import { processDueDigests } from "../repos/digest";
 import {
   flushSendQueue,
   type SendQueueDependencies,
@@ -44,5 +45,6 @@ export async function runTick(
       }
     }
   }
+  processDueDigests(database, now);
   return flushSendQueue(database, dependencies, { ...options, now });
 }

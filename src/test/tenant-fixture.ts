@@ -46,7 +46,8 @@ type FoundationTable =
   | "document_usage"
   | "saved_search"
   | "automation_rule"
-  | "automation_execution";
+  | "automation_execution"
+  | "digest_run";
 
 export type BaseTenantTestFixture = {
   client: DatabaseClient;

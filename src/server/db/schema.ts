@@ -55,6 +55,7 @@ import {
 } from "../../domain/task";
 import type { AutomationRuleSlug } from "../../domain/rules";
 import type { SavedSearchEntityType } from "../../domain/saved-search";
+import type { DigestCounts, DigestOutcome } from "../../domain/digest";
 import { DEFAULT_TIME_ZONE } from "./timezone";
 
 const utcInstant = (name: string) => integer(name, { mode: "timestamp_ms" });
@@ -212,6 +213,11 @@ export const settings = sqliteTable(
     quietEnd: integer("quiet_end"),
     digestHour: integer("digest_hour"),
     defaultEmailAccountId: text("default_email_account_id"),
+    digestEmailEnabled: integer("digest_email_enabled", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    digestAccountId: text("digest_account_id"),
+    digestAccountEmail: text("digest_account_email"),
     contactCooldownDays: integer("contact_cooldown_days").notNull().default(30),
     maxOutreachPerOpportunity: integer("max_outreach_per_opportunity")
       .notNull()
@@ -243,11 +249,27 @@ export const settings = sqliteTable(
       "settings_max_outreach_per_opportunity_range",
       sql`${table.maxOutreachPerOpportunity} between 1 and 100`,
     ),
+    check(
+      "settings_digest_email_enabled_valid",
+      sql`${table.digestEmailEnabled} in (0, 1)`,
+    ),
+    check(
+      "settings_digest_enabled_needs_account",
+      sql`${table.digestEmailEnabled} = 0 or ${table.digestAccountId} is not null`,
+    ),
     sameWorkspaceForeignKey(
       "settings_default_email_account_workspace_fk",
       {
         workspaceId: table.workspaceId,
         parentId: table.defaultEmailAccountId,
+      },
+      emailAccount,
+    ),
+    sameWorkspaceForeignKey(
+      "settings_digest_account_workspace_fk",
+      {
+        workspaceId: table.workspaceId,
+        parentId: table.digestAccountId,
       },
       emailAccount,
     ),
@@ -1987,5 +2009,49 @@ export const automationExecution = sqliteTable(
       { workspaceId: table.workspaceId, parentId: table.ruleId },
       automationRule,
     ).onDelete("cascade"),
+  ],
+);
+
+export const digestRun = sqliteTable(
+  "digest_run",
+  {
+    ...workspaceOwnedEntityColumns(),
+    localDate: text("local_date").notNull(),
+    at: utcInstant("at").notNull(),
+    outcome: text("outcome").$type<DigestOutcome>().notNull(),
+    accountId: text("account_id"),
+    recipient: text("recipient"),
+    queueId: text("queue_id"),
+    countsJson: text("counts_json", { mode: "json" })
+      .$type<DigestCounts>()
+      .notNull()
+      .default(sql`'{}'`),
+    body: text("body").notNull().default(""),
+  },
+  (table) => [
+    workspaceEntityKey("digest_run", table),
+    uniqueIndex("digest_run_workspace_local_date_unique").on(
+      table.workspaceId,
+      table.localDate,
+    ),
+    index("digest_run_workspace_at_idx").on(table.workspaceId, table.at),
+    sameWorkspaceForeignKey(
+      "digest_run_account_fk",
+      { workspaceId: table.workspaceId, parentId: table.accountId },
+      emailAccount,
+    ),
+    sameWorkspaceForeignKey(
+      "digest_run_queue_fk",
+      { workspaceId: table.workspaceId, parentId: table.queueId },
+      sendQueue,
+    ),
+    check(
+      "digest_run_local_date_iso",
+      sql`${table.localDate} glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'`,
+    ),
+    check(
+      "digest_run_outcome_valid",
+      sql`${table.outcome} in ('previewed', 'queued', 'skipped_disconnected', 'skipped_quiet')`,
+    ),
   ],
 );

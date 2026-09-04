@@ -7,6 +7,7 @@ import {
   hashSendPayload,
 } from "../../domain/send-safety";
 import { MAX_SYNC_AGE_MS, sequenceMailboxFreshness } from "../../domain/sequence";
+import { isQuietHourInZone } from "../../domain/settings";
 import { logEvent } from "../db/activity";
 import type { AppDatabase, AppTransaction } from "../db/client";
 import {
@@ -333,7 +334,11 @@ export function claimNextQueueMessage(
         )
         .get();
       const workspaceSettings = transaction
-        .select({ timeZone: settings.timezone })
+        .select({
+          timeZone: settings.timezone,
+          quietStart: settings.quietStart,
+          quietEnd: settings.quietEnd,
+        })
         .from(settings)
         .where(eq(settings.workspaceId, row.workspaceId))
         .get();
@@ -347,13 +352,22 @@ export function claimNextQueueMessage(
           .run();
         continue;
       }
+      const outsideWindow =
+        row.origin === "self_digest"
+          ? isQuietHourInZone(
+              workspaceSettings.timeZone,
+              now,
+              workspaceSettings.quietStart,
+              workspaceSettings.quietEnd,
+            )
+          : !insideSendingWindow(
+              now,
+              workspaceSettings.timeZone,
+              account.sendingWindowStart,
+              account.sendingWindowEnd,
+            );
       if (
-        !insideSendingWindow(
-          now,
-          workspaceSettings.timeZone,
-          account.sendingWindowStart,
-          account.sendingWindowEnd,
-        ) ||
+        outsideWindow ||
         countToday(
           transaction,
           row.workspaceId,

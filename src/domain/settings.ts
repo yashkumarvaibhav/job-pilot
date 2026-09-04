@@ -21,7 +21,7 @@ export const QUIET_HOURS_ACTIVE_LABEL = "Quiet right now";
 export const QUIET_HOURS_AWAKE_LABEL = "Not quiet right now";
 
 export const QUIET_HOURS_HELP =
-  "The notification center still lists everything during quiet hours. A future morning digest is what will wait for them to end.";
+  "The notification center still lists everything during quiet hours. The morning digest waits for them to end.";
 
 export const GMAIL_NOT_CONNECTED_TITLE = "No Gmail accounts connected";
 
@@ -134,6 +134,10 @@ export function minutesOfDayInZone(timeZone: string, at: Date): number {
     parts.find((part) => part.type === "minute")?.value ?? "0",
   );
   return hour * 60 + minute;
+}
+
+export function hourOfDayInZone(timeZone: string, at: Date): number {
+  return Math.floor(minutesOfDayInZone(timeZone, at) / 60);
 }
 
 export function isQuietHourInZone(

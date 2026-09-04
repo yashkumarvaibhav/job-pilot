@@ -9,6 +9,7 @@ const items = [
   { href: "/settings/templates", label: "Templates" },
   { href: "/settings/sequences", label: "Sequences" },
   { href: "/settings/queue", label: "Queue" },
+  { href: "/settings/digest/preview", label: "Digest" },
   { href: "/settings/import", label: "Import" },
   { href: "/settings/activity", label: "Activity" },
 ] as const;

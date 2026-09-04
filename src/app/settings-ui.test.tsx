@@ -14,6 +14,10 @@ import {
   TIMEZONE_HELP,
 } from "../domain/settings";
 import {
+  DIGEST_EMAIL_LABEL,
+  DIGEST_HELP,
+} from "../domain/digest";
+import {
   AUTOMATION_RULES_HELP,
   AUTOMATION_RULES_TITLE,
 } from "../domain/rules";
@@ -92,6 +96,9 @@ describe("settings screen", () => {
     expect(html).toContain('value="08:00"');
     expect(html).toContain(TIMEZONE_HELP);
     expect(html).toContain(QUIET_HOURS_HELP);
+    expect(html).toContain(DIGEST_EMAIL_LABEL);
+    expect(html).toContain(DIGEST_HELP);
+    expect(html).toContain('href="/settings/digest/preview"');
     expect(html).toContain(AUTOMATION_RULES_TITLE);
     expect(html).toContain(AUTOMATION_RULES_HELP);
     expect(html).toContain("Account security");
@@ -266,6 +273,7 @@ describe("settings screen", () => {
 
     expect(nav).toContain('href="/settings"');
     expect(nav).toContain('href="/settings/import"');
+    expect(nav).toContain('href="/settings/digest/preview"');
     expect(nav).toContain('href="/settings/activity"');
     expect(nav).toContain('aria-current="page"');
   });

@@ -4,7 +4,7 @@ import { and, asc, eq } from "drizzle-orm";
 
 import { normalizeEmail } from "../auth/email";
 import { logEvent } from "../db/activity";
-import type { AppDatabase } from "../db/client";
+import type { AppDatabase, AppTransaction } from "../db/client";
 import { emailAccount, settings } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
 import {
@@ -111,6 +111,23 @@ function validMinute(value: number | undefined, label: string): number | undefin
     );
   }
   return value;
+}
+
+function disableDigestPolicyForAccount(
+  transaction: AppTransaction,
+  workspaceId: string,
+  accountId: string,
+) {
+  transaction
+    .update(settings)
+    .set({ digestEmailEnabled: false })
+    .where(
+      and(
+        eq(settings.workspaceId, workspaceId),
+        eq(settings.digestAccountId, accountId),
+      ),
+    )
+    .run();
 }
 
 function toView(
@@ -253,6 +270,10 @@ export function connectEmailAccount(
           })
           .returning()
           .get();
+
+    if (existing && existing.email !== email) {
+      disableDigestPolicyForAccount(transaction, tenant.workspaceId, id);
+    }
 
     logEvent(transaction, tenant, {
       at: now,
@@ -462,6 +483,7 @@ export function disconnectEmailAccount(
         ),
       )
       .run();
+    disableDigestPolicyForAccount(transaction, tenant.workspaceId, accountId);
     transaction
       .update(emailAccount)
       .set({

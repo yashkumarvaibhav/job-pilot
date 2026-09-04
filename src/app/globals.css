@@ -4643,6 +4643,29 @@ main:focus {
   font-weight: 700;
 }
 
+.digest-preview-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.digest-preview-list .tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+.digest-preview-body {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--sidebar);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  white-space: pre-wrap;
+}
+
 @media (max-width: 767px) {
   .totp-scan-panel {
     grid-template-columns: minmax(0, 1fr);

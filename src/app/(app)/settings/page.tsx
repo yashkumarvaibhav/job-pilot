@@ -6,6 +6,7 @@ import {
   type GmailAccountCard,
 } from "@/components/gmail-accounts-panel";
 import { SettingsForm } from "@/components/settings-form";
+import { MorningDigestPanel } from "@/components/morning-digest-panel";
 import { AUTOMATION_RULES_TITLE } from "@/domain/rules";
 import {
   formatClockMinutes,
@@ -18,6 +19,7 @@ import { readAccountSecurity } from "@/server/auth/account-security";
 import { getDatabase } from "@/server/db/runtime";
 import { readGmailOAuthAvailability } from "@/server/mail/google-config";
 import { readWorkspaceSettings } from "@/server/repos/settings";
+import { readDigestPolicy } from "@/server/repos/digest";
 import { listEmailAccounts } from "@/server/repos/email-accounts";
 import { listAutomationRules } from "@/server/repos/rules";
 
@@ -25,6 +27,7 @@ export default async function SettingsPage() {
   const tenant = await requireTenant();
   const database = getDatabase();
   const view = readWorkspaceSettings(database, tenant);
+  const digest = readDigestPolicy(database, tenant);
   const accountSecretKey = configuredAccountSecretKey();
   const accountSecurity = readAccountSecurity(
     database,
@@ -110,6 +113,18 @@ export default async function SettingsPage() {
           missing={gmailAvailability.missing}
         />
       </section>
+
+      <MorningDigestPanel
+        accounts={gmailAccounts.map((account) => ({
+          id: account.id,
+          email: account.email,
+          status: account.status,
+        }))}
+        digestAccountId={digest.digestAccountId}
+        digestEmailEnabled={digest.digestEmailEnabled}
+        digestHour={digest.digestHour}
+        selectedAccountLiveEmail={digest.selectedAccountLiveEmail}
+      />
 
       <ExportPanel />
     </section>

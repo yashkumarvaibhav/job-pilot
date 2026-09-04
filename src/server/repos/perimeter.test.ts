@@ -182,6 +182,8 @@ const TENANT_ROUTE_FILES = [
   "referrals/route.ts",
   "saved-searches/[id]/route.ts",
   "saved-searches/route.ts",
+  "settings/digest/preview/route.ts",
+  "settings/digest/route.ts",
   "settings/route.ts",
   "sequences/[id]/enroll/route.ts",
   "sequences/[id]/route.ts",
