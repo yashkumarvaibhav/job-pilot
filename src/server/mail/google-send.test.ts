@@ -71,7 +71,7 @@ describe("Google Gmail send port", () => {
     await expect(port.send({ ...request, attachments: [] })).resolves.toEqual({
       gmailMessageId: "gmail-message",
       gmailThreadId: "gmail-thread",
-      rfcMessageId: "<fixed-id@jobpilot.invalid>",
+      rfcMessageId: null,
       sentAt: new Date("2026-09-03T15:00:00.000Z"),
     });
     expect(fetcher).toHaveBeenNthCalledWith(
@@ -89,7 +89,7 @@ describe("Google Gmail send port", () => {
     expect(String(gmailOptions.body)).not.toContain("synthetic-refresh");
   });
 
-  it("preserves a caller-supplied queue Message-ID", async () => {
+  it("does not claim that Gmail preserved a caller-supplied queue Message-ID", async () => {
     const fetcher = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(
@@ -118,44 +118,7 @@ describe("Google Gmail send port", () => {
     ) as { raw: string };
     const mime = Buffer.from(sendBody.raw, "base64url").toString("utf8");
     expect(mime).toContain("Message-ID: <jp-queue-1@invalid.test>");
-    expect(result.rfcMessageId).toBe("<jp-queue-1@invalid.test>");
-  });
-
-  it.each([
-    ["found", [{ id: "gmail-message", threadId: "gmail-thread" }]],
-    ["absent", []],
-    [
-      "ambiguous",
-      [
-        { id: "gmail-message-1", threadId: "gmail-thread-1" },
-        { id: "gmail-message-2", threadId: "gmail-thread-2" },
-      ],
-    ],
-  ] as const)("classifies RFC 822 lookup as %s", async (status, messages) => {
-    const fetcher = vi
-      .fn<typeof fetch>()
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ access_token: "synthetic-access" }), {
-          status: 200,
-        }),
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ messages }), { status: 200 }),
-      );
-    const port = new GoogleGmailMailPort(
-      { clientId: "client-id", clientSecret: "client-secret" },
-      { fetcher },
-    );
-
-    await expect(
-      port.findByRfcMessageId({
-        refreshToken: "synthetic-refresh",
-        rfcMessageId: "<jp-queue-1@invalid.test>",
-      }),
-    ).resolves.toMatchObject({ status });
-    expect(fetcher.mock.calls[1][0]).toBe(
-      "https://gmail.googleapis.com/gmail/v1/users/me/messages?q=rfc822msgid%3A%3Cjp-queue-1%40invalid.test%3E&maxResults=2",
-    );
+    expect(result.rfcMessageId).toBeNull();
   });
 
   it("fails without repeating Google response or credential details", async () => {

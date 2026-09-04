@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { UNCERTAIN_DELIVERY_ERROR } from "../../../domain/send-safety";
 import { createTenantTestFixture } from "../../../test/tenant-fixture";
+import { sendQueue } from "../../../server/db/schema";
 import { createContact } from "../../../server/repos/contacts";
 import { connectEmailAccount } from "../../../server/repos/email-accounts";
 import { createQueueMessage } from "../../../server/repos/send-safety";
@@ -138,6 +140,35 @@ describe("queue routes", () => {
     expect(await response.json()).toEqual(
       expect.objectContaining({ id: queueId, status: "approved" }),
     );
+  });
+
+  it("exposes uncertain delivery and requires one explicit acknowledgement", async () => {
+    const fixture = fixtures[0] as ReturnType<typeof createTenantTestFixture>;
+    fixture.client.db
+      .update(sendQueue)
+      .set({ status: "held", lastError: UNCERTAIN_DELIVERY_ERROR })
+      .run();
+    const detailResponse = await detail(request(`/api/queue/${queueId}`), {
+      params: Promise.resolve({ id: queueId }),
+    });
+    expect(await detailResponse.json()).toEqual(
+      expect.objectContaining({ deliveryUncertain: true }),
+    );
+    const blocked = await approve(
+      request(`/api/queue/${queueId}/approve`, {
+        sendAt: "2026-09-04T03:30:00.000Z",
+      }),
+      { params: Promise.resolve({ id: queueId }) },
+    );
+    expect(blocked.status).toBe(409);
+    const approved = await approve(
+      request(`/api/queue/${queueId}/approve`, {
+        sendAt: "2026-09-04T03:30:00.000Z",
+        uncertainDeliveryAcknowledged: true,
+      }),
+      { params: Promise.resolve({ id: queueId }) },
+    );
+    expect(approved.status).toBe(200);
   });
 
   it("holds and cancels only one owned row", async () => {

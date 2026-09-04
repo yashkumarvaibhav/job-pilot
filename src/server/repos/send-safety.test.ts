@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { hashSendPayload } from "../../domain/send-safety";
+import {
+  UNCERTAIN_DELIVERY_ERROR,
+  hashSendPayload,
+} from "../../domain/send-safety";
 import { createTenantTestFixture } from "../../test/tenant-fixture";
 import { sendQueue, suppressionEntry } from "../db/schema";
 import { connectEmailAccount } from "./email-accounts";
@@ -162,6 +165,35 @@ describe("send safety repository", () => {
     );
     expect(reapproved).toMatchObject({ status: "approved", approvalKind: "owner_click" });
     expect(reapproved?.payloadHash).toBe(reapproved?.approvalHash);
+  });
+
+  it("requires a check-Sent acknowledgement before reapproving uncertain delivery", () => {
+    const { fixture, accountA, contactA } = setup();
+    cleanups.push(fixture.dispose);
+    const row = createQueueMessage(fixture.client.db, fixture.tenantA, {
+      id: "queue-uncertain",
+      accountId: accountA.id,
+      contactId: contactA.id,
+      origin: "one_off",
+      subject: "Subject",
+      body: "Body",
+      attachmentVersionIds: [],
+      sendAt: NOW,
+      now: NOW,
+    });
+    fixture.client.db
+      .update(sendQueue)
+      .set({ status: "held", lastError: UNCERTAIN_DELIVERY_ERROR })
+      .run();
+
+    expect(() =>
+      approveQueueMessage(fixture.client.db, fixture.tenantA, row.id),
+    ).toThrowError("Check Gmail Sent before approving a new attempt.");
+    expect(
+      approveQueueMessage(fixture.client.db, fixture.tenantA, row.id, {
+        uncertainDeliveryAcknowledged: true,
+      }),
+    ).toMatchObject({ status: "approved", lastError: null });
   });
 
   it("blocks every queue creation for a suppressed address without an override", () => {

@@ -4,12 +4,12 @@ import { createTenantTestFixture } from "../../test/tenant-fixture";
 import { createContact } from "../repos/contacts";
 import { connectEmailAccount, disconnectEmailAccount } from "../repos/email-accounts";
 import { listInteractions } from "../repos/interactions";
-import type { MailPort, MailSendRequest } from "./mail-port";
+import type { MailPort, MailSendRequest, MailSendResult } from "./mail-port";
 import { ComposeSendError, sendComposedEmail } from "./compose-service";
 
 const TOKEN_KEY = Buffer.alloc(32, 11).toString("base64");
 
-function fakePort(result = {
+function fakePort(result: MailSendResult = {
   gmailMessageId: "gmail-message-1",
   gmailThreadId: "gmail-thread-1",
   rfcMessageId: "<message-1@jobpilot.invalid.test>",
@@ -156,6 +156,38 @@ describe("compose send service", () => {
         sender_email: selected.email,
       },
     ]);
+  });
+
+  it("records Gmail's receipt without inventing a provider Message-ID", async () => {
+    const fixture = newFixture();
+    const account = addAccount(fixture, "tenantA", "a");
+    const contact = addContact(fixture, "tenantA", "a");
+    const port = fakePort({
+      gmailMessageId: "gmail-message-1",
+      gmailThreadId: "gmail-thread-1",
+      rfcMessageId: null,
+      sentAt: new Date("2026-09-03T15:00:00.000Z"),
+    });
+
+    await sendComposedEmail(
+      fixture.client.db,
+      fixture.tenantA,
+      {
+        accountId: account.id,
+        contactId: contact.id,
+        subject: "Hello",
+        body: "Body",
+        attachmentVersionIds: [],
+        approval: "send_now",
+      },
+      { mailPort: port, tokenKey: TOKEN_KEY },
+    );
+
+    expect(
+      fixture.client.sqlite
+        .prepare("select rfc_message_id from email_message where gmail_id = ?")
+        .get("gmail-message-1"),
+    ).toEqual({ rfc_message_id: null });
   });
 
   it("does not fall back from a disconnected selected account", async () => {

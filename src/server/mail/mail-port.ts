@@ -21,22 +21,10 @@ export type MailSendRequest = {
 export type MailSendResult = {
   gmailMessageId: string;
   gmailThreadId: string;
-  rfcMessageId: string;
+  rfcMessageId: string | null;
   sentAt: Date;
 };
 
 export interface MailPort {
   send(request: MailSendRequest): Promise<MailSendResult>;
-}
-
-export type MailMessageLookupResult =
-  | { status: "found"; gmailMessageId: string; gmailThreadId: string }
-  | { status: "absent" }
-  | { status: "ambiguous" };
-
-export interface QueueMailPort extends MailPort {
-  findByRfcMessageId(input: {
-    refreshToken: string;
-    rfcMessageId: string;
-  }): Promise<MailMessageLookupResult>;
 }

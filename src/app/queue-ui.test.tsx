@@ -70,6 +70,8 @@ describe("queue UI", () => {
     expect(source).toContain("fetch(`/api/queue/${encodeURIComponent(id)}`)");
     expect(source).toContain("Complete body");
     expect(source).toContain("Approve and schedule");
+    expect(source).toContain("I checked Gmail Sent and want to approve a new attempt.");
+    expect(source).toContain("uncertainDeliveryAcknowledged");
     expect(source).not.toContain("Approve all");
   });
 

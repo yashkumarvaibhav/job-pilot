@@ -27,9 +27,13 @@ export async function POST(request: Request, context: Context) {
     typeof input !== "object" ||
     input === null ||
     Array.isArray(input) ||
-    Object.keys(input).some((key) => key !== "sendAt") ||
+    Object.keys(input).some(
+      (key) => key !== "sendAt" && key !== "uncertainDeliveryAcknowledged",
+    ) ||
     !("sendAt" in input) ||
-    typeof input.sendAt !== "string"
+    typeof input.sendAt !== "string" ||
+    ("uncertainDeliveryAcknowledged" in input &&
+      typeof input.uncertainDeliveryAcknowledged !== "boolean")
   ) {
     return NextResponse.json(
       { error: "Approve one queue id with one exact send time." },
@@ -43,7 +47,12 @@ export async function POST(request: Request, context: Context) {
       database,
       tenant,
       (await context.params).id,
-      { sendAt },
+      {
+        sendAt,
+        uncertainDeliveryAcknowledged:
+          "uncertainDeliveryAcknowledged" in input &&
+          input.uncertainDeliveryAcknowledged === true,
+      },
     );
     return row
       ? NextResponse.json(row)

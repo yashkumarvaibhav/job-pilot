@@ -3,6 +3,9 @@ import { createHash } from "node:crypto";
 import { zonedInterviewAt } from "./interview";
 import { calendarDateInZone } from "./referral";
 
+export const UNCERTAIN_DELIVERY_ERROR =
+  "Delivery may already have occurred. Check Gmail Sent before approving a new attempt. Job Pilot will not retry automatically.";
+
 export type SendPayload = Readonly<{
   recipient: string;
   accountId: string;

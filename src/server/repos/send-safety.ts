@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq, inArray, notInArray } from "drizzle-orm";
 
 import {
+  UNCERTAIN_DELIVERY_ERROR,
   hashSendPayload,
   queueMessageId,
   tomorrowMorningSlot,
@@ -729,7 +730,11 @@ export function approveQueueMessage(
   database: AppDatabase,
   tenant: TenantContext,
   id: string,
-  input: { sendAt?: Date; now?: Date } = {},
+  input: {
+    sendAt?: Date;
+    now?: Date;
+    uncertainDeliveryAcknowledged?: boolean;
+  } = {},
 ): QueueMessage | undefined {
   return database.transaction((transaction) => {
     const existing = transaction
@@ -742,6 +747,14 @@ export function approveQueueMessage(
     if (!existing) return undefined;
     if (["sent", "cancelled", "claimed"].includes(existing.status)) {
       throw new SendSafetyError("This queue row cannot be approved.");
+    }
+    if (
+      existing.lastError === UNCERTAIN_DELIVERY_ERROR &&
+      input.uncertainDeliveryAcknowledged !== true
+    ) {
+      throw new SendSafetyError(
+        "Check Gmail Sent before approving a new attempt.",
+      );
     }
     ownedAccount(transaction, tenant, existing.accountId);
     assertNotSuppressed(transaction, tenant, existing.recipient, existing.contactId);

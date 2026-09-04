@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { createTenantTestFixture } from "../../test/tenant-fixture";
 import { emailAccount, emailMessage, sendQueue } from "../db/schema";
-import type { MailSendRequest, QueueMailPort } from "../mail/mail-port";
+import type { MailPort, MailSendRequest } from "../mail/mail-port";
 import { createContact } from "../repos/contacts";
 import { connectEmailAccount } from "../repos/email-accounts";
 import {
@@ -54,13 +54,7 @@ function setup() {
   return { fixture, account, contact, row };
 }
 
-function port(
-  lookup: Awaited<ReturnType<QueueMailPort["findByRfcMessageId"]>> = {
-    status: "found",
-    gmailMessageId: "gmail-message",
-    gmailThreadId: "gmail-thread",
-  },
-) {
+function port() {
   return {
     send: vi.fn(async (request: MailSendRequest) => ({
       gmailMessageId: "gmail-message",
@@ -68,8 +62,7 @@ function port(
       rfcMessageId: request.rfcMessageId!,
       sentAt: NOW,
     })),
-    findByRfcMessageId: vi.fn().mockResolvedValue(lookup),
-  } satisfies QueueMailPort;
+  } satisfies MailPort;
 }
 
 describe("send queue crash safety", () => {
@@ -78,7 +71,7 @@ describe("send queue crash safety", () => {
     for (const cleanup of cleanups.splice(0)) cleanup();
   });
 
-  it("recovers a process killed after Gmail accepts without sending twice", async () => {
+  it("holds a process killed after Gmail accepts without sending twice", async () => {
     const { fixture, row } = setup();
     cleanups.push(fixture.dispose);
     const mailPort = port();
@@ -106,86 +99,46 @@ describe("send queue crash safety", () => {
       { now: later, reclaimAfterMs: 5 * 60_000 },
     );
     expect(mailPort.send).toHaveBeenCalledOnce();
-    expect(mailPort.findByRfcMessageId).toHaveBeenCalledWith({
-      refreshToken: "refresh-a",
-      rfcMessageId: row.messageId,
-    });
     expect(getQueueMessage(fixture.client.db, fixture.tenantA, row.id)).toMatchObject({
-      status: "sent",
-      gmailMessageId: "gmail-message",
+      status: "held",
+      approvalHash: null,
+      lastError: expect.stringContaining("Check Gmail Sent"),
+      gmailMessageId: null,
     });
-    expect(fixture.client.db.select().from(emailMessage).all()).toHaveLength(1);
+    expect(fixture.client.db.select().from(emailMessage).all()).toHaveLength(0);
   });
 
-  it.each(["ambiguous", "failed"] as const)(
-    "holds a stale claim when lookup is %s",
-    async (outcome) => {
-      const { fixture, row } = setup();
-      cleanups.push(fixture.dispose);
-      const mailPort = port({ status: "ambiguous" });
-      await expect(
-        flushSendQueue(
-          fixture.client.db,
-          { mailPort, tokenKey: TOKEN_KEY },
-          {
-            now: NOW,
-            afterTransportAccepted: () => {
-              throw new Error("simulated process death");
-            },
-          },
-        ),
-      ).rejects.toThrow();
-      if (outcome === "failed") {
-        mailPort.findByRfcMessageId.mockRejectedValueOnce(new Error("lookup failed"));
-      }
-      await reconcileClaimedRows(
-        fixture.client.db,
-        { mailPort, tokenKey: TOKEN_KEY },
-        { now: new Date(NOW.valueOf() + 10 * 60_000), reclaimAfterMs: 1 },
-      );
-      expect(getQueueMessage(fixture.client.db, fixture.tenantA, row.id)).toMatchObject({
-        status: "held",
-      });
-      expect(mailPort.send).toHaveBeenCalledOnce();
-    },
-  );
-
-  it("returns a provably absent unchanged payload to approved", async () => {
+  it("never restores an unchanged stale claim to approved", async () => {
     const { fixture, row } = setup();
     cleanups.push(fixture.dispose);
-    const mailPort = port({ status: "absent" });
     fixture.client.db
       .update(sendQueue)
       .set({ status: "claimed", claimedAt: NOW })
       .run();
     await reconcileClaimedRows(
       fixture.client.db,
-      { mailPort, tokenKey: TOKEN_KEY },
       { now: new Date(NOW.valueOf() + 10 * 60_000), reclaimAfterMs: 1 },
     );
     expect(getQueueMessage(fixture.client.db, fixture.tenantA, row.id)).toMatchObject({
-      status: "approved",
-      approvalHash: row.payloadHash,
-      claimedAt: null,
+      status: "held",
+      approvalHash: null,
+      lastError: expect.stringContaining("will not retry automatically"),
     });
   });
 
-  it("holds a changed payload even when Gmail proves the old id absent", async () => {
+  it("holds a changed stale claim without calling Gmail", async () => {
     const { fixture, row } = setup();
     cleanups.push(fixture.dispose);
-    const mailPort = port({ status: "absent" });
     fixture.client.sqlite
       .prepare("update send_queue set status = 'claimed', claimed_at = ?, body = 'changed' where id = ?")
       .run(NOW.valueOf(), row.id);
     await reconcileClaimedRows(
       fixture.client.db,
-      { mailPort, tokenKey: TOKEN_KEY },
       { now: new Date(NOW.valueOf() + 10 * 60_000), reclaimAfterMs: 1 },
     );
     expect(getQueueMessage(fixture.client.db, fixture.tenantA, row.id)).toMatchObject({
       status: "held",
     });
-    expect(mailPort.send).not.toHaveBeenCalled();
   });
 
   it("never claims an unapproved or hash-mismatched row", async () => {
@@ -237,7 +190,7 @@ describe("send queue crash safety", () => {
       });
     }
     let sequence = 0;
-    const mailPort: QueueMailPort = {
+    const mailPort: MailPort = {
       send: vi.fn(async (request) => {
         sequence += 1;
         return {
@@ -247,7 +200,6 @@ describe("send queue crash safety", () => {
           sentAt: NOW,
         };
       }),
-      findByRfcMessageId: vi.fn(),
     };
     await flushSendQueue(
       fixture.client.db,
@@ -296,7 +248,7 @@ describe("send queue crash safety", () => {
       now: NOW,
     });
     const sentIds: string[] = [];
-    const mailPort: QueueMailPort = {
+    const mailPort: MailPort = {
       send: vi.fn(async (request) => {
         sentIds.push(request.rfcMessageId!);
         await Promise.resolve();
@@ -307,7 +259,6 @@ describe("send queue crash safety", () => {
           sentAt: NOW,
         };
       }),
-      findByRfcMessageId: vi.fn(),
     };
     await Promise.all([
       flushSendQueue(
@@ -360,7 +311,7 @@ describe("send queue crash safety", () => {
       now: NOW,
     });
     const requests: MailSendRequest[] = [];
-    const mailPort: QueueMailPort = {
+    const mailPort: MailPort = {
       send: vi.fn(async (request) => {
         requests.push(request);
         return {
@@ -370,7 +321,6 @@ describe("send queue crash safety", () => {
           sentAt: NOW,
         };
       }),
-      findByRfcMessageId: vi.fn(),
     };
     await flushSendQueue(
       fixture.client.db,
@@ -383,7 +333,7 @@ describe("send queue crash safety", () => {
     ]);
   });
 
-  it("holds sequence delivery until Message-ID preservation is verified for its account", async () => {
+  it("sends an approved sequence without the disproved Message-ID gate", async () => {
     const { fixture, account, contact } = setup();
     cleanups.push(fixture.dispose);
     const sequence = createQueueMessage(fixture.client.db, fixture.tenantA, {
@@ -407,9 +357,9 @@ describe("send queue crash safety", () => {
       { now: NOW, onlyQueueId: sequence.id },
     );
     expect(getQueueMessage(fixture.client.db, fixture.tenantA, sequence.id)).toMatchObject({
-      status: "held",
-      lastError: expect.stringContaining("Message-ID preservation"),
+      status: "sent",
+      gmailMessageId: "gmail-message",
     });
-    expect(mailPort.send).not.toHaveBeenCalled();
+    expect(mailPort.send).toHaveBeenCalledOnce();
   });
 });

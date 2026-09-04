@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { UNCERTAIN_DELIVERY_ERROR } from "@/domain/send-safety";
 import { currentTenant } from "@/server/auth/current-session";
 import { getDatabase } from "@/server/db/runtime";
 import { flushSendQueue } from "@/server/jobs/send-queue";
@@ -46,6 +47,7 @@ export async function GET(_request: Request, context: Context) {
         sendAt: row.sendAt,
         sentAt: row.sentAt,
         lastError: row.lastError,
+        deliveryUncertain: row.lastError === UNCERTAIN_DELIVERY_ERROR,
       })
     : NextResponse.json({ error: "Queue row not found." }, { status: 404 });
 }
@@ -65,8 +67,13 @@ export async function PATCH(request: Request, context: Context) {
     typeof input !== "object" ||
     input === null ||
     Array.isArray(input) ||
-    Object.keys(input).some((key) => key !== "action") ||
+    Object.keys(input).some(
+      (key) => key !== "action" && key !== "uncertainDeliveryAcknowledged",
+    ) ||
     !("action" in input) ||
+    ("uncertainDeliveryAcknowledged" in input &&
+      typeof input.uncertainDeliveryAcknowledged !== "boolean") ||
+    ("uncertainDeliveryAcknowledged" in input && input.action !== "send_now") ||
     input.action !== "hold" &&
     input.action !== "cancel" &&
     input.action !== "send_now"
@@ -86,7 +93,13 @@ export async function PATCH(request: Request, context: Context) {
         );
       }
       const now = new Date();
-      row = approveQueueMessage(database, tenant, id, { sendAt: now, now });
+      row = approveQueueMessage(database, tenant, id, {
+        sendAt: now,
+        now,
+        uncertainDeliveryAcknowledged:
+          "uncertainDeliveryAcknowledged" in input &&
+          input.uncertainDeliveryAcknowledged === true,
+      });
       if (row) {
         await flushSendQueue(database, dependencies, {
           now,

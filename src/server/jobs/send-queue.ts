@@ -2,7 +2,10 @@ import { randomUUID } from "node:crypto";
 
 import { and, asc, eq, lte, sql } from "drizzle-orm";
 
-import { hashSendPayload } from "../../domain/send-safety";
+import {
+  UNCERTAIN_DELIVERY_ERROR,
+  hashSendPayload,
+} from "../../domain/send-safety";
 import { logEvent } from "../db/activity";
 import type { AppDatabase, AppTransaction } from "../db/client";
 import {
@@ -16,11 +19,7 @@ import {
   workspace,
 } from "../db/schema";
 import { createTenantContext, type TenantContext } from "../db/tenant";
-import type {
-  MailMessageLookupResult,
-  MailSendResult,
-  QueueMailPort,
-} from "../mail/mail-port";
+import type { MailPort, MailSendResult } from "../mail/mail-port";
 import { decryptRefreshToken } from "../mail/token-crypto";
 import { readDocumentVersionFile } from "../repos/documents";
 import { suppressionForRecipientInTransaction } from "../repos/send-safety";
@@ -29,7 +28,7 @@ const DEFAULT_RECLAIM_AFTER_MS = 5 * 60_000;
 const DEFAULT_MAX_SENDS = 25;
 
 export type SendQueueDependencies = {
-  mailPort: QueueMailPort;
+  mailPort: MailPort;
   tokenKey: string;
   uploadsRoot?: string;
 };
@@ -239,20 +238,6 @@ export function claimNextQueueMessage(
           .run();
         continue;
       }
-      if (row.origin === "sequence" && account.messageIdVerifiedAt === null) {
-        transaction
-          .update(sendQueue)
-          .set({
-            status: "held",
-            lastError: "Sequence delivery is disabled until Message-ID preservation is verified for this account.",
-            updatedAt: now,
-          })
-          .where(
-            and(eq(sendQueue.workspaceId, row.workspaceId), eq(sendQueue.id, row.id)),
-          )
-          .run();
-        continue;
-      }
       if (
         !insideSendingWindow(
           now,
@@ -302,7 +287,7 @@ function finalizeSent(
   receipt: {
     gmailMessageId: string;
     gmailThreadId: string;
-    rfcMessageId: string;
+    rfcMessageId: string | null;
     sentAt: Date;
   },
 ): void {
@@ -521,10 +506,18 @@ function holdClaim(
   row: typeof sendQueue.$inferSelect,
   now: Date,
   error: string,
+  consumeApproval = false,
 ) {
   database
     .update(sendQueue)
-    .set({ status: "held", lastError: error, updatedAt: now })
+    .set({
+      status: "held",
+      approvalHash: consumeApproval ? null : row.approvalHash,
+      approvedAt: consumeApproval ? null : row.approvedAt,
+      approvalKind: consumeApproval ? null : row.approvalKind,
+      lastError: error,
+      updatedAt: now,
+    })
     .where(
       and(
         eq(sendQueue.workspaceId, row.workspaceId),
@@ -537,7 +530,6 @@ function holdClaim(
 
 export async function reconcileClaimedRows(
   database: AppDatabase,
-  dependencies: SendQueueDependencies,
   options: { now?: Date; reclaimAfterMs?: number } = {},
 ): Promise<{ sent: number; approved: number; held: number }> {
   const now = options.now ?? new Date();
@@ -551,116 +543,8 @@ export async function reconcileClaimedRows(
     .all();
   const summary = { sent: 0, approved: 0, held: 0 };
   for (const row of rows) {
-    const context = database.transaction((transaction) => {
-      const tenant = ownedTenantForWorkspace(transaction, row.workspaceId);
-      const account = transaction
-        .select()
-        .from(emailAccount)
-        .where(
-          and(
-            eq(emailAccount.workspaceId, row.workspaceId),
-            eq(emailAccount.id, row.accountId),
-          ),
-        )
-        .get();
-      return tenant && account ? { tenant, account } : null;
-    });
-    if (!context) {
-      holdClaim(database, row, now, "Claim ownership could not be verified.");
-      summary.held += 1;
-      continue;
-    }
-    let refreshToken: string;
-    try {
-      refreshToken = decryptRefreshToken(
-        context.account.tokenBlob,
-        dependencies.tokenKey,
-        `${row.workspaceId}:${row.accountId}`,
-      );
-    } catch {
-      holdClaim(database, row, now, "Sending credential is unavailable.");
-      summary.held += 1;
-      continue;
-    }
-    let lookup: MailMessageLookupResult;
-    try {
-      lookup = await dependencies.mailPort.findByRfcMessageId({
-        refreshToken,
-        rfcMessageId: row.messageId,
-      });
-    } catch {
-      holdClaim(database, row, now, "Gmail delivery lookup failed.");
-      summary.held += 1;
-      continue;
-    }
-    if (lookup.status === "found") {
-      finalizeSent(
-        database,
-        { row, account: context.account, tenant: context.tenant },
-        {
-          gmailMessageId: lookup.gmailMessageId,
-          gmailThreadId: lookup.gmailThreadId,
-          rfcMessageId: row.messageId,
-          sentAt: now,
-        },
-      );
-      summary.sent += 1;
-      continue;
-    }
-    if (lookup.status === "ambiguous") {
-      holdClaim(database, row, now, "Gmail delivery lookup was ambiguous.");
-      summary.held += 1;
-      continue;
-    }
-    const restored = database.transaction((transaction) => {
-      const current = transaction
-        .select()
-        .from(sendQueue)
-        .where(
-          and(
-            eq(sendQueue.workspaceId, row.workspaceId),
-            eq(sendQueue.id, row.id),
-            eq(sendQueue.status, "claimed"),
-          ),
-        )
-        .get();
-      if (!current) return "missing" as const;
-      const computed = currentHash(current);
-      if (
-        current.payloadHash !== computed ||
-        current.approvalHash !== computed ||
-        current.approvedAt === null ||
-        current.approvalKind === null
-      ) {
-        transaction
-          .update(sendQueue)
-          .set({
-            status: "held",
-            lastError: "Message changed after its delivery claim.",
-            updatedAt: now,
-          })
-          .where(
-            and(eq(sendQueue.workspaceId, row.workspaceId), eq(sendQueue.id, row.id)),
-          )
-          .run();
-        return "held" as const;
-      }
-      transaction
-        .update(sendQueue)
-        .set({
-          status: "approved",
-          claimedAt: null,
-          lastError: null,
-          updatedAt: now,
-        })
-        .where(
-          and(eq(sendQueue.workspaceId, row.workspaceId), eq(sendQueue.id, row.id)),
-        )
-        .run();
-      return "approved" as const;
-    });
-    if (restored === "approved") summary.approved += 1;
-    if (restored === "held") summary.held += 1;
+    holdClaim(database, row, now, UNCERTAIN_DELIVERY_ERROR, true);
+    summary.held += 1;
   }
   return summary;
 }
@@ -680,7 +564,7 @@ export async function flushSendQueue(
   } = {},
 ): Promise<{ reconciled: number; sent: number; deferred: number }> {
   const now = options.now ?? new Date();
-  const reconciled = await reconcileClaimedRows(database, dependencies, {
+  const reconciled = await reconcileClaimedRows(database, {
     now,
     reclaimAfterMs: options.reclaimAfterMs,
   });
@@ -731,20 +615,7 @@ export async function flushSendQueue(
         rfcMessageId: claim.row.messageId,
       });
     } catch {
-      database
-        .update(sendQueue)
-        .set({
-          lastError: "Gmail send ended without a receipt; delivery must be reconciled.",
-          updatedAt: now,
-        })
-        .where(
-          and(
-            eq(sendQueue.workspaceId, claim.row.workspaceId),
-            eq(sendQueue.id, claim.row.id),
-            eq(sendQueue.status, "claimed"),
-          ),
-        )
-        .run();
+      holdClaim(database, claim.row, now, UNCERTAIN_DELIVERY_ERROR, true);
       deferred += 1;
       continue;
     }
@@ -752,11 +623,10 @@ export async function flushSendQueue(
     if (
       !receipt.gmailMessageId.trim() ||
       !receipt.gmailThreadId.trim() ||
-      receipt.rfcMessageId !== claim.row.messageId ||
       !(receipt.sentAt instanceof Date) ||
       Number.isNaN(receipt.sentAt.valueOf())
     ) {
-      holdClaim(database, claim.row, now, "Gmail returned an unsafe delivery receipt.");
+      holdClaim(database, claim.row, now, UNCERTAIN_DELIVERY_ERROR, true);
       deferred += 1;
       continue;
     }

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTenantTestFixture } from "../../../../test/tenant-fixture";
-import type { QueueMailPort } from "../../../../server/mail/mail-port";
+import type { MailPort } from "../../../../server/mail/mail-port";
 
 const mocks = vi.hoisted(() => ({
   database: undefined as unknown,
@@ -33,9 +33,8 @@ describe("cron tick route", () => {
     fixtures.push(fixture);
     mocks.database = fixture.client.db;
     process.env.CRON_SECRET = "synthetic-cron-secret";
-    const mailPort: QueueMailPort = {
+    const mailPort: MailPort = {
       send: vi.fn(),
-      findByRfcMessageId: vi.fn(),
     };
     mocks.dependencies = { mailPort, tokenKey: Buffer.alloc(32, 3).toString("base64") };
   });
@@ -60,8 +59,7 @@ describe("cron tick route", () => {
       sent: 0,
       deferred: 0,
     });
-    const port = (mocks.dependencies as { mailPort: QueueMailPort }).mailPort;
+    const port = (mocks.dependencies as { mailPort: MailPort }).mailPort;
     expect(port.send).not.toHaveBeenCalled();
-    expect(port.findByRfcMessageId).not.toHaveBeenCalled();
   });
 });

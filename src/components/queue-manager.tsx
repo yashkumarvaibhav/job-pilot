@@ -38,6 +38,7 @@ type QueueDetail = QueueSummary & {
   recipient: string;
   body: string;
   attachments: { id: string; name: string }[];
+  deliveryUncertain: boolean;
 };
 
 export type QueueUsage = {
@@ -110,6 +111,8 @@ export function QueueManager({
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [pending, setPending] = useState(false);
   const [sendAt, setSendAt] = useState("");
+  const [uncertainDeliveryAcknowledged, setUncertainDeliveryAcknowledged] =
+    useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -124,6 +127,7 @@ export function QueueManager({
     setSelectedId(id);
     setDetail(null);
     setLoadingDetail(true);
+    setUncertainDeliveryAcknowledged(false);
     setError(null);
     try {
       const response = await fetch(`/api/queue/${encodeURIComponent(id)}`);
@@ -145,6 +149,7 @@ export function QueueManager({
     setSelectedId(null);
     setDetail(null);
     setSendAt("");
+    setUncertainDeliveryAcknowledged(false);
     setError(null);
     opener.current?.focus();
     opener.current = null;
@@ -224,8 +229,8 @@ export function QueueManager({
         <div className="queue-stuck" role="alert">
           <ShieldAlert aria-hidden="true" />
           <p>
-            {stuck} delivery {stuck === 1 ? "claim is" : "claims are"} awaiting exact Gmail
-            confirmation. Job Pilot will not resend on a guess.
+            {stuck} delivery {stuck === 1 ? "claim needs" : "claims need"} review after an
+            interrupted send. Job Pilot will not resend automatically.
           </p>
         </div>
       ) : null}
@@ -404,6 +409,18 @@ export function QueueManager({
             ) : null}
             {detail.status !== "sent" && detail.status !== "cancelled" ? (
               <div className="queue-review-actions">
+                {detail.deliveryUncertain ? (
+                  <label className="queue-resolution-confirm">
+                    <input
+                      checked={uncertainDeliveryAcknowledged}
+                      onChange={(event) =>
+                        setUncertainDeliveryAcknowledged(event.target.checked)
+                      }
+                      type="checkbox"
+                    />
+                    <span>I checked Gmail Sent and want to approve a new attempt.</span>
+                  </label>
+                ) : null}
                 <div className="field">
                   <label htmlFor="queue-send-at">Approve and schedule in {timeZone}</label>
                   <input
@@ -415,14 +432,21 @@ export function QueueManager({
                 </div>
                 <button
                   className="btn"
-                  disabled={pending || !sendAt}
+                  disabled={
+                    pending ||
+                    !sendAt ||
+                    (detail.deliveryUncertain && !uncertainDeliveryAcknowledged)
+                  }
                   onClick={() =>
                     void queueAction(
                       `/api/queue/${encodeURIComponent(detail.id)}/approve`,
                       {
                         method: "POST",
                         headers: { "content-type": "application/json" },
-                        body: JSON.stringify({ sendAt }),
+                        body: JSON.stringify({
+                          sendAt,
+                          uncertainDeliveryAcknowledged,
+                        }),
                       },
                       "One exact message approved and scheduled.",
                     )
@@ -434,14 +458,20 @@ export function QueueManager({
                 </button>
                 <button
                   className="btn btn--ghost"
-                  disabled={pending}
+                  disabled={
+                    pending ||
+                    (detail.deliveryUncertain && !uncertainDeliveryAcknowledged)
+                  }
                   onClick={() =>
                     void queueAction(
                       `/api/queue/${encodeURIComponent(detail.id)}`,
                       {
                         method: "PATCH",
                         headers: { "content-type": "application/json" },
-                        body: JSON.stringify({ action: "send_now" }),
+                        body: JSON.stringify({
+                          action: "send_now",
+                          uncertainDeliveryAcknowledged,
+                        }),
                       },
                       "Send now approval recorded.",
                     )

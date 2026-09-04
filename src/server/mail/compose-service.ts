@@ -202,7 +202,6 @@ export async function sendComposedEmail(
   if (
     !result.gmailMessageId?.trim() ||
     !result.gmailThreadId?.trim() ||
-    !result.rfcMessageId?.trim() ||
     !(result.sentAt instanceof Date) ||
     Number.isNaN(result.sentAt.valueOf())
   ) {

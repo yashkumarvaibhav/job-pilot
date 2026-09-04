@@ -4,7 +4,7 @@ import { createTenantTestFixture } from "../../../test/tenant-fixture";
 import { createContact } from "../../../server/repos/contacts";
 import { connectEmailAccount } from "../../../server/repos/email-accounts";
 import { addSuppressionEntry } from "../../../server/repos/send-safety";
-import type { QueueMailPort } from "../../../server/mail/mail-port";
+import type { MailPort } from "../../../server/mail/mail-port";
 
 const TOKEN_KEY = Buffer.alloc(32, 13).toString("base64");
 const mocks = vi.hoisted(() => ({
@@ -118,16 +118,13 @@ describe("compose route", () => {
         },
       ],
     });
-    const mailPort: QueueMailPort = {
+    const mailPort: MailPort = {
       send: vi.fn(async (input) => ({
         gmailMessageId: "gmail-message",
         gmailThreadId: "gmail-thread",
         rfcMessageId: input.rfcMessageId!,
         sentAt: new Date("2026-09-03T10:00:00.000Z"),
       })),
-      findByRfcMessageId: vi.fn().mockResolvedValue({
-        status: "absent",
-      }),
     };
     mocks.dependencies = { mailPort, tokenKey: TOKEN_KEY };
 
