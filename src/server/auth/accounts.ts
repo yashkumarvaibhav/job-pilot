@@ -1,22 +1,20 @@
 import { randomBytes } from "node:crypto";
 
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import type { AppDatabase } from "../db/client";
 import { createAccountFoundation } from "../db/foundation";
 import { userAccount } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
-import { normalizeEmail } from "./email";
 import { hashPassword, isAcceptablePassword, verifyPassword } from "./password";
+import { normalizeAccountIdentifier, normalizeUsername } from "./username";
 
 export type RegisterAccountInput = {
-  email: string;
+  username: string;
   password: string;
   displayName?: string;
   timezone?: string;
   now?: Date;
-  /** Omit for verified fixtures; public signup passes null until link use. */
-  emailVerifiedAt?: Date | null;
 };
 
 /**
@@ -33,9 +31,9 @@ export async function registerAccount(
   database: AppDatabase,
   input: RegisterAccountInput,
 ): Promise<RegisterAccountResult> {
-  const emailNormalized = normalizeEmail(input.email);
+  const usernameNormalized = normalizeUsername(input.username);
 
-  if (emailNormalized === null || !isAcceptablePassword(input.password)) {
+  if (usernameNormalized === null || !isAcceptablePassword(input.password)) {
     return REJECTED;
   }
 
@@ -43,12 +41,11 @@ export async function registerAccount(
 
   try {
     const { tenant } = createAccountFoundation(database, {
-      emailNormalized,
+      usernameNormalized,
       passwordHash,
       displayName: input.displayName,
       timezone: input.timezone,
       now: input.now,
-      emailVerifiedAt: input.emailVerifiedAt,
     });
 
     return { ok: true, tenant };
@@ -62,18 +59,14 @@ export async function registerAccount(
 }
 
 export type AuthenticateAccountInput = {
-  email: string;
+  username: string;
   password: string;
-};
-
-export type AuthenticateAccountOptions = {
-  allowUnverified?: boolean;
 };
 
 let decoyHash: Promise<string> | null = null;
 
 /**
- * An unknown address still pays for one derivation, so a missing account and a
+ * An unknown username still pays for one derivation, so a missing account and a
  * wrong password cost the same wall-clock time.
  */
 function decoy(): Promise<string> {
@@ -84,11 +77,10 @@ function decoy(): Promise<string> {
 export async function authenticateAccount(
   database: AppDatabase,
   input: AuthenticateAccountInput,
-  options: AuthenticateAccountOptions = {},
 ): Promise<{ userId: string } | null> {
-  const emailNormalized = normalizeEmail(input.email);
+  const usernameNormalized = normalizeAccountIdentifier(input.username);
   const account =
-    emailNormalized === null
+    usernameNormalized === null
       ? undefined
       : database
           .select({
@@ -98,11 +90,8 @@ export async function authenticateAccount(
           .from(userAccount)
           .where(
             and(
-              eq(userAccount.emailNormalized, emailNormalized),
+              eq(userAccount.usernameNormalized, usernameNormalized),
               eq(userAccount.status, "active"),
-              options.allowUnverified
-                ? undefined
-                : isNotNull(userAccount.emailVerifiedAt),
             ),
           )
           .get();

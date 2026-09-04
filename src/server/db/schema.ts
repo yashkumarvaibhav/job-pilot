@@ -61,9 +61,11 @@ const utcInstant = (name: string) => integer(name, { mode: "timestamp_ms" });
 
 export const userAccount = sqliteTable("user_account", {
   id: text("id").primaryKey(),
-  emailNormalized: text("email_normalized").notNull().unique(),
+  usernameNormalized: text("username_normalized").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
-  emailVerifiedAt: utcInstant("email_verified_at"),
+  totpSecretBlob: text("totp_secret_blob"),
+  totpEnabledAt: utcInstant("totp_enabled_at"),
+  totpLastUsedCounter: integer("totp_last_used_counter"),
   status: text("status").notNull().default("active"),
   createdAt: utcInstant("created_at").notNull(),
   updatedAt: utcInstant("updated_at").notNull(),

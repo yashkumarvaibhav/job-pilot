@@ -80,7 +80,23 @@ describe("migrateDatabase", () => {
         client.sqlite
           .prepare("select count(*) as count from __drizzle_migrations")
           .get(),
-      ).toEqual({ count: 26 });
+      ).toEqual({ count: 27 });
+
+      const accountColumns = client.sqlite
+        .prepare("select name from pragma_table_info('user_account') order by cid")
+        .all() as { name: string }[];
+      expect(accountColumns.map((column) => column.name)).toEqual([
+        "id",
+        "username_normalized",
+        "password_hash",
+        "email_verified_at",
+        "status",
+        "created_at",
+        "updated_at",
+        "totp_secret_blob",
+        "totp_enabled_at",
+        "totp_last_used_counter",
+      ]);
 
       for (const indexName of [
         "company_workspace_id_id_unique",
@@ -1234,7 +1250,7 @@ describe("migrateDatabase", () => {
     }
   });
 
-  it("grandfathers accounts created before verification delivery existed", () => {
+  it("preserves a grandfathered account while renaming identity and adding TOTP", () => {
     const directory = mkdtempSync(join(tmpdir(), "job-pilot-backfill-"));
     temporaryDirectories.push(directory);
     const databasePath = join(directory, "legacy.sqlite");
@@ -1259,14 +1275,24 @@ describe("migrateDatabase", () => {
           "utf8",
         ),
       );
+      client.sqlite.exec(
+        readFileSync(resolve("drizzle/0026_username_totp.sql"), "utf8"),
+      );
 
       expect(
         client.sqlite
           .prepare(
-            "select email_verified_at from user_account where id = 'legacy-user'",
+            `select username_normalized, totp_secret_blob, totp_enabled_at,
+                    totp_last_used_counter
+             from user_account where id = 'legacy-user'`,
           )
           .get(),
-      ).toEqual({ email_verified_at: createdAt });
+      ).toEqual({
+        username_normalized: "legacy@invalid.test",
+        totp_secret_blob: null,
+        totp_enabled_at: null,
+        totp_last_used_counter: null,
+      });
     } finally {
       client.close();
     }

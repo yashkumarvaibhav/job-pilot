@@ -102,7 +102,7 @@ export function createTenantTestFixture(
   }
 
   const tenantA = createAccountFoundation(client.db, {
-    emailNormalized: "tenant-a@invalid.test",
+    usernameNormalized: "tenant-a",
     passwordHash: "synthetic-password-hash-a",
     displayName: "Tenant A",
     timezone: "Asia/Kolkata",
@@ -110,7 +110,7 @@ export function createTenantTestFixture(
     now: new Date("2026-08-31T10:00:00.000Z"),
   }).tenant;
   const tenantB = createAccountFoundation(client.db, {
-    emailNormalized: "tenant-b@invalid.test",
+    usernameNormalized: "tenant-b",
     passwordHash: "synthetic-password-hash-b",
     displayName: "Tenant B",
     timezone: "America/New_York",
