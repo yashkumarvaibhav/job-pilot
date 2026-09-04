@@ -14,8 +14,29 @@ try {
 `;
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://jobpilot.yashkumarvaibhav.me"),
   title: "Job Pilot",
   description: "A personal operating system for an off-campus job search.",
+  openGraph: {
+    title: "Job Pilot",
+    description: "Run your job search from one clear workspace.",
+    type: "website",
+    url: "/",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Job Pilot — Run your job search from one clear workspace",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Job Pilot",
+    description: "Run your job search from one clear workspace.",
+    images: ["/og.png"],
+  },
 };
 
 export default async function RootLayout({

@@ -68,6 +68,7 @@ function AuthDialog({
 
   useEffect(() => {
     const landing = document.querySelector<HTMLElement>(".landing-surface");
+    const skipLink = document.querySelector<HTMLElement>(".skip-link");
     const previousOverflow = document.body.style.overflow;
     returnFocusRef.current =
       document.activeElement instanceof HTMLElement
@@ -75,10 +76,12 @@ function AuthDialog({
         : null;
     document.body.style.overflow = "hidden";
     landing?.setAttribute("inert", "");
+    skipLink?.setAttribute("inert", "");
 
     return () => {
       document.body.style.overflow = previousOverflow;
       landing?.removeAttribute("inert");
+      skipLink?.removeAttribute("inert");
       window.requestAnimationFrame(() => returnFocusRef.current?.focus());
     };
   }, []);

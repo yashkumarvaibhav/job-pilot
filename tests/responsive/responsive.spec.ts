@@ -41,12 +41,14 @@ async function signIn(
   expect(response.status()).toBe(200);
 }
 
-async function auditPage(page: Page, path: string) {
+async function auditPage(page: Page, path: string, expectedPath = path) {
   const response = await page.goto(path, { waitUntil: "domcontentloaded" });
   expect(response?.status(), path).toBeLessThan(400);
-  expect(page.url(), path).toContain(path.split("?")[0]!);
+  const finalUrl = new URL(page.url());
+  expect(`${finalUrl.pathname}${finalUrl.search}`, path).toBe(expectedPath);
   await expect(page.locator("main")).toBeVisible();
-  if (path === "/add") {
+  const dialogExpected = path === "/add" || expectedPath.includes("auth=");
+  if (dialogExpected) {
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
     await expect(dialog.locator(":focus")).toHaveCount(1);
@@ -113,14 +115,21 @@ async function auditPage(page: Page, path: string) {
     `${path} colour-only status`,
   ).toEqual([]);
 
-  await page.evaluate(() => {
-    const active = document.activeElement;
-    if (active instanceof HTMLElement) active.blur();
-    document.body.tabIndex = -1;
-    document.body.focus();
-    document.body.removeAttribute("tabindex");
-  });
-  await page.keyboard.press("Tab");
+  if (dialogExpected) {
+    // Keep the keyboard probe on the path a user can actually reach while the
+    // page behind a modal is inert. Programmatically moving focus to <body>
+    // can expose development-only controls that are outside the application.
+    await page.keyboard.press("Shift+Tab");
+  } else {
+    await page.evaluate(() => {
+      const active = document.activeElement;
+      if (active instanceof HTMLElement) active.blur();
+      document.body.tabIndex = -1;
+      document.body.focus();
+      document.body.removeAttribute("tabindex");
+    });
+    await page.keyboard.press("Tab");
+  }
   const focus = await page.evaluate(() => {
     const element = document.activeElement as HTMLElement | null;
     const style = element ? getComputedStyle(element) : null;
@@ -139,7 +148,7 @@ async function auditPage(page: Page, path: string) {
       accent,
     };
   });
-  if (path === "/add") {
+  if (dialogExpected) {
     expect(focus.inDialog, `${path} deliberate focus trap`).toBe(true);
   } else {
     expect(focus.className, `${path} first focus`).toContain("skip-link");
@@ -191,7 +200,7 @@ test("desktop rail pairs every destination with a decorative icon", async ({ bro
     });
     await signIn(context);
     const page = await context.newPage();
-    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.goto("/today", { waitUntil: "domcontentloaded" });
     await page.evaluate((value) => localStorage.setItem("theme", value), theme);
 
     const links = page
@@ -221,7 +230,7 @@ test("every page fits three widths in both themes", async ({ browser }) => {
       await signedOutPage.goto("/login");
       await signedOutPage.evaluate((value) => localStorage.setItem("theme", value), theme);
       for (const route of REGISTERED_PAGES.filter(({ access }) => access === "signed-out")) {
-        await auditPage(signedOutPage, route.path);
+        await auditPage(signedOutPage, route.path, route.expectedPath);
       }
       await signedOut.close();
 
@@ -231,17 +240,17 @@ test("every page fits three widths in both themes", async ({ browser }) => {
       await setupPage.goto("/setup-totp");
       await setupPage.evaluate((value) => localStorage.setItem("theme", value), theme);
       for (const route of REGISTERED_PAGES.filter(({ access }) => access === "setup")) {
-        await auditPage(setupPage, route.path);
+        await auditPage(setupPage, route.path, route.expectedPath);
       }
       await setup.close();
 
       const signedIn = await browser.newContext({ colorScheme: theme, viewport });
       await signIn(signedIn);
       const signedInPage = await signedIn.newPage();
-      await signedInPage.goto("/");
+      await signedInPage.goto("/today");
       await signedInPage.evaluate((value) => localStorage.setItem("theme", value), theme);
       for (const route of REGISTERED_PAGES.filter(({ access }) => access === "signed-in")) {
-        await auditPage(signedInPage, route.path);
+        await auditPage(signedInPage, route.path, route.expectedPath);
       }
       await signedIn.close();
     }
@@ -256,12 +265,12 @@ test("empty and not-found states fit mobile in both themes", async ({ browser })
     });
     await signIn(context, FIXTURE.accountEmpty.username);
     const page = await context.newPage();
-    await page.goto("/");
+    await page.goto("/today");
     await page.evaluate((value) => localStorage.setItem("theme", value), theme);
     for (const route of REGISTERED_PAGES.filter(
       ({ access }) => access === "signed-in",
     )) {
-      await auditPage(page, route.path);
+      await auditPage(page, route.path, route.expectedPath);
     }
     await context.close();
   }
@@ -272,7 +281,7 @@ test("quick add traps focus and returns it on close", async ({ browser }) => {
     const context = await browser.newContext({ viewport });
     await signIn(context);
     const page = await context.newPage();
-    await page.goto("/");
+    await page.goto("/today");
     const trigger = viewport.width < 768
       ? page.getByRole("navigation", { name: "Mobile navigation" }).getByRole("button", { name: "Add" })
       : page.getByRole("banner").getByRole("button", { name: "Add" });
@@ -288,6 +297,46 @@ test("quick add traps focus and returns it on close", async ({ browser }) => {
     await expect(trigger).toBeFocused();
     await context.close();
   }
+});
+
+test("landing account dialogs trap focus and preserve browser history", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: VIEWPORTS[2] });
+  const page = await context.newPage();
+  await page.goto("/");
+
+  const trigger = page
+    .getByRole("navigation", { name: "Landing navigation" })
+    .getByRole("button", { name: "Sign in" });
+  await trigger.focus();
+  await trigger.click();
+  await expect(page).toHaveURL(`${BASE_URL}/?auth=sign-in`);
+
+  let dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("heading", { name: "Sign in" })).toBeVisible();
+  await expect(dialog.getByLabel("Username")).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(dialog.locator(":focus")).toHaveCount(1);
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(page).toHaveURL(`${BASE_URL}/`);
+  await expect(trigger).toBeFocused();
+
+  await trigger.click();
+  dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: "Forgot password?" }).click();
+  await expect(page).toHaveURL(`${BASE_URL}/?auth=forgot-password`);
+  await expect(dialog.getByRole("heading", { name: "Reset password" })).toBeVisible();
+  await expect(dialog.getByLabel("Username")).toBeFocused();
+
+  await page.goBack();
+  await expect(page).toHaveURL(`${BASE_URL}/?auth=sign-in`);
+  await expect(dialog.getByRole("heading", { name: "Sign in" })).toBeVisible();
+
+  await page.locator(".auth-dialog-backdrop").click({ position: { x: 2, y: 2 } });
+  await expect(dialog).toBeHidden();
+  await expect(page).toHaveURL(`${BASE_URL}/`);
+  await context.close();
 });
 
 test("foreign workspace pages, search, export and files reveal nothing", async ({ browser }) => {
@@ -330,11 +379,17 @@ test("signup setup cannot reach workspace data and confirmation promotes it", as
   await signIn(context, FIXTURE.accountSetup.username);
   const page = await context.newPage();
 
-  await page.goto("/");
-  await expect(page).toHaveURL(/\/setup-totp$/u);
+  await page.goto("/today");
+  await expect(page).toHaveURL(/\/\?auth=setup-totp$/u);
   await expect(page.getByText("Step 2 of 2", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Authenticator setup QR code")).toBeVisible();
   await expect(page.getByText("Skip for now", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Close account access" })).toHaveCount(0);
+
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.locator(".auth-dialog-backdrop").click({ position: { x: 2, y: 2 } });
+  await expect(page.getByRole("dialog")).toBeVisible();
 
   const before = await context.request.get(`${BASE_URL}/api/companies`);
   expect(before.status()).toBe(401);
@@ -355,7 +410,7 @@ test("signup setup cannot reach workspace data and confirmation promotes it", as
 
   await code.fill(validCode);
   await page.getByRole("button", { name: "Enable authenticator" }).click();
-  await expect(page).toHaveURL(`${BASE_URL}/`);
+  await expect(page).toHaveURL(`${BASE_URL}/today`);
   await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
 
   const after = await context.request.get(`${BASE_URL}/api/companies`);
