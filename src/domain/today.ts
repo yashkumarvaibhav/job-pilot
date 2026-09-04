@@ -100,6 +100,8 @@ export function todayDoNowVerb(kind: DueSourceKind): string {
       return "Decide";
     case "task":
       return "Do";
+    case "sequence_follow_up":
+      return "Review";
     default:
       return "Follow up";
   }
@@ -128,6 +130,11 @@ export function todayDoNowHeading(
     return entityLabel.length > 0
       ? `${entityLabel} offer deadline`
       : "Offer deadline";
+  }
+  if (parsed?.kind === "sequence_follow_up") {
+    return entityLabel.length > 0
+      ? `Review follow-up with ${entityLabel}`
+      : "Review follow-up email";
   }
   return entityLabel.length > 0 ? entityLabel : verb;
 }

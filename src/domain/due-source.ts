@@ -8,6 +8,7 @@ export const DUE_SOURCE_KINDS = [
   "assessment_deadline",
   "offer_deadline",
   "task",
+  "sequence_follow_up",
 ] as const;
 
 export type DueSourceKind = (typeof DUE_SOURCE_KINDS)[number];
@@ -52,6 +53,15 @@ export function dueSourceKey(kind: DueSourceKind, entityId: string): string {
       return `application:${id}:offer_deadline`;
     case "task":
       return `task:${id}`;
+    case "sequence_follow_up": {
+      const separator = id.indexOf("/");
+      if (separator <= 0 || separator === id.length - 1) {
+        throw new RangeError(
+          "A sequence due-source key needs enrollment and step ids.",
+        );
+      }
+      return `enrollment:${id.slice(0, separator)}:step:${id.slice(separator + 1)}`;
+    }
   }
 }
 
@@ -99,6 +109,11 @@ export function parseDueSourceKey(
     return { kind: "task", entityId: task[1] };
   }
 
+  const sequence = key.match(/^enrollment:(.+):step:(.+)$/);
+  if (sequence) {
+    return { kind: "sequence_follow_up", entityId: sequence[1] };
+  }
+
   return null;
 }
 
@@ -137,6 +152,8 @@ export function derivedDueItemTitle(
       return "Offer deadline";
     case "task":
       return "Do";
+    case "sequence_follow_up":
+      return "Review follow-up email";
     default:
       return "Follow up";
   }

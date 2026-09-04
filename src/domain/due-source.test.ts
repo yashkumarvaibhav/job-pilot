@@ -32,9 +32,18 @@ describe("due-source keys", () => {
       "application:google-app:offer_deadline",
     );
     expect(dueSourceKey("task", "task-prep")).toBe("task:task-prep");
+    expect(dueSourceKey("sequence_follow_up", "enroll-1/step-1")).toBe(
+      "enrollment:enroll-1:step:step-1",
+    );
     expect(parseDueSourceKey(dueSourceKey("interview", "round-1"))).toEqual({
       kind: "interview",
       entityId: "round-1",
+    });
+    expect(
+      parseDueSourceKey(dueSourceKey("sequence_follow_up", "enroll-1/step-1")),
+    ).toEqual({
+      kind: "sequence_follow_up",
+      entityId: "enroll-1",
     });
     expect(
       parseDueSourceKey(dueSourceKey("assessment_deadline", "oa-google")),
@@ -78,6 +87,9 @@ describe("due-source keys", () => {
       "Ping Priya",
     );
     expect(derivedDueItemTitle("contact_next_action", "")).toBe("Follow up");
+    expect(derivedDueItemTitle("sequence_follow_up", "")).toBe(
+      "Review follow-up email",
+    );
     expect(derivedDueItemTitle("referral_follow_up", null)).toBe(
       "Check referral",
     );
