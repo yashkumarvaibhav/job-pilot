@@ -183,12 +183,83 @@ describe("Google Gmail readonly adapter", () => {
           to: ["owner@example.com"],
           subject: "Interview availability",
           body: "Plain answer",
+          deliveryStatusText: null,
+          failedRecipients: [],
           sentAt: new Date(1788440000000),
         },
       ],
     });
     expect(JSON.stringify(thread)).not.toContain("unsafe");
     expect(JSON.stringify(thread)).not.toContain("HTML answer");
+  });
+
+  it("extracts a message/delivery-status part and X-Failed-Recipients", async () => {
+    const fetcher = vi.fn(async (input: string | URL | Request) => {
+      const url = new URL(input.toString());
+      if (url.hostname === "oauth2.googleapis.com") {
+        return json({ access_token: "access" });
+      }
+      return json({
+        id: "thread-bounce",
+        historyId: "301",
+        messages: [
+          {
+            id: "bounce-1",
+            internalDate: "1788440000000",
+            payload: {
+              mimeType: "multipart/report",
+              headers: [
+                {
+                  name: "From",
+                  value: "Mail Delivery Subsystem <mailer-daemon@googlemail.com>",
+                },
+                { name: "To", value: "Owner <owner@invalid.test>" },
+                {
+                  name: "Subject",
+                  value: "Delivery Status Notification (Failure)",
+                },
+                { name: "X-Failed-Recipients", value: "priya@invalid.test" },
+              ],
+              parts: [
+                {
+                  mimeType: "text/plain",
+                  body: { data: base64url("Address not found\n550 mailbox unavailable") },
+                },
+                {
+                  mimeType: "message/delivery-status",
+                  body: {
+                    data: base64url(
+                      "Final-Recipient: rfc822; priya@invalid.test\r\nAction: failed\r\nStatus: 5.1.1\r\n",
+                    ),
+                  },
+                },
+                {
+                  mimeType: "text/html",
+                  body: { data: base64url("<p>ignored html bounce</p>") },
+                },
+              ],
+            },
+          },
+        ],
+      });
+    });
+    const reader = new GoogleGmailReadPort(
+      { clientId: "client", clientSecret: "secret" },
+      { fetcher },
+    );
+
+    const thread = await reader.getThread({
+      refreshToken: "refresh",
+      gmailThreadId: "thread-bounce",
+    });
+    expect(thread.messages[0]).toMatchObject({
+      fromEmail: "mailer-daemon@googlemail.com",
+      failedRecipients: ["priya@invalid.test"],
+      deliveryStatusText:
+        "Final-Recipient: rfc822; priya@invalid.test\r\nAction: failed\r\nStatus: 5.1.1",
+      body: "Address not found\n550 mailbox unavailable",
+    });
+    expect(JSON.stringify(thread)).not.toContain("ignored html bounce");
   });
 
   it("uses Cc, Bcc and Delivered-To when To has no address", async () => {

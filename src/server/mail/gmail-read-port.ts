@@ -5,6 +5,8 @@ export type GmailMessageSnapshot = {
   to: string[];
   subject: string;
   body: string;
+  deliveryStatusText?: string | null;
+  failedRecipients?: string[];
   sentAt: Date;
 };
 

@@ -1,0 +1,7 @@
+{
+  "fromEmail": "mailer-daemon@googlemail.com",
+  "subject": "Delivery Status Notification (Delay)",
+  "failedRecipients": ["rahul@invalid.test"],
+  "body": "The recipient's mailbox is full. Try again later.",
+  "deliveryStatusText": "Final-Recipient: rfc822; rahul@invalid.test\nAction: delayed\nStatus: 4.2.2\nDiagnostic-Code: smtp; 452 4.2.2 Mailbox full\n"
+}

@@ -102,6 +102,16 @@ function plainTextParts(part: JsonObject): string[] {
   return arrayObjects(part.parts).flatMap(plainTextParts);
 }
 
+function deliveryStatusParts(part: JsonObject): string[] {
+  const mimeType = stringValue(part.mimeType)?.toLowerCase();
+  const body = object(part.body);
+  if (mimeType === "message/delivery-status") {
+    const text = decodeBase64url(body?.data);
+    return text ? [text] : [];
+  }
+  return arrayObjects(part.parts).flatMap(deliveryStatusParts);
+}
+
 function headers(payload: JsonObject): Map<string, string> {
   const result = new Map<string, string>();
   for (const header of arrayObjects(payload.headers)) {
@@ -145,6 +155,9 @@ function parseMessage(value: JsonObject): GmailMessageSnapshot | null {
   const milliseconds = Number(stringValue(value.internalDate));
   const sentAt = new Date(milliseconds);
   if (!fromEmail || to.length === 0 || Number.isNaN(sentAt.valueOf())) return null;
+  const failedRecipients = emailsFromHeader(fields.get("x-failed-recipients"));
+  const deliveryStatusText =
+    deliveryStatusParts(payload).join("\n\n").trim() || null;
   return {
     gmailId,
     rfcMessageId: fields.get("message-id") ?? null,
@@ -152,6 +165,8 @@ function parseMessage(value: JsonObject): GmailMessageSnapshot | null {
     to,
     subject: fields.get("subject") ?? "",
     body: plainTextParts(payload).join("\n\n").trim(),
+    deliveryStatusText,
+    failedRecipients,
     sentAt,
   };
 }

@@ -1,0 +1,7 @@
+{
+  "fromEmail": "postmaster@invalid.test",
+  "subject": "Undelivered Mail Returned to Sender",
+  "failedRecipients": [],
+  "body": "The following message to <sixth@invalid.test> was undeliverable.",
+  "deliveryStatusText": "Final-Recipient: rfc822; sixth@invalid.test\nAction: failed\nStatus: 5.0.0\nDiagnostic-Code: smtp; 554 5.0.0 Transaction failed\n"
+}

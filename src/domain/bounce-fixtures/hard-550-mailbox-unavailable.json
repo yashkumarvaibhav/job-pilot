@@ -1,0 +1,7 @@
+{
+  "fromEmail": "mailer-daemon@googlemail.com",
+  "subject": "Delivery Status Notification (Failure)",
+  "failedRecipients": ["Priya@Invalid.Test"],
+  "body": "Address not found\n550 mailbox unavailable\nDelivery failure",
+  "deliveryStatusText": "Reporting-MTA: dns; googlemail.com\r\nArrival-Date: Fri, 4 Sep 2026 10:00:00 +0000\r\n\r\nFinal-Recipient: rfc822; priya@invalid.test\r\nAction: failed\r\nStatus: 5.1.1\r\nRemote-MTA: dns; invalid.test\r\nDiagnostic-Code: smtp; 550-5.1.1 The email account that you tried to reach does not exist. 550 mailbox unavailable\r\n"
+}
