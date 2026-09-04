@@ -59,6 +59,8 @@ export type CreateQueueMessageInput = {
   attachmentVersionIds: string[];
   sendAt: Date;
   approvalKind?: "owner_click" | "self_digest_policy";
+  enrollmentId?: string | null;
+  stepId?: string | null;
   now?: Date;
 };
 
@@ -325,6 +327,8 @@ export function createQueueMessage(
         contactId,
         opportunityId,
         referralId,
+        enrollmentId: input.enrollmentId?.trim() || null,
+        stepId: input.stepId?.trim() || null,
         origin: input.origin,
         status: approved ? "approved" : "awaiting_approval",
         recipient,

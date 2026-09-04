@@ -3,8 +3,8 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { getDatabase } from "@/server/db/runtime";
-import { flushSendQueue } from "@/server/jobs/send-queue";
-import { getMailSendDependencies } from "@/server/mail/runtime";
+import { runTick } from "@/server/jobs/tick";
+import { getMailReadDependencies, getMailSendDependencies } from "@/server/mail/runtime";
 
 export const runtime = "nodejs";
 
@@ -24,13 +24,16 @@ export async function POST(request: Request) {
   if (!authorised(request, process.env.CRON_SECRET)) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
-  const dependencies = getMailSendDependencies();
-  if (!dependencies) {
+  const send = getMailSendDependencies();
+  if (!send) {
     return NextResponse.json(
       { error: "Mail delivery is not configured." },
       { status: 503 },
     );
   }
-  const result = await flushSendQueue(getDatabase(), dependencies);
+  const result = await runTick(getDatabase(), {
+    ...send,
+    read: getMailReadDependencies(),
+  });
   return NextResponse.json({ ok: true, ...result });
 }

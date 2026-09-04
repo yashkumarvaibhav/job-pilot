@@ -52,6 +52,7 @@ import { DEFAULT_TIME_ZONE } from "../db/timezone";
 import { listPendingInterviewDueRows } from "./interviews";
 import { listOpenAssessmentDueRows } from "./assessments";
 import { listOpenOfferDeadlineDueRows } from "./applications";
+import { listDueSequenceItemsInTransaction } from "./sequences";
 
 export type Task = typeof task.$inferSelect;
 
@@ -364,6 +365,7 @@ function derivedKindToLink(
     case "offer_deadline":
       return "opportunity";
     case "task":
+    case "sequence_follow_up":
       return null;
   }
 }
@@ -889,7 +891,7 @@ export function createTaskFromDerived(
   input: ConvertDerivedInput,
 ): Task | undefined {
   const parsed = parseDueSourceKey(input.sourceKey);
-  if (!parsed || parsed.kind === "task") {
+  if (!parsed || parsed.kind === "task" || parsed.kind === "sequence_follow_up") {
     return undefined;
   }
   return database.transaction((transaction) => {
@@ -1185,6 +1187,13 @@ export function listDueItems(
         priority: null,
         status: null,
       });
+    }
+
+    for (const row of listDueSequenceItemsInTransaction(transaction, tenant)) {
+      if (suppressed.has(row.sourceKey)) {
+        continue;
+      }
+      items.push(row);
     }
 
     for (const row of openTasks) {

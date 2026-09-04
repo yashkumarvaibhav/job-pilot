@@ -347,6 +347,11 @@ describe("send queue crash safety", () => {
       sendAt: NOW,
       now: NOW,
     });
+    fixture.client.db
+      .update(emailAccount)
+      .set({ sequenceSafeAt: NOW, lastSyncAt: NOW })
+      .where(eq(emailAccount.id, account.id))
+      .run();
     approveQueueMessage(fixture.client.db, fixture.tenantA, sequence.id, {
       now: NOW,
     });

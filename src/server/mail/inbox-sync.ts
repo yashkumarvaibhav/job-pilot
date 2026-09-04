@@ -13,6 +13,7 @@ import {
 import type { TenantContext } from "../db/tenant";
 import { readEmailAccountRefreshToken } from "../repos/email-accounts";
 import { ingestSyncedThreadSnapshot } from "../repos/inbox-content";
+import { proveEnrollmentThread } from "../repos/sequences";
 import {
   GmailHistoryGapError,
   type GmailReadPort,
@@ -96,14 +97,19 @@ function persistThreadSnapshot(
   snapshot: GmailThreadSnapshot,
   source: "sync" | "manual_import" = "sync",
 ): boolean {
-  return ingestSyncedThreadSnapshot(
+  const thread = ingestSyncedThreadSnapshot(
     database,
     tenant,
     account.id,
     snapshot,
     new Date(),
     source,
-  ) !== undefined;
+  );
+  if (thread) {
+    proveEnrollmentThread(database, tenant, thread.id);
+    return true;
+  }
+  return false;
 }
 
 async function fetchAndPersistThreads(

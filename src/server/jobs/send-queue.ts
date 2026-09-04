@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
 
-import { and, asc, eq, lte, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, lte, or, sql } from "drizzle-orm";
 
 import {
   UNCERTAIN_DELIVERY_ERROR,
   hashSendPayload,
 } from "../../domain/send-safety";
+import { MAX_SYNC_AGE_MS, sequenceMailboxFreshness } from "../../domain/sequence";
 import { logEvent } from "../db/activity";
 import type { AppDatabase, AppTransaction } from "../db/client";
 import {
@@ -15,6 +16,7 @@ import {
   emailThread,
   interaction,
   sendQueue,
+  sequenceEnrollment,
   settings,
   workspace,
 } from "../db/schema";
@@ -23,6 +25,13 @@ import type { MailPort, MailSendResult } from "../mail/mail-port";
 import { decryptRefreshToken } from "../mail/token-crypto";
 import { readDocumentVersionFile } from "../repos/documents";
 import { suppressionForRecipientInTransaction } from "../repos/send-safety";
+import {
+  HELD_MAILBOX_UNPROVEN,
+  advanceEnrollmentAfterSend,
+  cancelEnrollmentInTransaction,
+  enrollmentFreshness,
+  evaluateEnrollmentCancelInTransaction,
+} from "../repos/sequences";
 
 const DEFAULT_RECLAIM_AFTER_MS = 5 * 60_000;
 const DEFAULT_MAX_SENDS = 25;
@@ -148,7 +157,16 @@ export function claimNextQueueMessage(
   onlyQueueId?: string,
 ): ClaimedQueueMessage | null {
   return database.transaction((transaction) => {
-    const conditions = [eq(sendQueue.status, "approved"), lte(sendQueue.sendAt, now)];
+    const claimable = or(
+      eq(sendQueue.status, "approved"),
+      and(
+        eq(sendQueue.status, "held"),
+        eq(sendQueue.origin, "sequence"),
+        sql`${sendQueue.approvalHash} is not null`,
+        eq(sendQueue.lastError, HELD_MAILBOX_UNPROVEN),
+      ),
+    );
+    const conditions = [claimable, lte(sendQueue.sendAt, now)];
     if (onlyQueueId) conditions.push(eq(sendQueue.id, onlyQueueId));
     const candidates = transaction
       .select()
@@ -183,7 +201,7 @@ export function claimNextQueueMessage(
             and(
               eq(sendQueue.workspaceId, row.workspaceId),
               eq(sendQueue.id, row.id),
-              eq(sendQueue.status, "approved"),
+              inArray(sendQueue.status, ["approved", "held"]),
             ),
           )
           .run();
@@ -195,6 +213,97 @@ export function claimNextQueueMessage(
         row.recipient,
         row.contactId,
       );
+      if (row.origin === "sequence") {
+        if (row.enrollmentId) {
+          const enrollment = transaction
+            .select()
+            .from(sequenceEnrollment)
+            .where(
+              and(
+                eq(sequenceEnrollment.workspaceId, row.workspaceId),
+                eq(sequenceEnrollment.id, row.enrollmentId),
+              ),
+            )
+            .get();
+          if (!enrollment || enrollment.status !== "active") {
+            transaction
+              .update(sendQueue)
+              .set({
+                status: "cancelled",
+                approvalHash: null,
+                approvedAt: null,
+                approvalKind: null,
+                lastError: "Sequence enrollment is no longer active.",
+                updatedAt: now,
+              })
+              .where(
+                and(eq(sendQueue.workspaceId, row.workspaceId), eq(sendQueue.id, row.id)),
+              )
+              .run();
+            continue;
+          }
+          const cancel = evaluateEnrollmentCancelInTransaction(
+            transaction,
+            tenant,
+            enrollment,
+            now,
+          );
+          if (cancel) {
+            cancelEnrollmentInTransaction(transaction, tenant, enrollment, cancel, now);
+            continue;
+          }
+          const freshness = enrollmentFreshness(transaction, tenant, enrollment, now);
+          if (!freshness.ok) {
+            transaction
+              .update(sendQueue)
+              .set({
+                status: "held",
+                lastError: freshness.hold,
+                updatedAt: now,
+              })
+              .where(
+                and(eq(sendQueue.workspaceId, row.workspaceId), eq(sendQueue.id, row.id)),
+              )
+              .run();
+            continue;
+          }
+        } else {
+          const sequenceAccount = transaction
+            .select()
+            .from(emailAccount)
+            .where(
+              and(
+                eq(emailAccount.workspaceId, row.workspaceId),
+                eq(emailAccount.id, row.accountId),
+              ),
+            )
+            .get();
+          const freshness = sequenceMailboxFreshness({
+            accountStatus: sequenceAccount?.status ?? "disconnected",
+            sequenceSafeAt: sequenceAccount?.sequenceSafeAt ?? null,
+            enrolledAt: sequenceAccount?.sequenceSafeAt ?? new Date(0),
+            threadId: null,
+            threadProvenAt: null,
+            recoveryOpen: false,
+            now,
+            maxSyncAgeMs: MAX_SYNC_AGE_MS,
+          });
+          if (!freshness.ok) {
+            transaction
+              .update(sendQueue)
+              .set({
+                status: "held",
+                lastError: HELD_MAILBOX_UNPROVEN,
+                updatedAt: now,
+              })
+              .where(
+                and(eq(sendQueue.workspaceId, row.workspaceId), eq(sendQueue.id, row.id)),
+              )
+              .run();
+            continue;
+          }
+        }
+      }
       if (blocked) {
         transaction
           .update(sendQueue)
@@ -268,7 +377,7 @@ export function claimNextQueueMessage(
           and(
             eq(sendQueue.workspaceId, row.workspaceId),
             eq(sendQueue.id, row.id),
-            eq(sendQueue.status, "approved"),
+            eq(sendQueue.status, row.status),
             eq(sendQueue.payloadHash, computed),
             eq(sendQueue.approvalHash, computed),
           ),
@@ -498,6 +607,15 @@ function finalizeSent(
         threadId,
       },
     });
+    if (row.origin === "sequence" && row.enrollmentId) {
+      advanceEnrollmentAfterSend(
+        transaction,
+        claim.tenant,
+        row.enrollmentId,
+        threadId,
+        receipt.sentAt,
+      );
+    }
   });
 }
 

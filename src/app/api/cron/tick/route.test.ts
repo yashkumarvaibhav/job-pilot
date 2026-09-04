@@ -13,6 +13,7 @@ vi.mock("@/server/db/runtime", () => ({
 }));
 vi.mock("@/server/mail/runtime", () => ({
   getMailSendDependencies: () => mocks.dependencies,
+  getMailReadDependencies: () => null,
 }));
 
 import { POST } from "./route";
