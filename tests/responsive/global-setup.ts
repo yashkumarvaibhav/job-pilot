@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { hashPassword } from "../../src/server/auth/password";
+import { startTotpEnrollment } from "../../src/server/auth/account-security";
 import { openDatabase } from "../../src/server/db/client";
 import { createAccountFoundation } from "../../src/server/db/foundation";
 import { migrateDatabase } from "../../src/server/db/migrate";
@@ -219,6 +220,22 @@ export default async function globalSetup() {
       usernameNormalized: FIXTURE.accountEmpty.username,
       passwordHash,
       displayName: "Responsive Empty",
+      now: NOW,
+    });
+    const setupTenant = createAccountFoundation(client.db, {
+      ids: {
+        userId: FIXTURE.accountSetup.userId,
+        workspaceId: FIXTURE.accountSetup.workspaceId,
+      },
+      usernameNormalized: FIXTURE.accountSetup.username,
+      passwordHash,
+      displayName: "Responsive Setup",
+      signupCompletedAt: null,
+      now: NOW,
+    }).tenant;
+    startTotpEnrollment(client.db, setupTenant, {
+      tokenKey: Buffer.alloc(32, 21).toString("base64"),
+      secretBytes: Buffer.from("12345678901234567890", "ascii"),
       now: NOW,
     });
     seedWorkspace(client.db, uploadsRoot, tenantA, FIXTURE.a, "Atlas");

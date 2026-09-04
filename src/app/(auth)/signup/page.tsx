@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AccountForm } from "@/components/account-form";
+import { SignupProgress } from "@/components/signup-progress";
 import {
   DEMO_SIGNUP_CLOSED_MESSAGE,
   isDemoMode,
@@ -27,10 +28,12 @@ export default function SignupPage() {
 
   return (
     <section className="auth-card">
-      <p className="eyebrow">Your workspace</p>
+      <SignupProgress currentStep={1} />
+      <p className="eyebrow">Step 1 of 2</p>
       <h1>Create account</h1>
       <p className="auth-lede">
-        Creating an account opens one private workspace that only you can see.
+        Choose your credentials first. Next, you’ll scan a QR code to protect the
+        private workspace only you can see.
       </p>
       <AccountForm mode="signup" />
       <p className="auth-switch">

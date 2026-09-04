@@ -5,6 +5,7 @@ import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 import { ACCOUNT_PASSWORD, BASE_URL, FIXTURE } from "./fixture";
 import { REGISTERED_PAGES } from "./routes";
+import { createTotpSetup, generateTotpCode } from "../../src/server/auth/totp";
 
 const VIEWPORTS = [
   { width: 390, height: 844 },
@@ -224,6 +225,16 @@ test("every page fits three widths in both themes", async ({ browser }) => {
       }
       await signedOut.close();
 
+      const setup = await browser.newContext({ colorScheme: theme, viewport });
+      await signIn(setup, FIXTURE.accountSetup.username);
+      const setupPage = await setup.newPage();
+      await setupPage.goto("/setup-totp");
+      await setupPage.evaluate((value) => localStorage.setItem("theme", value), theme);
+      for (const route of REGISTERED_PAGES.filter(({ access }) => access === "setup")) {
+        await auditPage(setupPage, route.path);
+      }
+      await setup.close();
+
       const signedIn = await browser.newContext({ colorScheme: theme, viewport });
       await signIn(signedIn);
       const signedInPage = await signedIn.newPage();
@@ -312,4 +323,42 @@ test("foreign workspace pages, search, export and files reveal nothing", async (
   await expect(pageB.getByRole("heading", { name: "Private Labs" })).toBeVisible();
   await b.close();
   await a.close();
+});
+
+test("signup setup cannot reach workspace data and confirmation promotes it", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: VIEWPORTS[0] });
+  await signIn(context, FIXTURE.accountSetup.username);
+  const page = await context.newPage();
+
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/setup-totp$/u);
+  await expect(page.getByText("Step 2 of 2", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Authenticator setup QR code")).toBeVisible();
+  await expect(page.getByText("Skip for now", { exact: true })).toHaveCount(0);
+
+  const before = await context.request.get(`${BASE_URL}/api/companies`);
+  expect(before.status()).toBe(401);
+
+  const secret = createTotpSetup(
+    FIXTURE.accountSetup.username,
+    Buffer.from("12345678901234567890", "ascii"),
+  ).secret;
+  const validCode = generateTotpCode(secret);
+  const invalidCode = validCode === "000000" ? "000001" : "000000";
+  const code = page.getByLabel("Six-digit code");
+  await code.fill(invalidCode);
+  await page.getByRole("button", { name: "Enable authenticator" }).click();
+  await expect(page.locator(".form-alert")).toContainText(
+    "That authenticator code could not be confirmed.",
+  );
+  await expect(code).toBeFocused();
+
+  await code.fill(validCode);
+  await page.getByRole("button", { name: "Enable authenticator" }).click();
+  await expect(page).toHaveURL(`${BASE_URL}/`);
+  await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+
+  const after = await context.request.get(`${BASE_URL}/api/companies`);
+  expect(after.status()).toBe(200);
+  await context.close();
 });

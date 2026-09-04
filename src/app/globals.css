@@ -1707,6 +1707,10 @@ main:focus {
   background: var(--raised);
 }
 
+.auth-card--wide {
+  width: min(100%, 46rem);
+}
+
 .auth-card h1 {
   font-size: var(--h2-size);
   line-height: var(--h2-leading);
@@ -1739,6 +1743,71 @@ main:focus {
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.signup-progress {
+  margin-bottom: var(--space-2);
+}
+
+.signup-progress ol {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.signup-progress li {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--muted);
+}
+
+.signup-progress li.is-current {
+  border-color: var(--line-strong);
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.signup-progress li.is-complete {
+  color: var(--accent);
+}
+
+.signup-progress__number {
+  display: inline-grid;
+  width: var(--space-8);
+  height: var(--space-8);
+  flex: none;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.signup-progress__copy {
+  display: grid;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.signup-progress__copy strong {
+  overflow: hidden;
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signup-progress__copy small {
+  color: var(--faint);
+  font-size: 0.7rem;
 }
 
 .more-sign-out {
@@ -3689,6 +3758,30 @@ main:focus {
   margin: 0;
 }
 
+.totp-manual {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--raised);
+}
+
+.totp-manual summary {
+  display: flex;
+  min-height: var(--target-min);
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.totp-manual[open] summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.totp-manual .totp-key-block {
+  padding: var(--space-3);
+}
+
 .authenticator-qr {
   display: block;
   width: 100%;
@@ -3869,6 +3962,27 @@ main:focus {
   .settings-export-actions {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 479px) {
+  .signup-progress li {
+    display: grid;
+    justify-items: center;
+    gap: var(--space-1);
+    padding-inline: var(--space-1);
+    text-align: center;
+  }
+
+  .signup-progress__copy strong {
+    overflow: visible;
+    font-size: 0.72rem;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .signup-progress__copy small {
+    font-size: 0.66rem;
   }
 }
 

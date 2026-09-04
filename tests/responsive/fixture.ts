@@ -17,6 +17,11 @@ export const FIXTURE = {
     workspaceId: "responsive-workspace-empty",
     username: "responsive_empty",
   },
+  accountSetup: {
+    userId: "responsive-user-setup",
+    workspaceId: "responsive-workspace-setup",
+    username: "responsive_setup",
+  },
   a: {
     companyId: "responsive-company-a",
     contactId: "responsive-contact-a",

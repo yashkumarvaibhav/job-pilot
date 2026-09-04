@@ -126,6 +126,17 @@ export function TotpSetupPanel({
         codeRef.current?.focus();
         return;
       }
+      if (onboarding) {
+        const redirect =
+          body &&
+          typeof body === "object" &&
+          typeof (body as { redirect?: unknown }).redirect === "string"
+            ? (body as { redirect: string }).redirect
+            : "/";
+        router.replace(redirect);
+        router.refresh();
+        return;
+      }
       setEnabled(true);
       setSetup(null);
       router.refresh();
@@ -180,26 +191,34 @@ export function TotpSetupPanel({
             </div>
             <AuthenticatorQrCode uri={setup.uri} />
           </div>
-          <div className="totp-key-block">
-            <h3>Can’t scan it?</h3>
-            <p className="settings-help">
-              Enter this manual setup key in your authenticator app instead.
-            </p>
-            <span className="eyebrow">Manual setup key</span>
-            <code className="totp-secret">{setup.secret}</code>
-            <div className="security-actions">
-              <button className="btn btn--ghost" onClick={copySecret} type="button">
-                Copy setup key
-              </button>
-              <a className="btn btn--ghost" href={setup.uri}>
-                Open authenticator app
-              </a>
+          <details className="totp-manual">
+            <summary>Can’t scan it?</summary>
+            <div className="totp-key-block">
+              <p className="settings-help">
+                Enter this manual setup key in your authenticator app instead.
+              </p>
+              <span className="eyebrow">Manual setup key</span>
+              <code className="totp-secret">{setup.secret}</code>
+              <div className="security-actions">
+                <button className="btn btn--ghost" onClick={copySecret} type="button">
+                  Copy setup key
+                </button>
+                <a className="btn btn--ghost" href={setup.uri}>
+                  Open authenticator app
+                </a>
+              </div>
+              <p aria-live="polite" className="settings-saved" role="status">
+                {copied ? "Setup key copied." : ""}
+              </p>
             </div>
-            <p aria-live="polite" className="settings-saved" role="status">
-              {copied ? "Setup key copied." : ""}
-            </p>
-          </div>
+          </details>
           <form className="security-form" onSubmit={confirm}>
+            <div>
+              <h3>Confirm the connection</h3>
+              <p className="settings-help">
+                Enter the current six-digit code shown in your authenticator app.
+              </p>
+            </div>
             <div className="field">
               <label htmlFor={onboarding ? "onboarding-totp-code" : "settings-totp-code"}>
                 Six-digit code

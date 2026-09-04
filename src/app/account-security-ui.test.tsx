@@ -12,6 +12,7 @@ import {
   TotpSkippedWarning,
 } from "../components/account-security";
 import { PasswordRecoveryForm } from "../components/password-recovery-form";
+import { SignupProgress } from "../components/signup-progress";
 
 const SETUP = {
   secret: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
@@ -30,6 +31,18 @@ describe("username and authenticator UI", () => {
       expect(html).not.toContain("Email");
     }
     expect(signup).toContain("3–32 characters");
+    expect(signup).toContain("Continue to authenticator");
+  });
+
+  it("names the current and completed stages without relying on colour", () => {
+    const first = renderToStaticMarkup(<SignupProgress currentStep={1} />);
+    const second = renderToStaticMarkup(<SignupProgress currentStep={2} />);
+
+    expect(first).toContain('aria-current="step"');
+    expect(first).toContain("Current step");
+    expect(first).toContain("Next step");
+    expect(second).toContain("Complete");
+    expect(second).toContain("Current step");
   });
 
   it("shows a local QR, manual key and code field without a signup skip path", () => {

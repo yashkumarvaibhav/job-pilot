@@ -177,7 +177,7 @@ export function AccountForm({ mode }: { mode: Mode }) {
       ) : null}
 
       <button className="btn" disabled={pending} type="submit">
-        {isSignup ? "Create account" : "Sign in"}
+        {isSignup ? "Continue to authenticator" : "Sign in"}
       </button>
     </form>
   );

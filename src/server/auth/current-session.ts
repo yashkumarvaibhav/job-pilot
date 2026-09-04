@@ -59,6 +59,11 @@ export async function requireTenant(): Promise<TenantContext> {
   const tenant = await currentTenant();
 
   if (!tenant) {
+    const database = getDatabase();
+    const token = await readSessionToken();
+    if (resolveEnrollmentSessionTenant(database, token)) {
+      redirect("/setup-totp");
+    }
     redirect(LOGIN_PATH);
   }
 
