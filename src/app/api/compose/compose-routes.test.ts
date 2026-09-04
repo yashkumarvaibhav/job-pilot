@@ -4,6 +4,9 @@ import { and, eq } from "drizzle-orm";
 import { createTenantTestFixture } from "../../../test/tenant-fixture";
 import { emailAccount } from "../../../server/db/schema";
 import { createContact } from "../../../server/repos/contacts";
+import { createCompany } from "../../../server/repos/companies";
+import { createInteraction } from "../../../server/repos/interactions";
+import { createOpportunity } from "../../../server/repos/opportunities";
 import { connectEmailAccount } from "../../../server/repos/email-accounts";
 import { addSuppressionEntry } from "../../../server/repos/send-safety";
 import type { MailPort } from "../../../server/mail/mail-port";
@@ -343,5 +346,82 @@ describe("compose route", () => {
     );
     expect(sent.status).toBe(201);
     expect(mailPort.send).toHaveBeenCalledOnce();
+  });
+
+  it("requires an explicit Continue override for cooldown and logs it", async () => {
+    const fixture = fixtures[0] as ReturnType<typeof createTenantTestFixture>;
+    const account = connectEmailAccount(
+      fixture.client.db,
+      fixture.tenantA,
+      {
+        googleSub: "google-cooldown",
+        email: "cooldown-sender@invalid.test",
+        refreshToken: "synthetic-refresh",
+        sendingWindowStart: 0,
+        sendingWindowEnd: 1439,
+      },
+      TOKEN_KEY,
+    );
+    const companyRow = createCompany(fixture.client.db, fixture.tenantA, {
+      name: "Amazon",
+    });
+    const opportunity = createOpportunity(fixture.client.db, fixture.tenantA, {
+      companyId: companyRow.id,
+      role: "SDE II",
+    });
+    const contact = createContact(fixture.client.db, fixture.tenantA, {
+      id: "contact-cooldown",
+      name: "Rahul Sharma",
+      companyId: companyRow.id,
+      methods: [{ kind: "email", value: "rahul-cool@invalid.test" }],
+    });
+    createInteraction(fixture.client.db, fixture.tenantA, {
+      contactId: contact.id,
+      opportunityId: opportunity.id,
+      channel: "email",
+      direction: "outbound",
+      body: "Earlier note",
+      occurredAt: new Date("2026-08-20T10:00:00.000Z"),
+    });
+
+    const blocked = await POST(
+      request({
+        accountId: account.id,
+        contactId: contact.id,
+        opportunityId: opportunity.id,
+        subject: "Follow up",
+        body: "Checking in",
+        attachmentVersionIds: [],
+        approval: "send_tomorrow",
+      }),
+    );
+    expect(blocked.status).toBe(409);
+    const body = (await blocked.json()) as {
+      error: string;
+      acknowledgeOutreachWarningRequired: boolean;
+    };
+    expect(body.acknowledgeOutreachWarningRequired).toBe(true);
+    expect(body.error).toContain("You contacted Rahul Sharma");
+    expect(body.error).toContain("Continue?");
+
+    const approved = await POST(
+      request({
+        accountId: account.id,
+        contactId: contact.id,
+        opportunityId: opportunity.id,
+        subject: "Follow up",
+        body: "Checking in",
+        attachmentVersionIds: [],
+        approval: "send_tomorrow",
+        acknowledgeOutreachWarning: true,
+      }),
+    );
+    expect(approved.status).toBe(201);
+    const override = fixture.client.sqlite
+      .prepare(
+        "select kind from activity_event where kind = 'OUTREACH_WARNING_OVERRIDDEN'",
+      )
+      .get() as { kind: string } | undefined;
+    expect(override?.kind).toBe("OUTREACH_WARNING_OVERRIDDEN");
   });
 });

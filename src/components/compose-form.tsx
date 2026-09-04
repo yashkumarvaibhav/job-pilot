@@ -24,6 +24,7 @@ export type ComposeContactOption = {
   companyName: string | null;
   doNotContact: boolean;
   suppressionReason?: string | null;
+  emailInvalid?: boolean;
 };
 
 export type ComposeOpportunityOption = {
@@ -139,11 +140,17 @@ export function ComposeForm({
   const [documentId, setDocumentId] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
-  const [pendingAction, setPendingAction] = useState<ComposeApproval | "send_anyway" | null>(null);
+  const [pendingAction, setPendingAction] = useState<
+    ComposeApproval | "send_anyway" | "continue" | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<string | null>(null);
   const [customTime, setCustomTime] = useState("");
   const [sendAnywayRequired, setSendAnywayRequired] = useState(false);
+  const [outreachWarning, setOutreachWarning] = useState<string | null>(null);
+  const [outreachApproval, setOutreachApproval] = useState<ComposeApproval | null>(
+    null,
+  );
 
   const account = accounts.find((item) => item.id === accountId) ?? defaultAccount;
   const contact = contacts.find((item) => item.id === contactId);
@@ -201,8 +208,14 @@ export function ComposeForm({
     setOpportunityId(referral.opportunityId ?? "");
   }
 
-  async function approve(approval: ComposeApproval, sendAnyway = false) {
-    setPendingAction(sendAnyway ? "send_anyway" : approval);
+  async function approve(
+    approval: ComposeApproval,
+    sendAnyway = false,
+    acknowledgeOutreachWarning = false,
+  ) {
+    setPendingAction(
+      acknowledgeOutreachWarning ? "continue" : sendAnyway ? "send_anyway" : approval,
+    );
     setError(null);
     setOutcome(null);
     try {
@@ -220,6 +233,7 @@ export function ComposeForm({
           approval,
           ...(approval === "custom_time" ? { sendAt: customTime } : {}),
           ...(sendAnyway ? { sendAnyway: true } : {}),
+          ...(acknowledgeOutreachWarning ? { acknowledgeOutreachWarning: true } : {}),
         }),
       });
       const responseBody: unknown = await response.json().catch(() => null);
@@ -232,10 +246,24 @@ export function ComposeForm({
         ) {
           setSendAnywayRequired(true);
         }
+        if (
+          typeof responseBody === "object" &&
+          responseBody !== null &&
+          "acknowledgeOutreachWarningRequired" in responseBody &&
+          (responseBody as { acknowledgeOutreachWarningRequired?: unknown })
+            .acknowledgeOutreachWarningRequired === true
+        ) {
+          setOutreachWarning(responseError(responseBody));
+          setOutreachApproval(approval);
+          setPendingAction(null);
+          return;
+        }
         setError(responseError(responseBody));
         return;
       }
       setSendAnywayRequired(false);
+      setOutreachWarning(null);
+      setOutreachApproval(null);
       const queued = responseBody as { status?: unknown; sendAt?: unknown } | null;
       setOutcome(
         queued?.status === "sent"
@@ -286,6 +314,7 @@ export function ComposeForm({
               {contacts.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name} — {item.email}
+                  {item.emailInvalid ? " (invalid)" : ""}
                 </option>
               ))}
             </select>
@@ -416,6 +445,45 @@ export function ComposeForm({
             <AlertTriangle aria-hidden="true" />
             <p>{blockReason} There is no Send anyway button.</p>
           </div>
+        ) : null}
+        {outreachWarning ? (
+          <dialog
+            aria-labelledby="outreach-warning-title"
+            className="compose-outreach-dialog"
+            open
+          >
+            <div className="compose-warning">
+              <AlertTriangle aria-hidden="true" />
+              <div>
+                <h3 id="outreach-warning-title">Continue?</h3>
+                <pre className="compose-outreach-copy">{outreachWarning}</pre>
+              </div>
+            </div>
+            <div className="compose-outreach-dialog__actions">
+              <button
+                className="btn btn--ghost"
+                onClick={() => {
+                  setOutreachWarning(null);
+                  setOutreachApproval(null);
+                }}
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                className="btn"
+                disabled={pendingAction !== null || outreachApproval === null}
+                onClick={() =>
+                  outreachApproval
+                    ? void approve(outreachApproval, sendAnywayRequired, true)
+                    : undefined
+                }
+                type="button"
+              >
+                {pendingAction === "continue" ? "Continuing…" : "Continue"}
+              </button>
+            </div>
+          </dialog>
         ) : null}
         <dl className="compose-review__facts">
           <div><dt>Recipient</dt><dd>{contact ? `${contact.name} <${contact.email}>` : "Choose a contact"}</dd></div>

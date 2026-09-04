@@ -56,6 +56,8 @@ export default async function ComposePage({ searchParams }: Props) {
             companyName: row.companyName,
             doNotContact: row.networkingStatus === "do_not_contact",
             suppressionReason: block?.message ?? null,
+            emailInvalid:
+              Boolean(email.invalidAt) || block?.reason === "bounced",
           }
         : null;
     })

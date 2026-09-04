@@ -8,6 +8,10 @@ import { syncInboxAccount } from "@/server/mail/inbox-sync";
 import { getMailReadDependencies, getMailSendDependencies } from "@/server/mail/runtime";
 import { listEmailAccounts } from "@/server/repos/email-accounts";
 import {
+  evaluateComposeOutreach,
+  logOutreachWarningOverride,
+} from "@/server/repos/outreach-warning";
+import {
   SendSafetyError,
   createQueueMessage,
   getQueueMessage,
@@ -35,6 +39,7 @@ type ComposeQueueInput = {
   approval: ComposeApproval;
   sendAt?: string;
   sendAnyway?: boolean;
+  acknowledgeOutreachWarning?: boolean;
 };
 
 const ALLOWED_KEYS = new Set([
@@ -48,6 +53,7 @@ const ALLOWED_KEYS = new Set([
   "approval",
   "sendAt",
   "sendAnyway",
+  "acknowledgeOutreachWarning",
 ]);
 const APPROVALS = new Set<ComposeApproval>([
   "send_now",
@@ -79,6 +85,8 @@ async function readInput(request: Request): Promise<ComposeQueueInput | null> {
         typeof input.referralId !== "string") ||
       (input.sendAt !== undefined && typeof input.sendAt !== "string") ||
       (input.sendAnyway !== undefined && typeof input.sendAnyway !== "boolean") ||
+      (input.acknowledgeOutreachWarning !== undefined &&
+        typeof input.acknowledgeOutreachWarning !== "boolean") ||
       !Array.isArray(input.attachmentVersionIds) ||
       input.attachmentVersionIds.some((id) => typeof id !== "string")
     ) {
@@ -155,6 +163,32 @@ export async function POST(request: Request) {
         { error: "Custom send time must be a valid instant." },
         { status: 400 },
       );
+    }
+    const outreach = evaluateComposeOutreach(database, tenant, {
+      contactId: input.contactId,
+      opportunityId: input.opportunityId,
+      now,
+    });
+    if (outreach.kind === "blocked") {
+      return NextResponse.json({ error: outreach.message }, { status: 409 });
+    }
+    if (outreach.kind === "warning" && input.acknowledgeOutreachWarning !== true) {
+      return NextResponse.json(
+        {
+          error: outreach.copy,
+          acknowledgeOutreachWarningRequired: true,
+          outreachWarnings: outreach.warnings,
+        },
+        { status: 409 },
+      );
+    }
+    if (outreach.kind === "warning") {
+      logOutreachWarningOverride(database, tenant, {
+        contactId: input.contactId,
+        opportunityId: input.opportunityId,
+        kinds: outreach.warnings.map((warning) => warning.kind),
+        now,
+      });
     }
     const queued = createQueueMessage(database, tenant, {
       accountId: input.accountId,

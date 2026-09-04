@@ -132,12 +132,15 @@ describe("composer UI", () => {
         {
           ...contacts[0],
           suppressionReason: "Email is blocked by bounced suppression.",
+          emailInvalid: true,
         },
       ]),
     );
     expect(html).toContain("Email is blocked by bounced suppression.");
     expect(html).toContain("There is no Send anyway button.");
+    expect(html).toContain("(invalid)");
     expect(html).not.toContain("Send now from");
+    expect(html).not.toContain(">Continue<");
   });
 
   it("uses tokens and stacks the review at the narrow breakpoint", () => {
@@ -147,6 +150,8 @@ describe("composer UI", () => {
     expect(composer).toContain("var(--raised)");
     expect(composer).toContain("var(--line)");
     expect(composer).toContain("var(--warning)");
+    expect(composer).toContain("var(--shadow-lg)");
+    expect(composer).toContain(".compose-outreach-dialog");
     expect(composer).toContain("@media (max-width: 767px)");
     expect(composer).not.toMatch(/#[0-9a-f]{3,8}/i);
   });

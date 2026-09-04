@@ -42,6 +42,8 @@ const KIND_VERBS: Record<string, string> = {
   SEQUENCE_CREATED: "Sequence created",
   SEQUENCE_ENROLLED: "Sequence enrolled",
   SEQUENCE_CANCELLED: "Sequence cancelled",
+  BOUNCE_RECORDED: "Bounce recorded",
+  OUTREACH_WARNING_OVERRIDDEN: "Outreach warning continued",
 };
 
 const channelByValue = new Map<string, string>(
