@@ -9,11 +9,10 @@ vi.mock("next/headers", () => ({
   headers: async () => ({ get: () => null }),
 }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
 }));
 
-import LoginPage from "./(auth)/login/page";
-import SignupPage from "./(auth)/signup/page";
+import { LandingExperience } from "@/components/landing-experience";
 import { POST as signup } from "./api/auth/signup/route";
 
 afterEach(() => {
@@ -28,17 +27,33 @@ describe("demo authentication surfaces", () => {
     process.env.JOB_PILOT_DEPLOYMENT_MODE = "demo";
     process.env.DEMO_ACCOUNT_EMAIL = "demo@jobpilot.invalid.test";
 
-    const html = renderToStaticMarkup(<LoginPage />);
+    const html = renderToStaticMarkup(
+      <LandingExperience
+        authMode="sign-in"
+        demoAccount="demo@jobpilot.invalid.test"
+        setupAvailable
+        signupAvailable={false}
+        totpSetup={null}
+      />,
+    );
 
     expect(html).toContain("Demo environment");
     expect(html).toContain("demo@jobpilot.invalid.test");
-    expect(html).not.toContain("Create account");
+    expect(html).not.toContain("Create your workspace");
   });
 
   it("replaces the signup form with the closed-demo notice", () => {
     process.env.JOB_PILOT_DEPLOYMENT_MODE = "demo";
 
-    const html = renderToStaticMarkup(<SignupPage />);
+    const html = renderToStaticMarkup(
+      <LandingExperience
+        authMode="sign-up"
+        demoAccount="demo@jobpilot.invalid.test"
+        setupAvailable
+        signupAvailable={false}
+        totpSetup={null}
+      />,
+    );
 
     expect(html).toContain("Public account creation is closed for this demo.");
     expect(html).toContain("Sign in");
@@ -68,10 +83,26 @@ describe("demo authentication surfaces", () => {
   it("renders ordinary account access in public application mode", () => {
     process.env.JOB_PILOT_DEPLOYMENT_MODE = "public";
 
-    const loginHtml = renderToStaticMarkup(<LoginPage />);
-    const signupHtml = renderToStaticMarkup(<SignupPage />);
+    const loginHtml = renderToStaticMarkup(
+      <LandingExperience
+        authMode="sign-in"
+        demoAccount={null}
+        setupAvailable
+        signupAvailable
+        totpSetup={null}
+      />,
+    );
+    const signupHtml = renderToStaticMarkup(
+      <LandingExperience
+        authMode="sign-up"
+        demoAccount={null}
+        setupAvailable
+        signupAvailable
+        totpSetup={null}
+      />,
+    );
 
-    expect(loginHtml).toContain("Job Pilot keeps one private workspace for each account.");
+    expect(loginHtml).toContain("Open the private workspace that belongs only to your account.");
     expect(loginHtml).toContain("No account yet?");
     expect(loginHtml).toContain("Create account");
     expect(loginHtml).toContain("Forgot password?");

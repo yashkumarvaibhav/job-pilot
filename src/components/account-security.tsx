@@ -225,6 +225,7 @@ export function TotpSetupPanel({
               </label>
               <input
                 autoComplete="one-time-code"
+                data-dialog-initial-focus={onboarding || undefined}
                 id={onboarding ? "onboarding-totp-code" : "settings-totp-code"}
                 inputMode="numeric"
                 maxLength={6}

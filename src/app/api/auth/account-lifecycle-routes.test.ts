@@ -225,6 +225,11 @@ describe("username and TOTP account routes", () => {
       "198.51.100.23",
     );
     expect(confirmResponse.status).toBe(200);
+    expect(await confirmResponse.json()).toEqual({
+      ok: true,
+      message: "Authenticator enabled.",
+      redirect: "/today",
+    });
     expect(readAccountSecurity(client.db, created.tenant, TOKEN_KEY)?.totpEnabled).toBe(true);
     expect(resolveSessionTenant(client.db, enrollmentSession.token)).toEqual(created.tenant);
     expect(resolveEnrollmentSessionTenant(client.db, enrollmentSession.token)).toBeNull();

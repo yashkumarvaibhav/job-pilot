@@ -9,6 +9,7 @@ const { currentTenantMock, enrollmentTenantMock, redirectMock } = vi.hoisted(() 
 
 vi.mock("next/navigation", () => ({
   redirect: redirectMock,
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
 }));
 
 vi.mock("@/server/auth/current-session", () => ({
@@ -19,6 +20,21 @@ vi.mock("@/server/auth/current-session", () => ({
 vi.mock("@/server/demo-mode", () => ({
   isDemoMode: () => false,
 }));
+
+vi.mock("@/server/auth/account-secret-key", () => ({
+  configuredAccountSecretKey: () => "synthetic-test-key",
+}));
+
+vi.mock("@/server/auth/account-security", () => ({
+  readAccountSecurity: () => ({
+    setup: {
+      secret: "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+      uri: "otpauth://totp/Job%20Pilot%3Aowner_name?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&issuer=Job+Pilot",
+    },
+  }),
+}));
+
+vi.mock("@/server/db/runtime", () => ({ getDatabase: () => ({}) }));
 
 import ForgotPasswordPage from "./(auth)/forgot-password/page";
 import LoginPage from "./(auth)/login/page";
@@ -58,7 +74,8 @@ describe("public account-access routing", () => {
       await LandingPage({ searchParams: Promise.resolve({ auth: "sign-in" }) }),
     );
 
-    expect(html).toContain('data-initial-auth="setup-totp"');
+    expect(html).toContain('data-auth-mode="setup-totp"');
+    expect(html).toContain("Authenticator setup QR code");
   });
 
   it("redirects legacy account pages to canonical landing dialog states", () => {

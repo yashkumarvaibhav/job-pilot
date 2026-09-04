@@ -130,6 +130,7 @@ export function AccountForm({ mode }: { mode: Mode }) {
         <input
           autoCapitalize="none"
           autoComplete="username"
+          data-dialog-initial-focus
           id="username"
           maxLength={isSignup ? USERNAME_MAX_LENGTH : 254}
           minLength={isSignup ? USERNAME_MIN_LENGTH : undefined}

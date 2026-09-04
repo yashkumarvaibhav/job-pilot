@@ -1,16 +1,29 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 
+import {
+  type LandingAuthMode,
+  LandingExperience,
+} from "@/components/landing-experience";
+import { configuredAccountSecretKey } from "@/server/auth/account-secret-key";
+import { readAccountSecurity } from "@/server/auth/account-security";
 import {
   currentIncompleteSignupTenant,
   currentTenant,
 } from "@/server/auth/current-session";
+import { getDatabase } from "@/server/db/runtime";
+import { isDemoMode } from "@/server/demo-mode";
 
-const AUTH_STATES = new Set([
+export const metadata: Metadata = {
+  title: "Job Pilot · Run your job search from one clear workspace",
+  description:
+    "A private operating system for job-search relationships, opportunities, follow-ups and owner-approved outreach.",
+};
+
+const AUTH_STATES = new Set<LandingAuthMode>([
   "sign-in",
   "sign-up",
   "forgot-password",
-  "setup-totp",
 ]);
 
 export default async function LandingPage({
@@ -22,33 +35,24 @@ export default async function LandingPage({
 
   const incomplete = await currentIncompleteSignupTenant();
   const requested = (await searchParams).auth;
-  const initialAuth = incomplete
+  const authMode: LandingAuthMode | null = incomplete
     ? "setup-totp"
-    : requested && AUTH_STATES.has(requested)
-      ? requested
-      : "";
+    : requested && AUTH_STATES.has(requested as LandingAuthMode)
+      ? requested as LandingAuthMode
+      : null;
+  const tokenKey = incomplete ? configuredAccountSecretKey() : null;
+  const security = incomplete
+    ? readAccountSecurity(getDatabase(), incomplete, tokenKey)
+    : null;
+  const demoMode = isDemoMode();
 
   return (
-    <main
-      className="landing-placeholder"
-      data-initial-auth={initialAuth}
-      id="main-content"
-      tabIndex={-1}
-    >
-      <p className="eyebrow">Your private job-search command center</p>
-      <h1>Run your job search from one clear workspace</h1>
-      <p>
-        Track relationships, roles, follow-ups and decisions without losing the
-        next action.
-      </p>
-      <div>
-        <Link className="btn" href="/?auth=sign-up">
-          Create account
-        </Link>
-        <Link className="btn btn--ghost" href="/?auth=sign-in">
-          Sign in
-        </Link>
-      </div>
-    </main>
+    <LandingExperience
+      authMode={authMode}
+      demoAccount={demoMode ? process.env.DEMO_ACCOUNT_EMAIL?.trim() ?? null : null}
+      setupAvailable={tokenKey !== null}
+      signupAvailable={!demoMode}
+      totpSetup={security?.setup ?? null}
+    />
   );
 }

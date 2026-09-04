@@ -32,7 +32,7 @@ function errorMessage(value: unknown): string {
     : REQUEST_FAILED_MESSAGE;
 }
 
-export function PasswordRecoveryForm() {
+export function PasswordRecoveryForm({ onSignIn }: { onSignIn?: () => void } = {}) {
   const formRef = useRef<HTMLFormElement>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +81,14 @@ export function PasswordRecoveryForm() {
           <span>{PASSWORD_RESET_COMPLETE_MESSAGE}</span>
         </p>
         <p className="auth-switch">
-          Continue to <Link href="/login">Sign in</Link>
+          Continue to{" "}
+          {onSignIn ? (
+            <button className="auth-inline-action" onClick={onSignIn} type="button">
+              Sign in
+            </button>
+          ) : (
+            <Link href="/?auth=sign-in">Sign in</Link>
+          )}
         </p>
       </>
     );
@@ -97,7 +104,7 @@ export function PasswordRecoveryForm() {
       ) : null}
       <div className="field">
         <label htmlFor="recovery-username">Username</label>
-        <input autoCapitalize="none" autoComplete="username" id="recovery-username" name="username" required spellCheck={false} type="text" />
+        <input autoCapitalize="none" autoComplete="username" data-dialog-initial-focus id="recovery-username" name="username" required spellCheck={false} type="text" />
       </div>
       <div className="field">
         <label htmlFor="recovery-code">Authenticator code</label>
