@@ -20,6 +20,18 @@ type RouteContext = { params: Promise<{ id: string }> };
 const AUTHENTICATION_REQUIRED = { error: "Authentication required." };
 const COMPANY_NOT_FOUND = { error: "Company not found" };
 const INVALID_COMPANY = { error: "Enter valid company details." };
+const COMPANY_HAS_LINKS = {
+  error:
+    "This company has linked contacts, jobs, or history and cannot be deleted. Keep it for the existing record.",
+};
+
+function isForeignKeyConstraint(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    error.code === "SQLITE_CONSTRAINT_FOREIGNKEY"
+  );
+}
 
 export async function GET(_request: Request, context: RouteContext) {
   const tenant = await currentTenant();
@@ -73,7 +85,14 @@ export async function DELETE(_request: Request, context: RouteContext) {
   }
 
   const { id } = await context.params;
-  return deleteCompany(getDatabase(), tenant, id)
-    ? new Response(null, { status: 204 })
-    : NextResponse.json(COMPANY_NOT_FOUND, { status: 404 });
+  try {
+    return deleteCompany(getDatabase(), tenant, id)
+      ? new Response(null, { status: 204 })
+      : NextResponse.json(COMPANY_NOT_FOUND, { status: 404 });
+  } catch (error) {
+    if (isForeignKeyConstraint(error)) {
+      return NextResponse.json(COMPANY_HAS_LINKS, { status: 409 });
+    }
+    throw error;
+  }
 }

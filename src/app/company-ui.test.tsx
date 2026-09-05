@@ -112,6 +112,8 @@ describe("company screens", () => {
       "Referrals received",
       "Interviews",
       "Edit company",
+      "Delete company",
+      "Linked records are preserved",
     ]) {
       expect(html).toContain(expected);
     }

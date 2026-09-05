@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTenantTestFixture } from "../../../test/tenant-fixture";
 import { createCompany } from "../../../server/repos/companies";
+import { createContact } from "../../../server/repos/contacts";
 
 const mocks = vi.hoisted(() => ({
   database: undefined as unknown,
@@ -17,6 +18,7 @@ vi.mock("@/server/db/runtime", () => ({
 
 import { GET as listCompaniesRoute, POST } from "./route";
 import {
+  DELETE,
   GET as getCompanyRoute,
   PUT,
 } from "./[id]/route";
@@ -197,5 +199,44 @@ describe("company route handlers", () => {
     );
     expect(created.status).toBe(201);
     expect(fixture.rowCount("company")).toBe(3);
+  });
+
+  it("deletes an unlinked company and explains when linked records protect one", async () => {
+    const fixture = newFixture();
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "accidental",
+      name: "Accidental Company",
+    });
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "with-contact",
+      name: "Company With Contact",
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "linked-contact",
+      companyId: "with-contact",
+      name: "Linked Contact",
+    });
+
+    const deleted = await DELETE(
+      new Request("http://localhost/api/companies/accidental", {
+        method: "DELETE",
+      }),
+      { params: Promise.resolve({ id: "accidental" }) },
+    );
+    expect(deleted.status).toBe(204);
+    expect(fixture.rowCount("company")).toBe(1);
+
+    const protectedResponse = await DELETE(
+      new Request("http://localhost/api/companies/with-contact", {
+        method: "DELETE",
+      }),
+      { params: Promise.resolve({ id: "with-contact" }) },
+    );
+    expect(protectedResponse.status).toBe(409);
+    expect(await protectedResponse.json()).toEqual({
+      error:
+        "This company has linked contacts, jobs, or history and cannot be deleted. Keep it for the existing record.",
+    });
+    expect(fixture.rowCount("company")).toBe(1);
   });
 });

@@ -7,6 +7,7 @@ import {
   CompanyRelatedLists,
 } from "@/components/company-conversion";
 import { TagPicker } from "@/components/tag-picker";
+import { RecordDeleteButton } from "@/components/record-delete-button";
 import { calendarDateInZone } from "@/domain/referral";
 import { requireTenant } from "@/server/auth/current-session";
 import { getWorkspaceSettings } from "@/server/db/foundation";
@@ -148,6 +149,23 @@ export default async function CompanyDetailPage({
       <section aria-labelledby="edit-company" className="detail-section">
         <h2 id="edit-company">Edit company</h2>
         <CompanyEditForm company={company} />
+      </section>
+
+      <section aria-labelledby="delete-company" className="detail-section danger-zone">
+        <div>
+          <h2 id="delete-company">Delete company</h2>
+          <p>
+            Delete this company only if it was added by mistake and has no linked
+            records. Linked records are preserved, so a company with contacts,
+            jobs, or history cannot be deleted.
+          </p>
+        </div>
+        <RecordDeleteButton
+          endpoint={`/api/companies/${company.id}`}
+          label="Delete company"
+          name={company.name}
+          redirectTo="/companies"
+        />
       </section>
     </article>
   );
