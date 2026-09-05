@@ -196,6 +196,8 @@ describe("contact screens", () => {
       "Create opportunity from conversation",
       "Log the opening first",
       "No opportunities linked yet.",
+      "Delete contact",
+      "Linked history is preserved",
     ]) {
       expect(html).toContain(expected);
     }

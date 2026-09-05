@@ -21,6 +21,7 @@ import { ReferralCreateForm } from "@/components/referral-forms";
 import { ReferralCollection } from "@/components/referral-list";
 import { TagPicker } from "@/components/tag-picker";
 import { StaleFlag } from "@/components/stale-chip";
+import { RecordDeleteButton } from "@/components/record-delete-button";
 import { RolledUpStageChip } from "@/components/application-status";
 import {
   formatInteractionOccurredAt,
@@ -428,6 +429,23 @@ export default async function ContactDetailPage({
               isPrimary,
             })),
           }}
+        />
+      </section>
+
+      <section aria-labelledby="delete-contact" className="detail-section danger-zone">
+        <div>
+          <h2 id="delete-contact">Delete contact</h2>
+          <p>
+            Delete this contact only if it was added by mistake and has no linked
+            history. Linked history is preserved; set the networking status to
+            Inactive when the relationship should stay out of active work.
+          </p>
+        </div>
+        <RecordDeleteButton
+          endpoint={`/api/contacts/${contact.id}`}
+          label="Delete contact"
+          name={contact.name}
+          redirectTo="/contacts"
         />
       </section>
     </article>

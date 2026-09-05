@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTenantTestFixture } from "../../../test/tenant-fixture";
 import { createCompany } from "../../../server/repos/companies";
 import { createContact } from "../../../server/repos/contacts";
+import { createInteraction } from "../../../server/repos/interactions";
 
 const mocks = vi.hoisted(() => ({
   database: undefined as unknown,
@@ -17,7 +18,7 @@ vi.mock("@/server/db/runtime", () => ({
 }));
 
 import { GET as listContactsRoute, POST } from "./route";
-import { GET as getContactRoute, PUT } from "./[id]/route";
+import { DELETE, GET as getContactRoute, PUT } from "./[id]/route";
 
 function jsonRequest(url: string, method: string, body: unknown) {
   return new Request(url, {
@@ -208,5 +209,45 @@ describe("contact route handlers", () => {
     });
     expect(JSON.stringify(created)).not.toContain("workspace");
     expect(fixture.rowCount("company")).toBe(1);
+  });
+
+  it("deletes an unlinked contact and explains when linked history protects one", async () => {
+    const fixture = newFixture();
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "accidental",
+      name: "Accidental Contact",
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "with-history",
+      name: "Contact With History",
+    });
+    createInteraction(fixture.client.db, fixture.tenantA, {
+      contactId: "with-history",
+      channel: "whatsapp",
+      direction: "outbound",
+      body: "Recorded history",
+    });
+
+    const deleted = await DELETE(
+      new Request("http://localhost/api/contacts/accidental", {
+        method: "DELETE",
+      }),
+      { params: Promise.resolve({ id: "accidental" }) },
+    );
+    expect(deleted.status).toBe(204);
+    expect(fixture.rowCount("contact")).toBe(1);
+
+    const protectedResponse = await DELETE(
+      new Request("http://localhost/api/contacts/with-history", {
+        method: "DELETE",
+      }),
+      { params: Promise.resolve({ id: "with-history" }) },
+    );
+    expect(protectedResponse.status).toBe(409);
+    expect(await protectedResponse.json()).toEqual({
+      error:
+        "This contact has linked history and cannot be deleted. Set its networking status to Inactive to keep the history out of active work.",
+    });
+    expect(fixture.rowCount("contact")).toBe(1);
   });
 });

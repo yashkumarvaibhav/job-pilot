@@ -3241,6 +3241,48 @@ main:focus {
   border-top: 1px solid var(--line);
 }
 
+.danger-zone {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.danger-zone > div:first-child {
+  display: grid;
+  max-width: var(--measure-copy);
+  gap: var(--space-2);
+}
+
+.danger-zone p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.record-delete-action {
+  display: grid;
+  justify-items: end;
+  gap: var(--space-2);
+}
+
+.record-delete-action .btn {
+  gap: var(--space-2);
+}
+
+.record-delete-action svg {
+  width: var(--space-4);
+  height: var(--space-4);
+}
+
+@media (max-width: 767px) {
+  .danger-zone {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .record-delete-action,
+  .record-delete-action .btn {
+    width: 100%;
+  }
+}
+
 .company-field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
