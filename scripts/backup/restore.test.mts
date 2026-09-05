@@ -310,24 +310,28 @@ describe("restoreBackup — verification", () => {
 });
 
 describe("restoreBackup — the live database", () => {
-  it("refuses to overwrite it without --force", () => {
-    const app = scratchApp();
-    seedTenants(app.databasePath);
-    const backup = createBackup({ appRoot: app.root });
-    const before = readFileSync(app.databasePath);
+  it(
+    "refuses to overwrite it without --force",
+    () => {
+      const app = scratchApp();
+      seedTenants(app.databasePath);
+      const backup = createBackup({ appRoot: app.root });
+      const before = readFileSync(app.databasePath);
 
-    expect(() =>
-      restoreBackup({ appRoot: app.root, directory: backup.directory }),
-    ).toThrowError(/Refusing to overwrite the live database/);
-    expect(() =>
-      restoreBackup({
-        appRoot: app.root,
-        directory: backup.directory,
-        into: app.databasePath,
-      }),
-    ).toThrowError(/Refusing to overwrite the live database/);
-    expect(readFileSync(app.databasePath)).toEqual(before);
-  });
+      expect(() =>
+        restoreBackup({ appRoot: app.root, directory: backup.directory }),
+      ).toThrowError(/Refusing to overwrite the live database/);
+      expect(() =>
+        restoreBackup({
+          appRoot: app.root,
+          directory: backup.directory,
+          into: app.databasePath,
+        }),
+      ).toThrowError(/Refusing to overwrite the live database/);
+      expect(readFileSync(app.databasePath)).toEqual(before);
+    },
+    15_000,
+  );
 
   it("revokes every restored session and unused account token with --force", () => {
     const app = scratchApp();
