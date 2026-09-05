@@ -11,9 +11,11 @@ import {
   completeTask,
   createTask,
   createTaskFromDerived,
+  deleteTask,
   getTask,
   listDueItems,
   listTasks,
+  updateTask,
 } from "./tasks";
 
 describe("task repository", () => {
@@ -143,6 +145,58 @@ describe("task repository", () => {
       ]),
     );
     expect(items).toHaveLength(2);
+  });
+
+  it("reopens and deletes only a workspace-owned task", () => {
+    const fixture = newFixture();
+    createTask(fixture.client.db, fixture.tenantA, {
+      id: "owned-task",
+      title: "Owned task",
+      now: new Date("2026-09-05T10:00:00.000Z"),
+    });
+    createTask(fixture.client.db, fixture.tenantB, {
+      id: "private-task",
+      title: "Private task",
+    });
+    completeTask(
+      fixture.client.db,
+      fixture.tenantA,
+      "owned-task",
+      new Date("2026-09-05T11:00:00.000Z"),
+    );
+
+    const reopened = updateTask(
+      fixture.client.db,
+      fixture.tenantA,
+      "owned-task",
+      { status: "open", now: new Date("2026-09-05T12:00:00.000Z") },
+    );
+    expect(reopened).toMatchObject({ status: "open", completedAt: null });
+
+    const before = fixture.rowCount("activity_event");
+    expect(
+      deleteTask(fixture.client.db, fixture.tenantA, "private-task"),
+    ).toBe(false);
+    expect(fixture.rowCount("activity_event")).toBe(before);
+
+    expect(deleteTask(fixture.client.db, fixture.tenantA, "owned-task")).toBe(
+      true,
+    );
+    expect(
+      getTask(fixture.client.db, fixture.tenantA, "owned-task"),
+    ).toBeUndefined();
+    expect(
+      fixture.client.sqlite
+        .prepare(
+          "select kind from activity_event where workspace_id = ? and entity_id = ? order by at asc",
+        )
+        .all(fixture.tenantA.workspaceId, "owned-task"),
+    ).toEqual([
+      { kind: "TASK_CREATED" },
+      { kind: "TASK_COMPLETED" },
+      { kind: "TASK_UPDATED" },
+      { kind: "TASK_DELETED" },
+    ]);
   });
 
   it("converts a derived next action into one task that suppresses only that source", () => {

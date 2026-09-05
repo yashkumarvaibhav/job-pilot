@@ -2,8 +2,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { calendarDateInZone } from "../domain/referral";
+import { dueSourceKey } from "../domain/due-source";
 import { createContact, updateContact } from "../server/repos/contacts";
-import { createTask } from "../server/repos/tasks";
+import { createTask, createTaskFromDerived } from "../server/repos/tasks";
 import { createTenantTestFixture } from "../test/tenant-fixture";
 
 const mocks = vi.hoisted(() => ({
@@ -68,6 +69,7 @@ describe("task screens", () => {
     );
     expect(open).toContain("Prepare system design");
     expect(open).toContain("Complete");
+    expect(open).toContain("Delete task");
     expect(open).toContain("2026-09-07");
     expect(open).toContain('class="tbl task-table"');
     expect(open).toContain('class="task-card-list"');
@@ -87,6 +89,8 @@ describe("task screens", () => {
     );
     expect(completed).toContain("Prepare system design");
     expect(completed).toContain("Completed");
+    expect(completed).toContain("Reopen");
+    expect(completed).toContain("Delete task");
   });
 
   it("shows a contact next action and a same-day linked task on Today", async () => {
@@ -116,5 +120,27 @@ describe("task screens", () => {
     expect(html).toContain("Rahul Sharma");
     expect(html).toContain('class="tbl task-table"');
     expect(html).toContain('class="task-card-list"');
+  });
+
+  it("labels removal of a converted Today row as Undo create task", async () => {
+    const fixture = newFixture();
+    const asOfOn = calendarDateInZone("Asia/Kolkata");
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "priya",
+      name: "Priya Nair",
+    });
+    updateContact(fixture.client.db, fixture.tenantA, "priya", {
+      nextAction: "Follow up",
+      followUpOn: asOfOn,
+    });
+    createTaskFromDerived(fixture.client.db, fixture.tenantA, {
+      id: "converted-follow-up",
+      sourceKey: dueSourceKey("contact_next_action", "priya"),
+    });
+
+    const html = renderToStaticMarkup(await Home());
+    expect(html).toContain("Undo create task");
+    expect(html).toContain("Complete");
+    expect(html).not.toContain(">Create task<");
   });
 });

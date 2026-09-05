@@ -8,6 +8,7 @@ import {
 } from "@/server/repos/task-http";
 import {
   getTask,
+  deleteTask,
   TaskInputError,
   updateTask,
 } from "@/server/repos/tasks";
@@ -56,3 +57,14 @@ async function write(request: Request, context: RouteContext) {
 
 export const PUT = write;
 export const PATCH = write;
+
+export async function DELETE(_request: Request, context: RouteContext) {
+  const tenant = await currentTenant();
+  if (!tenant) {
+    return NextResponse.json(AUTHENTICATION_REQUIRED, { status: 401 });
+  }
+  const { id } = await context.params;
+  return deleteTask(getDatabase(), tenant, id)
+    ? new Response(null, { status: 204 })
+    : NextResponse.json(NOT_FOUND, { status: 404 });
+}

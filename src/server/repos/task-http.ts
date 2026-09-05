@@ -2,6 +2,7 @@ import {
   isTaskLinkType,
   isTaskPriority,
   isTaskSource,
+  isTaskStatus,
   type TaskLinkType,
   type TaskPriority,
   type TaskSource,
@@ -22,7 +23,7 @@ const CREATE_FIELDS = [
   "entityType",
   "entityId",
 ] as const;
-const UPDATE_FIELDS = CREATE_FIELDS;
+const UPDATE_FIELDS = [...CREATE_FIELDS, "status"] as const;
 const CONVERT_FIELDS = ["sourceKey"] as const;
 
 async function readObject(
@@ -112,6 +113,9 @@ export async function readUpdateTaskInput(
   if (priority && isTaskPriority(priority)) input.priority = priority;
   const source = optionalString(body, "source");
   if (source && isTaskSource(source)) input.source = source;
+  const status = optionalString(body, "status");
+  if ("status" in body && (!status || !isTaskStatus(status))) return null;
+  if (status && isTaskStatus(status)) input.status = status;
   const entityType = optionalString(body, "entityType");
   if (entityType && isTaskLinkType(entityType)) input.entityType = entityType;
   if (entityType === null) input.entityType = null;

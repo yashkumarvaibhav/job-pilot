@@ -19,7 +19,11 @@ vi.mock("@/server/db/runtime", () => ({
 }));
 
 import { GET as listRoute, POST } from "./route";
-import { GET as detailRoute } from "./[id]/route";
+import {
+  DELETE as deleteRoute,
+  GET as detailRoute,
+  PATCH as updateRoute,
+} from "./[id]/route";
 import { POST as completeRoute } from "./[id]/complete/route";
 import { POST as convertRoute } from "./from-derived/route";
 
@@ -93,6 +97,29 @@ describe("task route handlers", () => {
     expect(await completed.json()).toEqual([
       expect.objectContaining({ status: "completed" }),
     ]);
+
+    const reopenedResponse = await updateRoute(
+      jsonRequest(`http://localhost/api/tasks/${created.id}`, "PATCH", {
+        status: "open",
+      }),
+      { params: Promise.resolve({ id: String(created.id) }) },
+    );
+    expect(reopenedResponse.status).toBe(200);
+    expect(await reopenedResponse.json()).toMatchObject({
+      status: "open",
+      completedAt: null,
+    });
+
+    const deletedResponse = await deleteRoute(
+      jsonRequest(`http://localhost/api/tasks/${created.id}`, "DELETE"),
+      { params: Promise.resolve({ id: String(created.id) }) },
+    );
+    expect(deletedResponse.status).toBe(204);
+    const empty = await listRoute(
+      jsonRequest("http://localhost/api/tasks", "GET"),
+    );
+    expect(empty.status).toBe(200);
+    expect(await empty.json()).toEqual([]);
   });
 
   it("converts a derived contact next action without leaking tenant B", async () => {
@@ -187,5 +214,22 @@ describe("task route handlers", () => {
         sourceKey: dueSourceKey("contact_next_action", "b-priya"),
       }),
     ]);
+  });
+
+  it("does not let one workspace delete another workspace's task", async () => {
+    const fixture = newFixture();
+    createTask(fixture.client.db, fixture.tenantB, {
+      id: "private-task",
+      title: "Private task",
+    });
+    const before = fixture.rowCount("activity_event");
+
+    const response = await deleteRoute(
+      jsonRequest("http://localhost/api/tasks/private-task", "DELETE"),
+      { params: Promise.resolve({ id: "private-task" }) },
+    );
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "Task not found" });
+    expect(fixture.rowCount("activity_event")).toBe(before);
   });
 });

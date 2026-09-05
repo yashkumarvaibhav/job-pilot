@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AlarmClock } from "lucide-react";
 
-import { ConvertDueItemButton, TaskCompleteButton } from "@/components/task-forms";
+import { ConvertDueItemButton, TaskActions } from "@/components/task-forms";
 import { taskEntityHref } from "@/components/task-status";
 import { isOverdueOn } from "@/domain/assessment";
 import { parseDueSourceKey } from "@/domain/due-source";
@@ -36,7 +36,14 @@ function DueItemNextStep({ row }: { row: DueItem }) {
     return <ConvertDueItemButton sourceKey={row.sourceKey} title={row.title} />;
   }
   if (row.taskId) {
-    return <TaskCompleteButton taskId={row.taskId} />;
+    return (
+      <TaskActions
+        deleteLabel={row.derivedFromKey ? "Undo create task" : "Delete task"}
+        status="open"
+        taskId={row.taskId}
+        title={row.title}
+      />
+    );
   }
   return "Open task";
 }

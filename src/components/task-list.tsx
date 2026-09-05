@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { TaskCompleteButton } from "@/components/task-forms";
+import { TaskActions } from "@/components/task-forms";
 import {
   TaskPriorityChip,
   TaskSourceChip,
@@ -12,11 +12,9 @@ import type { TaskListItem } from "@/server/repos/tasks";
 export function TaskCollection({
   empty,
   rows,
-  showComplete,
 }: {
   empty: string;
   rows: TaskListItem[];
-  showComplete: boolean;
 }) {
   if (rows.length === 0) {
     return (
@@ -38,7 +36,7 @@ export function TaskCollection({
               <th scope="col">Priority</th>
               <th scope="col">Status</th>
               <th scope="col">Source</th>
-              {showComplete ? <th scope="col">Action</th> : null}
+              <th scope="col">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -66,11 +64,13 @@ export function TaskCollection({
                   <td>
                     <TaskSourceChip source={row.source} />
                   </td>
-                  {showComplete ? (
-                    <td>
-                      <TaskCompleteButton taskId={row.id} />
-                    </td>
-                  ) : null}
+                  <td>
+                    <TaskActions
+                      status={row.status}
+                      taskId={row.id}
+                      title={row.title}
+                    />
+                  </td>
                 </tr>
               );
             })}
@@ -102,7 +102,11 @@ export function TaskCollection({
                 <TaskPriorityChip priority={row.priority} />
                 <TaskSourceChip source={row.source} />
               </span>
-              {showComplete ? <TaskCompleteButton taskId={row.id} /> : null}
+              <TaskActions
+                status={row.status}
+                taskId={row.id}
+                title={row.title}
+              />
             </li>
           );
         })}

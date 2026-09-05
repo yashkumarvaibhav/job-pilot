@@ -7,6 +7,7 @@ import {
   TASK_LINK_TYPES,
   TASK_PRIORITIES,
   type TaskLinkType,
+  type TaskStatus,
 } from "@/domain/task";
 
 function responseError(value: unknown, fallback: string): string {
@@ -168,40 +169,83 @@ export function TaskCreateForm({ links }: { links: TaskLinkOptions }) {
   );
 }
 
-export function TaskCompleteButton({ taskId }: { taskId: string }) {
+export function TaskActions({
+  deleteLabel = "Delete task",
+  status,
+  taskId,
+  title,
+}: {
+  deleteLabel?: string;
+  status: TaskStatus;
+  taskId: string;
+  title: string;
+}) {
   const router = useRouter();
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState<
+    "complete" | "reopen" | "delete" | null
+  >(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function complete() {
-    setPending(true);
+  async function change(next: "complete" | "reopen" | "delete") {
+    if (
+      next === "delete" &&
+      !window.confirm(`${deleteLabel} “${title}”? This cannot be undone.`)
+    ) {
+      return;
+    }
+    setPending(next);
     setMessage(null);
     try {
-      const response = await fetch(`/api/tasks/${taskId}/complete`, {
-        method: "POST",
-      });
-      const body: unknown = await response.json();
+      const response = await fetch(
+        next === "complete"
+          ? `/api/tasks/${taskId}/complete`
+          : `/api/tasks/${taskId}`,
+        next === "reopen"
+          ? {
+              method: "PATCH",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ status: "open" }),
+            }
+          : { method: next === "delete" ? "DELETE" : "POST" },
+      );
       if (!response.ok) {
-        setMessage(responseError(body, "Could not complete the task."));
+        const body: unknown = await response.json().catch(() => null);
+        setMessage(responseError(body, `Could not ${next} the task.`));
         return;
       }
       router.refresh();
     } catch {
       setMessage("Could not reach Job Pilot. Check the connection and retry.");
     } finally {
-      setPending(false);
+      setPending(null);
     }
   }
 
   return (
-    <span className="task-complete">
+    <span className="task-actions">
       <button
         className="btn btn--ghost"
-        disabled={pending}
-        onClick={() => void complete()}
+        disabled={pending !== null}
+        onClick={() =>
+          void change(status === "completed" ? "reopen" : "complete")
+        }
         type="button"
       >
-        {pending ? "Completing…" : "Complete"}
+        {pending === "complete"
+          ? "Completing…"
+          : pending === "reopen"
+            ? "Reopening…"
+            : status === "completed"
+              ? "Reopen"
+              : "Complete"}
+      </button>
+      <button
+        className="btn btn--danger"
+        disabled={pending !== null}
+        onClick={() => void change("delete")}
+        type="button"
+      >
+        {pending === "delete" ? "Deleting…" : deleteLabel}
       </button>
       {message ? (
         <span className="form-alert" role="alert">

@@ -26,6 +26,7 @@ const KIND_VERBS: Record<string, string> = {
   TASK_CREATED: "Task created",
   TASK_UPDATED: "Task updated",
   TASK_COMPLETED: "Task completed",
+  TASK_DELETED: "Task deleted",
   INTERACTION_SENT: "Message sent",
   INTERACTION_REPLIED: "Reply received",
   INTERACTION_LOGGED: "Interaction logged",

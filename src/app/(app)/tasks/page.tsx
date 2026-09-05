@@ -100,7 +100,6 @@ export default async function TasksPage({ searchParams }: Props) {
             : "No open tasks. Follow-up dates on contacts also appear on Today."
         }
         rows={tasks}
-        showComplete={status !== "completed"}
       />
       <section aria-labelledby="add-task" className="detail-section">
         <h2 id="add-task">Add task</h2>

@@ -43,6 +43,7 @@ import {
   company,
   contact,
   interview,
+  notification,
   opportunity,
   referralRequest,
   task,
@@ -818,6 +819,44 @@ export function completeTask(
       entityId: id,
     });
     return updated;
+  });
+}
+
+export function deleteTask(
+  database: AppDatabase,
+  tenant: TenantContext,
+  id: string,
+  at = new Date(),
+): boolean {
+  return database.transaction((transaction) => {
+    const current = transaction
+      .select({ id: task.id })
+      .from(task)
+      .where(and(eq(task.workspaceId, tenant.workspaceId), eq(task.id, id)))
+      .get();
+    if (!current) {
+      return false;
+    }
+    transaction
+      .delete(notification)
+      .where(
+        and(
+          eq(notification.workspaceId, tenant.workspaceId),
+          eq(notification.dueKey, dueSourceKey("task", id)),
+        ),
+      )
+      .run();
+    transaction
+      .delete(task)
+      .where(and(eq(task.workspaceId, tenant.workspaceId), eq(task.id, id)))
+      .run();
+    logEvent(transaction, tenant, {
+      at,
+      kind: "TASK_DELETED",
+      entityType: "task",
+      entityId: id,
+    });
+    return true;
   });
 }
 
