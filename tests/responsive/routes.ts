@@ -31,6 +31,7 @@ export const REGISTERED_PAGES: RegisteredPage[] = [
   { file: "(app)/referrals/[id]/page.tsx", path: `/referrals/${FIXTURE.a.referralId}`, access: "signed-in" },
   { file: "(app)/settings/page.tsx", path: "/settings", access: "signed-in" },
   { file: "(app)/settings/activity/page.tsx", path: "/settings/activity", access: "signed-in" },
+  { file: "(app)/settings/digest/preview/page.tsx", path: "/settings/digest/preview", access: "signed-in" },
   { file: "(app)/settings/documents/page.tsx", path: "/settings/documents", access: "signed-in" },
   { file: "(app)/settings/import/page.tsx", path: "/settings/import", access: "signed-in" },
   { file: "(app)/settings/queue/page.tsx", path: "/settings/queue", access: "signed-in" },
