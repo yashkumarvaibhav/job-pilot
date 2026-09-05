@@ -60,13 +60,41 @@ describe("company screens", () => {
     expect(html).toContain("Add company");
   });
 
-  it("renders both desktop table and mobile card treatments with target text and icon", async () => {
+  it("renders live scoped contact navigation in desktop and mobile company lists", async () => {
     const fixture = newFixture();
     createCompany(fixture.client.db, fixture.tenantA, {
       id: "microsoft",
       name: "Microsoft",
       industry: "Technology",
       target: true,
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "rahul",
+      name: "Rahul Sharma",
+      companyId: "microsoft",
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "priya",
+      name: "Priya Nair",
+      companyId: "microsoft",
+    });
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "exl",
+      name: "EXL",
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "mudassir",
+      name: "Mudassir Jamil",
+      companyId: "exl",
+    });
+    createCompany(fixture.client.db, fixture.tenantB, {
+      id: "private-microsoft",
+      name: "Microsoft",
+    });
+    createContact(fixture.client.db, fixture.tenantB, {
+      id: "hidden-contact",
+      name: "Hidden Contact",
+      companyId: "private-microsoft",
     });
 
     const html = renderToStaticMarkup(await CompaniesPage());
@@ -76,6 +104,16 @@ describe("company screens", () => {
     expect(html).toContain("Microsoft");
     expect(html).toContain("Technology");
     expect(html).toContain("Target");
+    expect(html.match(/>2 contacts</g)).toHaveLength(2);
+    expect(html.match(/>1 contact</g)).toHaveLength(2);
+    expect(
+      html.match(/href="\/companies\/microsoft#company-contacts"/g),
+    ).toHaveLength(2);
+    expect(html.match(/href="\/companies\/exl#company-contacts"/g)).toHaveLength(
+      2,
+    );
+    expect(html).not.toContain("3 contacts");
+    expect(html).not.toContain("Hidden Contact");
     expect(html).toContain('aria-hidden="true"');
   });
 
@@ -196,6 +234,8 @@ describe("company screens", () => {
     expect(html).toContain("Referral requests");
     expect(html).toContain("Referrals received");
     expect(html).toContain("Rahul Sharma");
+    expect(html).toContain('id="company-contacts"');
+    expect(html).toContain('href="/contacts/rahul"');
     expect(html).toContain("SDE");
     expect(html).toContain("Saved intern");
     expect(html).toContain("Coding");

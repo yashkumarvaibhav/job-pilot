@@ -3,11 +3,38 @@ import Link from "next/link";
 import { CompanyCreatePanel, TargetChip } from "@/components/company-form";
 import { requireTenant } from "@/server/auth/current-session";
 import { getDatabase } from "@/server/db/runtime";
-import { listCompanies } from "@/server/repos/companies";
+import { listCompanySummaries } from "@/server/repos/companies";
+
+function contactCountLabel(contactCount: number) {
+  return `${contactCount} ${contactCount === 1 ? "contact" : "contacts"}`;
+}
+
+function CompanyContactCount({
+  companyId,
+  contactCount,
+  className,
+}: {
+  companyId: string;
+  contactCount: number;
+  className?: string;
+}) {
+  const label = contactCountLabel(contactCount);
+  return contactCount === 0 ? (
+    <span>{label}</span>
+  ) : (
+    <Link
+      aria-label={`${label}; show company contacts`}
+      className={className}
+      href={`/companies/${companyId}#company-contacts`}
+    >
+      {label}
+    </Link>
+  );
+}
 
 export default async function CompaniesPage() {
   const tenant = await requireTenant();
-  const companies = listCompanies(getDatabase(), tenant);
+  const companies = listCompanySummaries(getDatabase(), tenant);
 
   return (
     <section className="company-page">
@@ -51,7 +78,13 @@ export default async function CompaniesPage() {
                     </td>
                     <td>{company.industry ?? "—"}</td>
                     <td>{company.target ? <TargetChip /> : "—"}</td>
-                    <td className="tnum">0</td>
+                    <td className="tnum">
+                      <CompanyContactCount
+                        className="table-link"
+                        companyId={company.id}
+                        contactCount={company.contactCount}
+                      />
+                    </td>
                     <td className="tnum">0</td>
                     <td>{company.nextAction ?? "—"}</td>
                   </tr>
@@ -62,15 +95,23 @@ export default async function CompaniesPage() {
 
           <ul aria-label="Companies" className="company-card-list">
             {companies.map((company) => (
-              <li key={company.id}>
-                <Link className="company-list-card" href={`/companies/${company.id}`}>
-                  <span className="company-list-card__heading">
+              <li className="company-list-card" key={company.id}>
+                <span className="company-list-card__heading">
+                  <Link
+                    className="company-list-card__name"
+                    href={`/companies/${company.id}`}
+                  >
                     <strong>{company.name}</strong>
-                    {company.target ? <TargetChip /> : null}
-                  </span>
-                  <span>{company.industry ?? "Industry not set"}</span>
-                  <span>{company.nextAction ?? "No next action"}</span>
-                </Link>
+                  </Link>
+                  {company.target ? <TargetChip /> : null}
+                </span>
+                <span>{company.industry ?? "Industry not set"}</span>
+                <CompanyContactCount
+                  className="company-list-card__contacts tnum"
+                  companyId={company.id}
+                  contactCount={company.contactCount}
+                />
+                <span>{company.nextAction ?? "No next action"}</span>
               </li>
             ))}
           </ul>

@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, count, eq, isNotNull } from "drizzle-orm";
 
 import { duplicateOverridePayload } from "../../domain/duplicate";
 import { logEvent } from "../db/activity";
 import type { AppDatabase, AppTransaction } from "../db/client";
-import { company } from "../db/schema";
+import { company, contact } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
 import { requireCompanyDuplicatesAcknowledged } from "./duplicates";
 import {
@@ -14,6 +14,7 @@ import {
 } from "./tags";
 
 export type Company = typeof company.$inferSelect;
+export type CompanyListSummary = Company & { contactCount: number };
 
 export type CreateCompanyInput = {
   id?: string;
@@ -199,6 +200,37 @@ export function listCompanies(
     .where(eq(company.workspaceId, tenant.workspaceId))
     .orderBy(asc(company.name), asc(company.id))
     .all();
+}
+
+export function listCompanySummaries(
+  database: AppDatabase,
+  tenant: TenantContext,
+): CompanyListSummary[] {
+  const companies = listCompanies(database, tenant);
+  const contactCounts = database
+    .select({
+      companyId: contact.companyId,
+      contactCount: count(contact.id),
+    })
+    .from(contact)
+    .where(
+      and(
+        eq(contact.workspaceId, tenant.workspaceId),
+        isNotNull(contact.companyId),
+      ),
+    )
+    .groupBy(contact.companyId)
+    .all();
+  const countByCompany = new Map(
+    contactCounts.flatMap((row) =>
+      row.companyId === null ? [] : [[row.companyId, row.contactCount] as const],
+    ),
+  );
+
+  return companies.map((row) => ({
+    ...row,
+    contactCount: countByCompany.get(row.id) ?? 0,
+  }));
 }
 
 export function getCompany(
