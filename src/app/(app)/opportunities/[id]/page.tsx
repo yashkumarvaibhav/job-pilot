@@ -57,9 +57,11 @@ import { opportunityHealth } from "@/domain/opportunity-health";
 type Props = { params: Promise<{ id: string }> };
 
 function Field({
+  href,
   label,
   value,
 }: {
+  href?: string | null;
   label: string;
   value: string | number | boolean | null;
 }) {
@@ -67,7 +69,17 @@ function Field({
     <div>
       <dt>{label}</dt>
       <dd>
-        {value === null || value === ""
+        {href ? (
+          <a
+            aria-label="Open job post in a new tab"
+            className="table-link"
+            href={href}
+            rel="noreferrer"
+            target="_blank"
+          >
+            Open job post
+          </a>
+        ) : value === null || value === ""
           ? "Not set"
           : typeof value === "boolean"
             ? value
@@ -226,7 +238,12 @@ export default async function OpportunityDetailPage({ params }: Props) {
         <h2 id="opportunity-fields">Opportunity details</h2>
         <dl className="opportunity-field-grid">
           {fields.map(([label, value]) => (
-            <Field key={label} label={label} value={value} />
+            <Field
+              href={label === "Job URL" ? row.url : null}
+              key={label}
+              label={label}
+              value={value}
+            />
           ))}
         </dl>
       </section>

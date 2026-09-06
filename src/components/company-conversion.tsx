@@ -35,12 +35,14 @@ export function CompanyConversionTiles({
 
 export function CompanyRelatedLists({
   applications,
+  companyId,
   contacts,
   interviews,
   opportunities,
   referrals,
 }: {
   applications: ApplicationListItem[];
+  companyId: string;
   contacts: ContactListItem[];
   interviews: InterviewListItem[];
   opportunities: OpportunityListItem[];
@@ -96,6 +98,14 @@ export function CompanyRelatedLists({
       </RelatedSection>
 
       <RelatedSection
+        action={
+          <Link
+            className="btn btn--ghost"
+            href={`/opportunities?company=${companyId}&add=1`}
+          >
+            Add role / post
+          </Link>
+        }
         empty="No opportunities at this company yet."
         headingId="company-opportunities"
         title="Opportunities"
@@ -107,6 +117,7 @@ export function CompanyRelatedLists({
                 <thead>
                   <tr>
                     <th scope="col">Role</th>
+                    <th scope="col">Job post</th>
                     <th scope="col">Bucket</th>
                     <th scope="col">Stage</th>
                   </tr>
@@ -122,6 +133,21 @@ export function CompanyRelatedLists({
                           {row.role}
                         </Link>
                       </td>
+                      <td>
+                        {row.url ? (
+                          <a
+                            aria-label="Open job post in a new tab"
+                            className="table-link"
+                            href={row.url}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            Open job post
+                          </a>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td>{opportunityBucketLabel(row.bucket)}</td>
                       <td>
                         <OpportunityStageChip stage={row.stage} />
@@ -136,17 +162,30 @@ export function CompanyRelatedLists({
               className="opportunity-card-list"
             >
               {opportunities.map((row) => (
-                <li key={row.id}>
-                  <Link
-                    className="opportunity-list-card"
-                    href={`/opportunities/${row.id}`}
-                  >
-                    <span className="opportunity-list-card__heading">
+                <li className="opportunity-list-card" key={row.id}>
+                  <span className="opportunity-list-card__heading">
+                    <Link
+                      className="table-link"
+                      href={`/opportunities/${row.id}`}
+                    >
                       <strong>{row.role}</strong>
-                      <OpportunityStageChip stage={row.stage} />
-                    </span>
-                    <span>{opportunityBucketLabel(row.bucket)}</span>
-                  </Link>
+                    </Link>
+                    <OpportunityStageChip stage={row.stage} />
+                  </span>
+                  <span>{opportunityBucketLabel(row.bucket)}</span>
+                  {row.url ? (
+                    <a
+                      aria-label="Open job post in a new tab"
+                      className="table-link"
+                      href={row.url}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      Open job post
+                    </a>
+                  ) : (
+                    <span>No job link</span>
+                  )}
                 </li>
               ))}
             </ul>
@@ -319,11 +358,13 @@ export function CompanyRelatedLists({
 }
 
 function RelatedSection({
+  action,
   children,
   empty,
   headingId,
   title,
 }: {
+  action?: ReactNode;
   children: ReactNode;
   empty: string;
   headingId: string;
@@ -331,7 +372,14 @@ function RelatedSection({
 }) {
   return (
     <section aria-labelledby={headingId} className="detail-section">
-      <h2 id={headingId}>{title}</h2>
+      {action ? (
+        <div className="related-section__header">
+          <h2 id={headingId}>{title}</h2>
+          {action}
+        </div>
+      ) : (
+        <h2 id={headingId}>{title}</h2>
+      )}
       {children ?? <p className="section-empty">{empty}</p>}
     </section>
   );

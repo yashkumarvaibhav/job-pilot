@@ -78,6 +78,24 @@ describe("company screens", () => {
       name: "Priya Nair",
       companyId: "microsoft",
     });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "microsoft-ai",
+      companyId: "microsoft",
+      role: "AI Engineer",
+      bucket: "active",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "microsoft-sde",
+      companyId: "microsoft",
+      role: "SDE",
+      bucket: "active",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "microsoft-saved",
+      companyId: "microsoft",
+      role: "Saved role",
+      bucket: "saved",
+    });
     createCompany(fixture.client.db, fixture.tenantA, {
       id: "exl",
       name: "EXL",
@@ -96,6 +114,12 @@ describe("company screens", () => {
       name: "Hidden Contact",
       companyId: "private-microsoft",
     });
+    createOpportunity(fixture.client.db, fixture.tenantB, {
+      id: "hidden-role",
+      companyId: "private-microsoft",
+      role: "Hidden Role",
+      bucket: "active",
+    });
 
     const html = renderToStaticMarkup(await CompaniesPage());
 
@@ -106,14 +130,20 @@ describe("company screens", () => {
     expect(html).toContain("Target");
     expect(html.match(/>2 contacts</g)).toHaveLength(2);
     expect(html.match(/>1 contact</g)).toHaveLength(2);
+    expect(html.match(/>2 open roles</g)).toHaveLength(2);
     expect(
       html.match(/href="\/companies\/microsoft#company-contacts"/g),
     ).toHaveLength(2);
     expect(html.match(/href="\/companies\/exl#company-contacts"/g)).toHaveLength(
       2,
     );
+    expect(
+      html.match(/href="\/companies\/microsoft#company-opportunities"/g),
+    ).toHaveLength(2);
     expect(html).not.toContain("3 contacts");
+    expect(html).not.toContain("3 open roles");
     expect(html).not.toContain("Hidden Contact");
+    expect(html).not.toContain("Hidden Role");
     expect(html).toContain('aria-hidden="true"');
   });
 
@@ -189,6 +219,7 @@ describe("company screens", () => {
       companyId: "microsoft",
       role: "SDE",
       bucket: "active",
+      url: "https://careers.microsoft.com/jobs/sde",
     });
     createOpportunity(fixture.client.db, fixture.tenantA, {
       id: "msft-saved",
@@ -238,6 +269,14 @@ describe("company screens", () => {
     expect(html).toContain('href="/contacts/rahul"');
     expect(html).toContain("SDE");
     expect(html).toContain("Saved intern");
+    expect(html).toContain(
+      'href="/opportunities?company=microsoft&amp;add=1"',
+    );
+    expect(html).toContain("Add role / post");
+    expect(html).toContain(
+      'href="https://careers.microsoft.com/jobs/sde"',
+    );
+    expect(html).toContain("Open job post");
     expect(html).toContain("Coding");
     expect(html).not.toContain("Hidden Co");
     expect(html).not.toContain("Hidden role");

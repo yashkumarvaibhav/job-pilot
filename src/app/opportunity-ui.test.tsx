@@ -154,6 +154,31 @@ describe("opportunity screens", () => {
     expect(empty).toContain("No opportunities match these filters.");
   });
 
+  it("opens company-first role creation with the existing company and Active selected", async () => {
+    const fixture = newFixture();
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "microsoft",
+      name: "Microsoft",
+    });
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "google",
+      name: "Google",
+    });
+
+    const html = renderToStaticMarkup(
+      await OpportunitiesPage({
+        searchParams: Promise.resolve({ company: "microsoft", add: "1" }),
+      }),
+    );
+
+    expect(html).toContain('id="new-opportunity-form"');
+    expect(html).toContain('name="companyId"');
+    expect(html).toContain('value="microsoft" selected=""');
+    expect(html).toContain('value="active" selected=""');
+    expect(html).toContain('value="google"');
+    expect(html).toContain("Job URL");
+  });
+
   it("sorts the list by its numeric score without using score colour", async () => {
     const fixture = newFixture();
     createCompany(fixture.client.db, fixture.tenantA, {
@@ -299,6 +324,7 @@ describe("opportunity screens", () => {
       referralPreferred: true,
       jdSnapshot: "Build reliable distributed systems.",
       stage: "interested",
+      url: "https://careers.google.com/jobs/software-engineer",
     });
 
     const html = renderToStaticMarkup(
@@ -322,6 +348,10 @@ describe("opportunity screens", () => {
     expect(html).not.toContain("OA Received");
     expect(html).not.toContain("Interview Scheduled");
     expect(html).not.toContain("Offer</option>");
+    expect(html).toContain(
+      'href="https://careers.google.com/jobs/software-engineer"',
+    );
+    expect(html).toContain("Open job post");
     expect(html).toContain("Linked contacts");
     expect(html).toContain("No contacts linked to this opening yet.");
     expect(html).toContain("Every contact is already linked, or none exist yet.");

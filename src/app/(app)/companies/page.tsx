@@ -32,6 +32,29 @@ function CompanyContactCount({
   );
 }
 
+function CompanyOpenRoleCount({
+  companyId,
+  openRoleCount,
+  className,
+}: {
+  companyId: string;
+  openRoleCount: number;
+  className?: string;
+}) {
+  const label = `${openRoleCount} ${openRoleCount === 1 ? "open role" : "open roles"}`;
+  return openRoleCount === 0 ? (
+    <span>{label}</span>
+  ) : (
+    <Link
+      aria-label={`${label}; show company roles`}
+      className={className}
+      href={`/companies/${companyId}#company-opportunities`}
+    >
+      {label}
+    </Link>
+  );
+}
+
 export default async function CompaniesPage() {
   const tenant = await requireTenant();
   const companies = listCompanySummaries(getDatabase(), tenant);
@@ -85,7 +108,13 @@ export default async function CompaniesPage() {
                         contactCount={company.contactCount}
                       />
                     </td>
-                    <td className="tnum">0</td>
+                    <td className="tnum">
+                      <CompanyOpenRoleCount
+                        className="table-link"
+                        companyId={company.id}
+                        openRoleCount={company.openRoleCount}
+                      />
+                    </td>
                     <td>{company.nextAction ?? "—"}</td>
                   </tr>
                 ))}
@@ -107,9 +136,14 @@ export default async function CompaniesPage() {
                 </span>
                 <span>{company.industry ?? "Industry not set"}</span>
                 <CompanyContactCount
-                  className="company-list-card__contacts tnum"
+                  className="company-list-card__relationship-link tnum"
                   companyId={company.id}
                   contactCount={company.contactCount}
+                />
+                <CompanyOpenRoleCount
+                  className="company-list-card__relationship-link tnum"
+                  companyId={company.id}
+                  openRoleCount={company.openRoleCount}
                 />
                 <span>{company.nextAction ?? "No next action"}</span>
               </li>

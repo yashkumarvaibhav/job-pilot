@@ -51,6 +51,8 @@ type FormValues = Omit<
 
 type Props = {
   companies: CompanyOption[];
+  defaultBucket?: "saved" | "active";
+  defaultCompanyId?: string;
   endpoint: string;
   method: "POST" | "PUT";
   initial?: FormValues;
@@ -69,6 +71,8 @@ function responseError(value: unknown): string {
 
 function OpportunityForm({
   companies,
+  defaultBucket,
+  defaultCompanyId,
   endpoint,
   method,
   initial,
@@ -180,7 +184,7 @@ function OpportunityForm({
       <div className="opportunity-form-grid">
         <div className="field">
           <label htmlFor={`${formId}-company`}>Company</label>
-          <select defaultValue={initial?.companyId ?? ""} disabled={pending} id={`${formId}-company`} name="companyId" required>
+          <select defaultValue={initial?.companyId ?? defaultCompanyId ?? ""} disabled={pending} id={`${formId}-company`} name="companyId" required>
             <option disabled value="">Choose a company</option>
             {companies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}
           </select>
@@ -225,7 +229,7 @@ function OpportunityForm({
         </div>
         <div className="field">
           <label htmlFor={`${formId}-bucket`}>Bucket</label>
-          <select defaultValue={initial?.bucket ?? "saved"} disabled={pending} id={`${formId}-bucket`} name="bucket">
+          <select defaultValue={initial?.bucket ?? defaultBucket ?? "saved"} disabled={pending} id={`${formId}-bucket`} name="bucket">
             {OPPORTUNITY_BUCKETS.map((bucket) => <option key={bucket.value} value={bucket.value}>{bucket.label}</option>)}
           </select>
         </div>
@@ -276,15 +280,25 @@ export function OpportunityStageChip({ stage }: { stage: OpportunityStage }) {
   return <span className="chip opportunity-stage-chip"><svg aria-hidden="true" fill="currentColor" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4" /></svg>{opportunityStageLabel(stage)}</span>;
 }
 
-export function OpportunityCreatePanel({ companies }: { companies: CompanyOption[] }) {
+export function OpportunityCreatePanel({
+  companies,
+  defaultBucket,
+  defaultCompanyId,
+  initiallyOpen = false,
+}: {
+  companies: CompanyOption[];
+  defaultBucket?: "saved" | "active";
+  defaultCompanyId?: string;
+  initiallyOpen?: boolean;
+}) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initiallyOpen);
   if (companies.length === 0) {
     return <div className="company-required"><button className="btn" disabled type="button">Add job</button><p>Add a company before adding a job.</p></div>;
   }
   return <div className="opportunity-create-panel">
     <button aria-controls="new-opportunity-form" aria-expanded={open} className={open ? "btn btn--ghost" : "btn"} onClick={() => setOpen((value) => !value)} type="button">{open ? "Cancel" : "Add job"}</button>
-    {open ? <section className="card opportunity-form-card" id="new-opportunity-form"><h2>Add job</h2><p>Capture the opening first; people and referrals attach later.</p><OpportunityForm companies={companies} endpoint="/api/opportunities" method="POST" onSaved={(created) => router.push(`/opportunities/${created.id}`)} submitLabel="Save job" /></section> : null}
+    {open ? <section className="card opportunity-form-card" id="new-opportunity-form"><h2>Add job</h2><p>Capture the opening first; people and referrals attach later.</p><OpportunityForm companies={companies} defaultBucket={defaultBucket} defaultCompanyId={defaultCompanyId} endpoint="/api/opportunities" method="POST" onSaved={(created) => router.push(`/opportunities/${created.id}`)} submitLabel="Save job" /></section> : null}
   </div>;
 }
 

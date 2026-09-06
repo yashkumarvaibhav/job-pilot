@@ -5,7 +5,7 @@ import { and, asc, count, eq, isNotNull } from "drizzle-orm";
 import { duplicateOverridePayload } from "../../domain/duplicate";
 import { logEvent } from "../db/activity";
 import type { AppDatabase, AppTransaction } from "../db/client";
-import { company, contact } from "../db/schema";
+import { company, contact, opportunity } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
 import { requireCompanyDuplicatesAcknowledged } from "./duplicates";
 import {
@@ -14,7 +14,10 @@ import {
 } from "./tags";
 
 export type Company = typeof company.$inferSelect;
-export type CompanyListSummary = Company & { contactCount: number };
+export type CompanyListSummary = Company & {
+  contactCount: number;
+  openRoleCount: number;
+};
 
 export type CreateCompanyInput = {
   id?: string;
@@ -221,15 +224,33 @@ export function listCompanySummaries(
     )
     .groupBy(contact.companyId)
     .all();
+  const openRoleCounts = database
+    .select({
+      companyId: opportunity.companyId,
+      openRoleCount: count(opportunity.id),
+    })
+    .from(opportunity)
+    .where(
+      and(
+        eq(opportunity.workspaceId, tenant.workspaceId),
+        eq(opportunity.bucket, "active"),
+      ),
+    )
+    .groupBy(opportunity.companyId)
+    .all();
   const countByCompany = new Map(
     contactCounts.flatMap((row) =>
       row.companyId === null ? [] : [[row.companyId, row.contactCount] as const],
     ),
   );
+  const openRoleCountByCompany = new Map(
+    openRoleCounts.map((row) => [row.companyId, row.openRoleCount] as const),
+  );
 
   return companies.map((row) => ({
     ...row,
     contactCount: countByCompany.get(row.id) ?? 0,
+    openRoleCount: openRoleCountByCompany.get(row.id) ?? 0,
   }));
 }
 

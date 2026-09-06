@@ -56,6 +56,13 @@ export default async function OpportunitiesPage({ searchParams }: Props) {
     id,
     name,
   }));
+  const defaultCompanyId = companies.some(
+    (company) => company.id === filter.companyId,
+  )
+    ? filter.companyId
+    : undefined;
+  const companyFirstAdd =
+    query.get("add") === "1" && defaultCompanyId !== undefined;
   const searches = listSavedSearches(database, tenant, "opportunities").map(
     savedSearchResponse,
   );
@@ -88,7 +95,12 @@ export default async function OpportunitiesPage({ searchParams }: Props) {
             pursuing.
           </p>
         </div>
-        <OpportunityCreatePanel companies={companies} />
+        <OpportunityCreatePanel
+          companies={companies}
+          defaultBucket={companyFirstAdd ? "active" : undefined}
+          defaultCompanyId={defaultCompanyId}
+          initiallyOpen={query.get("add") === "1"}
+        />
       </header>
       <nav aria-label="Opportunity bucket" className="filter-tabs">
         {(["saved", "active", "all"] as const).map((item) => (

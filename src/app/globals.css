@@ -3241,8 +3241,15 @@ main:focus {
   border-top: 1px solid var(--line);
 }
 
-.detail-section > h2 {
+.detail-section h2 {
   scroll-margin-top: calc(var(--shell-topbar-height) + var(--space-4));
+}
+
+.related-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
 }
 
 .danger-zone {
@@ -4267,7 +4274,7 @@ main:focus {
   }
 
   .company-list-card__name,
-  .company-list-card__contacts {
+  .company-list-card__relationship-link {
     display: inline-flex;
     min-height: var(--target-min);
     align-items: center;

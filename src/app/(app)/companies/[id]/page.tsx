@@ -120,6 +120,7 @@ export default async function CompanyDetailPage({
 
       <CompanyRelatedLists
         applications={applications}
+        companyId={company.id}
         contacts={contacts}
         interviews={interviews}
         opportunities={opportunities}
