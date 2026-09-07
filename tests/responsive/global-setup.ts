@@ -23,6 +23,7 @@ import { materializeNotifications } from "../../src/server/repos/notifications";
 import { createOpportunity } from "../../src/server/repos/opportunities";
 import { createReferral } from "../../src/server/repos/referrals";
 import { createTask } from "../../src/server/repos/tasks";
+import { JOURNEY_ACCOUNTS } from "../journeys/fixture";
 import { ACCOUNT_PASSWORD, BASE_URL, FIXTURE } from "./fixture";
 
 const NOW = new Date("2026-09-02T09:00:00.000Z");
@@ -240,6 +241,20 @@ export default async function globalSetup() {
     });
     seedWorkspace(client.db, uploadsRoot, tenantA, FIXTURE.a, "Atlas");
     seedWorkspace(client.db, uploadsRoot, tenantB, FIXTURE.b, "Private");
+
+    // The journey suite builds its own rows through the UI, which is the point
+    // of it, so these workspaces start empty. They exist here because account
+    // creation is the one step a journey cannot bootstrap for itself without
+    // making every file depend on the signup screen staying green.
+    for (const account of Object.values(JOURNEY_ACCOUNTS)) {
+      createAccountFoundation(client.db, {
+        ids: { userId: account.userId, workspaceId: account.workspaceId },
+        usernameNormalized: account.username,
+        passwordHash,
+        displayName: account.displayName,
+        now: NOW,
+      });
+    }
   } finally {
     client.close();
   }

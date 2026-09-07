@@ -1,5 +1,8 @@
-export const BASE_URL = "http://127.0.0.1:3061";
-export const ACCOUNT_PASSWORD = "synthetic-responsive-password";
+import { ACCOUNT_PASSWORD, BASE_URL } from "../shared";
+
+// Re-exported so this suite's own imports keep reading from one fixture, while
+// the journey suite shares the same server and password (see ../shared.ts).
+export { ACCOUNT_PASSWORD, BASE_URL };
 
 export const FIXTURE = {
   accountA: {
