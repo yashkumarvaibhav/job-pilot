@@ -116,11 +116,48 @@ test("a due contact follow-up completes once without becoming a task", async ({
     "/api/today/complete",
   );
   await expect(doNow.getByText(CONTACT)).toHaveCount(0);
+  await expect(page.getByText(`Follow-up completed → ${CONTACT}`)).toBeVisible();
   await page.reload();
   await expect(doNow.getByText(CONTACT)).toHaveCount(0);
 
   await page.goto("/tasks?status=completed");
   await expect(page.getByText("Ask about referrals")).toHaveCount(0);
+});
+
+test("marking a follow-up notification done resolves the new source action", async ({
+  page,
+}) => {
+  await page.goto("/contacts");
+  await page.getByRole("link", { name: CONTACT }).click();
+  const edit = page.getByRole("region", { name: "Edit contact" });
+  await edit.getByLabel("Next action", { exact: true }).fill("Send resume");
+  await edit.getByLabel("Follow-up date", { exact: true }).fill(workspaceDate());
+  await saveAndSettle(
+    page,
+    edit.getByRole("button", { name: "Save changes" }),
+    "/api/contacts/",
+  );
+
+  await page.goto("/notifications");
+  const row = page.getByRole("row").filter({ hasText: CONTACT });
+  await expect(row).toBeVisible();
+  await saveAndSettle(
+    page,
+    row.getByRole("button", { name: "Mark done" }),
+    "/api/notifications/done",
+  );
+
+  await page.goto("/today");
+  await expect(
+    page.getByRole("region", { name: "Do Now" }).getByText(CONTACT),
+  ).toHaveCount(0);
+  await page.goto("/contacts");
+  await page.getByRole("link", { name: CONTACT }).click();
+  await expect(
+    page
+      .getByRole("region", { name: "Edit contact" })
+      .getByLabel("Follow-up date", { exact: true }),
+  ).toHaveValue("");
 });
 
 test("the status change survives a reload rather than living in the tab", async ({

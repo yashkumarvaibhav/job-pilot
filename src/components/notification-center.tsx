@@ -20,7 +20,10 @@ import {
   notificationKindLabel,
   type SnoozePreset,
 } from "@/domain/notification";
-import type { DueSourceKind } from "@/domain/due-source";
+import {
+  isDirectlyCompletableDueKind,
+  type DueSourceKind,
+} from "@/domain/due-source";
 import { taskEntityHref } from "@/components/task-status";
 
 export type NotificationView = {
@@ -77,6 +80,33 @@ function responseError(value: unknown, fallback: string): string {
     : fallback;
 }
 
+function notificationTarget(row: NotificationView): {
+  href: string;
+  label: string;
+} | null {
+  if (row.kind === "sequence_follow_up") {
+    return {
+      href: `/settings/queue?review=${encodeURIComponent(row.dueKey)}`,
+      label: "Review",
+    };
+  }
+  const base = taskEntityHref(row.entityType, row.entityId);
+  if (!base) return null;
+  if (row.kind === "interview") {
+    return { href: `${base}#interviews`, label: "Record result" };
+  }
+  if (row.kind === "assessment_deadline") {
+    return { href: `${base}#assessments`, label: "Open assessment" };
+  }
+  if (row.kind === "offer_deadline") {
+    return { href: `${base}#application`, label: "Decide" };
+  }
+  if (row.kind === "opportunity_deadline") {
+    return { href: `${base}#application`, label: "Apply" };
+  }
+  return { href: base, label: "Open" };
+}
+
 export function NotificationMaterialize() {
   const router = useRouter();
   useEffect(() => {
@@ -96,9 +126,11 @@ export function NotificationMaterialize() {
 }
 
 function NotificationActions({
+  canComplete,
   ids,
   kind,
 }: {
+  canComplete: boolean;
   ids: string[];
   kind: DueSourceKind;
 }) {
@@ -133,14 +165,16 @@ function NotificationActions({
 
   return (
     <div className="notification-actions">
-      <button
-        className="btn btn--ghost"
-        disabled={pending}
-        onClick={() => post("/api/notifications/done", { ids })}
-        type="button"
-      >
-        Mark done
-      </button>
+      {canComplete ? (
+        <button
+          className="btn btn--ghost"
+          disabled={pending}
+          onClick={() => post("/api/notifications/done", { ids })}
+          type="button"
+        >
+          Mark done
+        </button>
+      ) : null}
       {SNOOZE_PRESETS.map((preset) => (
         <button
           className="btn btn--ghost"
@@ -246,7 +280,7 @@ export function NotificationCollection({
           <tbody>
             {cards.map((card) => {
               const lead = card.members[0]!;
-              const href = taskEntityHref(lead.entityType, lead.entityId);
+              const target = notificationTarget(lead);
               const title = lead.title;
               const reason =
                 card.members.length > 1
@@ -265,9 +299,9 @@ export function NotificationCollection({
                     {reason ? <small>{reason}</small> : null}
                   </td>
                   <td>
-                    {href ? (
-                      <Link className="table-link" href={href}>
-                        Open
+                    {target ? (
+                      <Link className="table-link" href={target.href}>
+                        {target.label}
                       </Link>
                     ) : (
                       "—"
@@ -276,6 +310,11 @@ export function NotificationCollection({
                   <td className="tnum">{lead.dueOn}</td>
                   <td>
                     <NotificationActions
+                      canComplete={card.members.every(
+                        (member) =>
+                          member.kind === "task" ||
+                          isDirectlyCompletableDueKind(member.kind),
+                      )}
                       ids={card.members.map((member) => member.id)}
                       kind={lead.kind}
                     />
@@ -289,7 +328,7 @@ export function NotificationCollection({
       <ul aria-label="Notifications" className="task-card-list">
         {cards.map((card) => {
           const lead = card.members[0]!;
-          const href = taskEntityHref(lead.entityType, lead.entityId);
+          const target = notificationTarget(lead);
           const reason =
             card.members.length > 1
               ? card.members
@@ -308,12 +347,17 @@ export function NotificationCollection({
               </span>
               {reason ? <span>{reason}</span> : null}
               <span className="tnum">Due {lead.dueOn}</span>
-              {href ? (
-                <Link className="inline-link" href={href}>
-                  Open
+              {target ? (
+                <Link className="inline-link" href={target.href}>
+                  {target.label}
                 </Link>
               ) : null}
               <NotificationActions
+                canComplete={card.members.every(
+                  (member) =>
+                    member.kind === "task" ||
+                    isDirectlyCompletableDueKind(member.kind),
+                )}
                 ids={card.members.map((member) => member.id)}
                 kind={lead.kind}
               />

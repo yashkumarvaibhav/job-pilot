@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { dueSourceKey } from "../../domain/due-source";
 import { createTenantTestFixture } from "../../test/tenant-fixture";
 import { createCompany, updateCompany } from "./companies";
-import { createContact, updateContact } from "./contacts";
+import { createContact, getContact, updateContact } from "./contacts";
 import { createOpportunity, updateOpportunity } from "./opportunities";
 import { createReferral, updateReferral } from "./referrals";
 import {
@@ -145,6 +145,7 @@ describe("task repository", () => {
       ]),
     );
     expect(items).toHaveLength(2);
+
   });
 
   it("reopens and deletes only a workspace-owned task", () => {
@@ -257,6 +258,20 @@ describe("task repository", () => {
       ]),
     );
     expect(items).toHaveLength(2);
+
+    completeTask(
+      fixture.client.db,
+      fixture.tenantA,
+      converted!.id,
+      new Date("2026-09-02T12:00:00.000Z"),
+    );
+    expect(getContact(fixture.client.db, fixture.tenantA, "rahul")).toMatchObject({
+      nextAction: null,
+      followUpOn: null,
+    });
+    expect(
+      listDueItems(fixture.client.db, fixture.tenantA).map((item) => item.taskId),
+    ).toEqual(["task-resume"]);
   });
 
   it("scopes links, due keys and suppression to the owning workspace", () => {

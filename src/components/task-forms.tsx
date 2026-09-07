@@ -260,61 +260,6 @@ export function TaskActions({
   );
 }
 
-export function ConvertDueItemButton({
-  label = "Create task",
-  sourceKey,
-  title,
-}: {
-  label?: string;
-  sourceKey: string;
-  title: string;
-}) {
-  const router = useRouter();
-  const [pending, setPending] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-
-  async function convert() {
-    setPending(true);
-    setMessage(null);
-    try {
-      const response = await fetch("/api/tasks/from-derived", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ sourceKey }),
-      });
-      const body: unknown = await response.json();
-      if (!response.ok) {
-        setMessage(responseError(body, "Could not create a task from this row."));
-        return;
-      }
-      router.refresh();
-    } catch {
-      setMessage("Could not reach Job Pilot. Check the connection and retry.");
-    } finally {
-      setPending(false);
-    }
-  }
-
-  return (
-    <span className="task-complete">
-      <button
-        aria-label={`${label}: ${title}`}
-        className="btn"
-        disabled={pending}
-        onClick={() => void convert()}
-        type="button"
-      >
-        {pending ? "Working…" : label}
-      </button>
-      {message ? (
-        <span className="form-alert" role="alert">
-          {message}
-        </span>
-      ) : null}
-    </span>
-  );
-}
-
 export function CompleteDueItemButton({
   sourceKey,
   title,
@@ -337,7 +282,7 @@ export function CompleteDueItemButton({
       });
       if (!response.ok) {
         const body: unknown = await response.json().catch(() => null);
-        setMessage(responseError(body, "Could not complete this follow-up."));
+        setMessage(responseError(body, "Could not complete this action."));
         return;
       }
       router.refresh();

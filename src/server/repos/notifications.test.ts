@@ -4,7 +4,7 @@ import { dueSourceKey } from "../../domain/due-source";
 import { calendarDateInZone } from "../../domain/referral";
 import { createTenantTestFixture } from "../../test/tenant-fixture";
 import { createCompany } from "./companies";
-import { createContact, getContact } from "./contacts";
+import { createContact, getContact, updateContact } from "./contacts";
 import { createOpportunity, getOpportunity } from "./opportunities";
 import {
   completeNotifications,
@@ -287,12 +287,18 @@ describe("notification centre", () => {
     expect(after?.stage).toBe(before?.stage);
   });
 
-  it("dismisses and completes without changing the contact follow-up date", () => {
+  it("dismisses one reminder but resolves the source when another is marked done", () => {
     const fixture = newFixture();
     const asOfOn = calendarDateInZone("Asia/Kolkata", now);
     createContact(fixture.client.db, fixture.tenantA, {
       id: "rahul",
       name: "Rahul Sharma",
+      followUpOn: asOfOn,
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "priya",
+      name: "Priya Nair",
+      nextAction: "Ask about openings",
       followUpOn: asOfOn,
     });
     createTask(fixture.client.db, fixture.tenantA, {
@@ -305,17 +311,70 @@ describe("notification centre", () => {
       now,
     });
     const followUp = rows.find((row) => row.entityId === "rahul")!;
+    const completedFollowUp = rows.find((row) => row.entityId === "priya")!;
     const taskRow = rows.find((row) => row.dueKey === dueSourceKey("task", "task-prep"))!;
     dismissNotifications(fixture.client.db, fixture.tenantA, [followUp.id], now);
+    completeNotifications(
+      fixture.client.db,
+      fixture.tenantA,
+      [completedFollowUp.id],
+      now,
+    );
     completeNotifications(fixture.client.db, fixture.tenantA, [taskRow.id], now);
     expect(getContact(fixture.client.db, fixture.tenantA, "rahul")?.followUpOn).toBe(
       asOfOn,
     );
+    expect(getContact(fixture.client.db, fixture.tenantA, "priya")).toMatchObject({
+      nextAction: null,
+      followUpOn: null,
+    });
     expect(getTask(fixture.client.db, fixture.tenantA, "task-prep")?.status).toBe(
       "completed",
     );
     expect(
       listNotifications(fixture.client.db, fixture.tenantA, "unread", { now }),
     ).toEqual([]);
+  });
+
+  it("opens a fresh reminder when a completed source gets a new action", () => {
+    const fixture = newFixture();
+    const asOfOn = calendarDateInZone("Asia/Kolkata", now);
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "priya",
+      name: "Priya Nair",
+      nextAction: "Ask about openings",
+      followUpOn: asOfOn,
+    });
+    materializeNotifications(fixture.client.db, fixture.tenantA, { now });
+    const [first] = listNotifications(
+      fixture.client.db,
+      fixture.tenantA,
+      "unread",
+      { now },
+    );
+    completeNotifications(fixture.client.db, fixture.tenantA, [first.id], now);
+
+    updateContact(fixture.client.db, fixture.tenantA, "priya", {
+      nextAction: "Send resume",
+      followUpOn: asOfOn,
+    });
+    materializeNotifications(fixture.client.db, fixture.tenantA, {
+      now: new Date(now.valueOf() + 1_000),
+    });
+
+    expect(
+      listNotifications(fixture.client.db, fixture.tenantA, "unread", {
+        now: new Date(now.valueOf() + 1_000),
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        id: first.id,
+        body: "Send resume",
+        completedAt: null,
+        dismissedAt: null,
+        readAt: null,
+        snoozedUntil: null,
+      }),
+    ]);
   });
 });

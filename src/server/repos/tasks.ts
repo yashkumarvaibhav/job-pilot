@@ -827,6 +827,12 @@ export function completeTask(
       entityType: "task",
       entityId: id,
     });
+    if (current.derivedFromKey) {
+      completeDerivedDueItemInTransaction(transaction, tenant, {
+        sourceKey: current.derivedFromKey,
+        now: at,
+      });
+    }
     return updated;
   });
 }
@@ -973,17 +979,56 @@ export function createTaskFromDerived(
   });
 }
 
-export function completeDerivedDueItem(
-  database: AppDatabase,
+function completeDerivedDueItemInTransaction(
+  transaction: AppTransaction,
   tenant: TenantContext,
   input: CompleteDerivedInput,
 ): CompleteDerivedResult | undefined {
   const parsed = parseDueSourceKey(input.sourceKey);
-  if (!parsed || parsed.kind !== "contact_next_action") {
+  if (!parsed) {
     return undefined;
   }
+  const at = input.now ?? new Date();
 
-  return database.transaction((transaction) => {
+  if (parsed.kind === "company_next_action") {
+    const current = transaction
+      .select({
+        nextAction: company.nextAction,
+        nextActionDue: company.nextActionDue,
+      })
+      .from(company)
+      .where(
+        and(
+          eq(company.workspaceId, tenant.workspaceId),
+          eq(company.id, parsed.entityId),
+        ),
+      )
+      .get();
+    if (!current) return undefined;
+    if (current.nextAction === null || current.nextActionDue === null) {
+      return { outcome: "already_completed" };
+    }
+    transaction
+      .update(company)
+      .set({ nextAction: null, nextActionDue: null })
+      .where(
+        and(
+          eq(company.workspaceId, tenant.workspaceId),
+          eq(company.id, parsed.entityId),
+        ),
+      )
+      .run();
+    logEvent(transaction, tenant, {
+      at,
+      kind: "NEXT_ACTION_COMPLETED",
+      entityType: "company",
+      entityId: parsed.entityId,
+      payload: { sourceKey: input.sourceKey, action: current.nextAction },
+    });
+    return { outcome: "completed" };
+  }
+
+  if (parsed.kind === "contact_next_action") {
     const current = transaction
       .select({
         id: contact.id,
@@ -1020,7 +1065,7 @@ export function completeDerivedDueItem(
       )
       .run();
     logEvent(transaction, tenant, {
-      at: input.now ?? new Date(),
+      at,
       kind: "FOLLOW_UP_COMPLETED",
       entityType: "contact",
       entityId: parsed.entityId,
@@ -1030,7 +1075,140 @@ export function completeDerivedDueItem(
       },
     });
     return { outcome: "completed" };
-  });
+  }
+
+  if (parsed.kind === "opportunity_next_action") {
+    const current = transaction
+      .select({
+        nextAction: opportunity.nextAction,
+        nextActionDue: opportunity.nextActionDue,
+      })
+      .from(opportunity)
+      .where(
+        and(
+          eq(opportunity.workspaceId, tenant.workspaceId),
+          eq(opportunity.id, parsed.entityId),
+        ),
+      )
+      .get();
+    if (!current) return undefined;
+    if (current.nextAction === null || current.nextActionDue === null) {
+      return { outcome: "already_completed" };
+    }
+    transaction
+      .update(opportunity)
+      .set({ nextAction: null, nextActionDue: null })
+      .where(
+        and(
+          eq(opportunity.workspaceId, tenant.workspaceId),
+          eq(opportunity.id, parsed.entityId),
+        ),
+      )
+      .run();
+    logEvent(transaction, tenant, {
+      at,
+      kind: "NEXT_ACTION_COMPLETED",
+      entityType: "opportunity",
+      entityId: parsed.entityId,
+      payload: { sourceKey: input.sourceKey, action: current.nextAction },
+    });
+    return { outcome: "completed" };
+  }
+
+  if (parsed.kind === "referral_follow_up") {
+    const current = transaction
+      .select({
+        stage: referralRequest.stage,
+        nextAction: referralRequest.nextAction,
+        followUpOn: referralRequest.followUpOn,
+      })
+      .from(referralRequest)
+      .where(
+        and(
+          eq(referralRequest.workspaceId, tenant.workspaceId),
+          eq(referralRequest.id, parsed.entityId),
+        ),
+      )
+      .get();
+    if (!current) return undefined;
+    if (
+      current.followUpOn === null ||
+      isReferralTerminalStage(current.stage)
+    ) {
+      return { outcome: "already_completed" };
+    }
+    transaction
+      .update(referralRequest)
+      .set({ nextAction: null, followUpOn: null })
+      .where(
+        and(
+          eq(referralRequest.workspaceId, tenant.workspaceId),
+          eq(referralRequest.id, parsed.entityId),
+        ),
+      )
+      .run();
+    logEvent(transaction, tenant, {
+      at,
+      kind: "FOLLOW_UP_COMPLETED",
+      entityType: "referral_request",
+      entityId: parsed.entityId,
+      payload: {
+        sourceKey: input.sourceKey,
+        action: derivedDueItemTitle("referral_follow_up", current.nextAction),
+      },
+    });
+    return { outcome: "completed" };
+  }
+
+  if (parsed.kind === "assessment_deadline") {
+    const current = transaction
+      .select({
+        status: assessment.status,
+        opportunityId: assessment.opportunityId,
+      })
+      .from(assessment)
+      .where(
+        and(
+          eq(assessment.workspaceId, tenant.workspaceId),
+          eq(assessment.id, parsed.entityId),
+        ),
+      )
+      .get();
+    if (!current) return undefined;
+    if (!isOpenAssessmentStatus(current.status)) {
+      return { outcome: "already_completed" };
+    }
+    transaction
+      .update(assessment)
+      .set({ status: "completed" })
+      .where(
+        and(
+          eq(assessment.workspaceId, tenant.workspaceId),
+          eq(assessment.id, parsed.entityId),
+        ),
+      )
+      .run();
+    logEvent(transaction, tenant, {
+      at,
+      kind: "ASSESSMENT_COMPLETED",
+      entityType: "opportunity",
+      entityId: current.opportunityId,
+      payload: { assessmentId: parsed.entityId, sourceKey: input.sourceKey },
+    });
+    return { outcome: "completed" };
+  }
+
+  return undefined;
+}
+
+export function completeDerivedDueItem(
+  database: AppDatabase,
+  tenant: TenantContext,
+  input: CompleteDerivedInput,
+): CompleteDerivedResult | undefined {
+  return database.transaction((transaction) =>
+    completeDerivedDueItemInTransaction(transaction, tenant, input),
+  );
 }
 
 export function listDueItems(

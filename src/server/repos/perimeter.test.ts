@@ -195,6 +195,7 @@ const TENANT_ROUTE_FILES = [
   "tags/route.ts",
   "templates/[id]/route.ts",
   "templates/route.ts",
+  "today/complete/route.ts",
   "tasks/[id]/complete/route.ts",
   "tasks/[id]/route.ts",
   "tasks/from-derived/route.ts",

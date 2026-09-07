@@ -24,6 +24,7 @@ const KIND_VERBS: Record<string, string> = {
   REFERRAL_CREATED: "Referral requested",
   REFERRAL_UPDATED: "Referral updated",
   FOLLOW_UP_COMPLETED: "Follow-up completed",
+  NEXT_ACTION_COMPLETED: "Next action completed",
   TASK_CREATED: "Task created",
   TASK_UPDATED: "Task updated",
   TASK_COMPLETED: "Task completed",

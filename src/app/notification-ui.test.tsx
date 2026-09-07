@@ -6,8 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { NOTIFICATION_EMPTY, NOTIFICATION_ERROR } from "../domain/notification";
 import { calendarDateInZone } from "../domain/referral";
+import { createCompany } from "../server/repos/companies";
 import { createContact } from "../server/repos/contacts";
 import { materializeNotifications } from "../server/repos/notifications";
+import { createOpportunity } from "../server/repos/opportunities";
 import { createTenantTestFixture } from "../test/tenant-fixture";
 
 const mocks = vi.hoisted(() => ({
@@ -83,6 +85,7 @@ describe("notification screen", () => {
     expect(html).toContain("Snooze 3 hours");
     expect(html).toContain("Mute this type");
     expect(html).toContain("Open");
+    expect(html).toContain("Mark done");
     expect(html).toContain('class="task-card-list"');
   });
 
@@ -96,6 +99,30 @@ describe("notification screen", () => {
     await Home();
     await NotificationsPage({ searchParams: Promise.resolve({}) });
     expect(fixture.rowCount("notification")).toBe(0);
+  });
+
+  it("does not offer Mark done when a deadline needs an application workflow", async () => {
+    const fixture = newFixture();
+    const asOfOn = calendarDateInZone("Asia/Kolkata");
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "acme",
+      name: "Acme",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "acme-sde",
+      companyId: "acme",
+      role: "SDE",
+      deadlineOn: asOfOn,
+    });
+    materializeNotifications(fixture.client.db, fixture.tenantA);
+
+    const html = renderToStaticMarkup(
+      await NotificationsPage({ searchParams: Promise.resolve({}) }),
+    );
+    expect(html).toContain("Application deadline");
+    expect(html).toContain('href="/opportunities/acme-sde#application"');
+    expect(html).toContain(">Apply<");
+    expect(html).not.toContain("Mark done");
   });
 
   it("designs loading and error states and stacks cards below 768px", () => {

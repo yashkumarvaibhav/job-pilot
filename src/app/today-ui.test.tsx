@@ -5,10 +5,10 @@ import { TODAY_EMPTY } from "../domain/today";
 import { calendarDateInZone, shiftCalendarDate } from "../domain/referral";
 import { applyToOpportunity, updateApplication } from "../server/repos/applications";
 import { createAssessment } from "../server/repos/assessments";
-import { createCompany } from "../server/repos/companies";
+import { createCompany, updateCompany } from "../server/repos/companies";
 import { createContact, updateContact } from "../server/repos/contacts";
 import { createInterview } from "../server/repos/interviews";
-import { createOpportunity } from "../server/repos/opportunities";
+import { createOpportunity, updateOpportunity } from "../server/repos/opportunities";
 import { createReferral } from "../server/repos/referrals";
 import { createTenantTestFixture } from "../test/tenant-fixture";
 
@@ -116,6 +116,9 @@ describe("Today screen", () => {
     expect(html).toContain("Round 1 · Coding");
     expect(html).toContain("Interview");
     expect(html).toContain("Microsoft SDE");
+    expect(html).toContain('href="/opportunities/ms-sde#interviews"');
+    expect(html).toContain("Record result");
+    expect(html).not.toContain("Create task");
   });
 
   it("lists a complete Google assessment due tomorrow and an overdue offer with an icon", async () => {
@@ -156,6 +159,10 @@ describe("Today screen", () => {
     expect(html).toContain("Overdue");
     expect(html).toContain("aria-hidden=\"true\"");
     expect(html).toContain("Deadlines");
+    expect(html).toContain('aria-label="Complete: Complete Google assessment"');
+    expect(html).toContain('href="/opportunities/google-swe#application"');
+    expect(html).toContain("Decide");
+    expect(html).not.toContain("Create task");
   });
 
   it("lists a rule-created referral follow-up on Today", async () => {
@@ -186,6 +193,35 @@ describe("Today screen", () => {
 
     const html = renderToStaticMarkup(await TodayPage());
     expect(html).toContain("Follow up on referral");
+    expect(html).toContain("Complete");
+    expect(html).not.toContain("Create task");
+  });
+
+  it("offers direct completion for company and opportunity next actions", async () => {
+    const fixture = newFixture();
+    const asOfOn = calendarDateInZone("Asia/Kolkata");
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "acme",
+      name: "Acme",
+    });
+    updateCompany(fixture.client.db, fixture.tenantA, "acme", {
+      nextAction: "Review careers page",
+      nextActionDue: asOfOn,
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "acme-sde",
+      companyId: "acme",
+      role: "SDE",
+    });
+    updateOpportunity(fixture.client.db, fixture.tenantA, "acme-sde", {
+      nextAction: "Review job description",
+      nextActionDue: asOfOn,
+    });
+
+    const html = renderToStaticMarkup(await TodayPage());
+    expect(html).toContain('aria-label="Complete: Review careers page"');
+    expect(html).toContain('aria-label="Complete: Review job description"');
+    expect(html).not.toContain("Create task");
   });
 
   it("designs loading and error states", () => {

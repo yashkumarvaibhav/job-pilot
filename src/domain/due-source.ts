@@ -13,6 +13,20 @@ export const DUE_SOURCE_KINDS = [
 
 export type DueSourceKind = (typeof DUE_SOURCE_KINDS)[number];
 
+const DIRECTLY_COMPLETABLE_DUE_KINDS = new Set<DueSourceKind>([
+  "company_next_action",
+  "contact_next_action",
+  "opportunity_next_action",
+  "referral_follow_up",
+  "assessment_deadline",
+]);
+
+export function isDirectlyCompletableDueKind(
+  kind: DueSourceKind,
+): boolean {
+  return DIRECTLY_COMPLETABLE_DUE_KINDS.has(kind);
+}
+
 const KIND_BY_PREFIX: Record<string, DueSourceKind> = {
   "company:": "company_next_action",
   "contact:": "contact_next_action",

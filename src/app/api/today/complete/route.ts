@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 
 const AUTHENTICATION_REQUIRED = { error: "Authentication required." };
 const INVALID_SOURCE = { error: "Enter a due-source key." };
-const NOT_FOUND = { error: "Follow-up not found" };
+const NOT_FOUND = { error: "Due action not found" };
 
 export async function POST(request: Request) {
   const tenant = await currentTenant();

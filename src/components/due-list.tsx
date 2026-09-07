@@ -3,12 +3,14 @@ import { AlarmClock } from "lucide-react";
 
 import {
   CompleteDueItemButton,
-  ConvertDueItemButton,
   TaskActions,
 } from "@/components/task-forms";
 import { taskEntityHref } from "@/components/task-status";
 import { isOverdueOn } from "@/domain/assessment";
-import { parseDueSourceKey } from "@/domain/due-source";
+import {
+  isDirectlyCompletableDueKind,
+  parseDueSourceKey,
+} from "@/domain/due-source";
 import {
   TODAY_EMPTY,
   todayDoNowHeading,
@@ -37,11 +39,27 @@ function DueItemNextStep({ row }: { row: DueItem }) {
       </Link>
     );
   }
-  if (row.origin === "derived" && parsed?.kind === "contact_next_action") {
+  if (
+    row.origin === "derived" &&
+    parsed &&
+    isDirectlyCompletableDueKind(parsed.kind)
+  ) {
     return <CompleteDueItemButton sourceKey={row.sourceKey} title={row.title} />;
   }
   if (row.origin === "derived") {
-    return <ConvertDueItemButton sourceKey={row.sourceKey} title={row.title} />;
+    const href = taskEntityHref(row.entityType, row.entityId);
+    if (!href || !parsed) return "Open";
+    const next =
+      parsed.kind === "interview"
+        ? { label: "Record result", anchor: "#interviews" }
+        : parsed.kind === "offer_deadline"
+          ? { label: "Decide", anchor: "#application" }
+          : { label: "Apply", anchor: "#application" };
+    return (
+      <Link className="btn" href={`${href}${next.anchor}`}>
+        {next.label}
+      </Link>
+    );
   }
   if (row.taskId) {
     return (

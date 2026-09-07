@@ -4,6 +4,7 @@ import { and, asc, eq, gt, inArray, isNotNull } from "drizzle-orm";
 
 import {
   dueSourceKey,
+  isDirectlyCompletableDueKind,
   parseDueSourceKey,
   type DueSourceKind,
 } from "../../domain/due-source";
@@ -28,7 +29,12 @@ import type { AppDatabase, AppTransaction } from "../db/client";
 import { company, notification, opportunity, settings } from "../db/schema";
 import type { TenantContext } from "../db/tenant";
 import { DEFAULT_TIME_ZONE } from "../db/timezone";
-import { completeTask, listDueItems, type DueItem } from "./tasks";
+import {
+  completeDerivedDueItem,
+  completeTask,
+  listDueItems,
+  type DueItem,
+} from "./tasks";
 
 const TERMINAL_OPPORTUNITY_STAGES = new Set<string>(
   OPPORTUNITY_TERMINAL_STAGES.map((stage) => stage.value),
@@ -185,6 +191,56 @@ function upsertSource(
     derivedFromKey: source.derivedFromKey,
   });
   const dueAt = startOfZonedDay(source.dueOn, timeZone);
+  const existing = transaction
+    .select()
+    .from(notification)
+    .where(
+      and(
+        eq(notification.workspaceId, tenant.workspaceId),
+        eq(notification.dueKey, source.dueKey),
+      ),
+    )
+    .get();
+  if (existing) {
+    const sourceChanged =
+      existing.kind !== source.kind ||
+      existing.entityType !== source.entityType ||
+      existing.entityId !== source.entityId ||
+      existing.title !== source.title ||
+      existing.body !== source.body ||
+      existing.dueOn !== source.dueOn ||
+      existing.groupKey !== groupKey;
+    const reopen = existing.completedAt !== null || sourceChanged;
+    transaction
+      .update(notification)
+      .set({
+        kind: source.kind,
+        entityType: source.entityType,
+        entityId: source.entityId,
+        title: source.title,
+        body: source.body,
+        dueOn: source.dueOn,
+        dueAt,
+        groupKey,
+        ...(reopen
+          ? {
+              readAt: null,
+              dismissedAt: null,
+              completedAt: null,
+              snoozedUntil: null,
+            }
+          : {}),
+      })
+      .where(
+        and(
+          eq(notification.workspaceId, tenant.workspaceId),
+          eq(notification.id, existing.id),
+        ),
+      )
+      .run();
+    return existing.id;
+  }
+
   const id = randomUUID();
   transaction
     .insert(notification)
@@ -202,34 +258,8 @@ function upsertSource(
       groupKey,
       createdAt: now,
     })
-    .onConflictDoUpdate({
-      target: [notification.workspaceId, notification.dueKey],
-      set: {
-        kind: source.kind,
-        entityType: source.entityType,
-        entityId: source.entityId,
-        title: source.title,
-        body: source.body,
-        dueOn: source.dueOn,
-        dueAt,
-        groupKey,
-      },
-    })
     .run();
-  const stored = transaction
-    .select({ id: notification.id })
-    .from(notification)
-    .where(
-      and(
-        eq(notification.workspaceId, tenant.workspaceId),
-        eq(notification.dueKey, source.dueKey),
-      ),
-    )
-    .get();
-  if (!stored) {
-    throw new Error("Notification upsert did not produce a row.");
-  }
-  return stored.id;
+  return id;
 }
 
 export function materializeNotifications(
@@ -465,6 +495,11 @@ export function completeNotifications(
     const parsed = parseDueSourceKey(row.dueKey);
     if (parsed?.kind === "task") {
       completeTask(database, tenant, parsed.entityId, now);
+    } else if (parsed && isDirectlyCompletableDueKind(parsed.kind)) {
+      completeDerivedDueItem(database, tenant, {
+        sourceKey: row.dueKey,
+        now,
+      });
     }
   }
   return updated;
