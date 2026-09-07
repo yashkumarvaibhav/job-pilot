@@ -40,7 +40,11 @@ export function TaskCreateForm({ links }: { links: TaskLinkOptions }) {
     event.preventDefault();
     setPending(true);
     setMessage(null);
-    const form = new FormData(event.currentTarget);
+    // React clears `currentTarget` once the handler returns, so the element has
+    // to be captured before the first await or the reset below throws into the
+    // catch — reporting a connection failure for a task that was saved.
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const payload = {
       title: String(form.get("title") ?? ""),
       description: String(form.get("description") ?? ""),
@@ -60,7 +64,7 @@ export function TaskCreateForm({ links }: { links: TaskLinkOptions }) {
         setMessage(responseError(body, "Could not save the task."));
         return;
       }
-      event.currentTarget.reset();
+      formElement.reset();
       setEntityType("");
       router.refresh();
     } catch {

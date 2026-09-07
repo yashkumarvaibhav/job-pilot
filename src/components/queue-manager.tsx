@@ -213,7 +213,11 @@ export function QueueManager({
 
   async function addSuppression(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    // Captured before the await for the same reason as the task form: a reset
+    // through the pooled event would throw and report the suppression as
+    // unreachable when it had in fact been stored.
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const email = String(form.get("email") ?? "");
     setPending(true);
     setError(null);
@@ -228,7 +232,7 @@ export function QueueManager({
         setError(responseError(body));
         return;
       }
-      event.currentTarget.reset();
+      formElement.reset();
       setMessage(`${email.trim().toLowerCase()} is suppressed.`);
       router.refresh();
     } catch {
