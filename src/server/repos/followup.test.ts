@@ -7,11 +7,16 @@ import {
 } from "../../domain/referral";
 import { createTenantTestFixture } from "../../test/tenant-fixture";
 import { createCompany } from "./companies";
-import { createContact, updateContact } from "./contacts";
+import { createContact, getContact, updateContact } from "./contacts";
 import { createInteraction } from "./interactions";
 import { createOpportunity } from "./opportunities";
 import { createReferral, updateReferral } from "./referrals";
-import { createTask, createTaskFromDerived, listDueItems } from "./tasks";
+import {
+  completeDerivedDueItem,
+  createTask,
+  createTaskFromDerived,
+  listDueItems,
+} from "./tasks";
 import { getTodaySnapshot, listTodayDueItems } from "./today";
 
 describe("follow-up engine", () => {
@@ -198,6 +203,87 @@ describe("follow-up engine", () => {
     expect(
       getTodaySnapshot(fixture.client.db, fixture.tenantA, { now }).doNow,
     ).toEqual([]);
+  });
+
+  it("completes a contact follow-up once without creating a task or touching another workspace", () => {
+    const fixture = newFixture();
+    const asOfOn = calendarDateInZone("Asia/Kolkata", now);
+    const sourceKey = dueSourceKey("contact_next_action", "priya");
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "priya",
+      name: "Priya Nair",
+      networkingStatus: "waiting_for_reply",
+      nextAction: "Ask about referrals",
+      followUpOn: asOfOn,
+    });
+    createContact(fixture.client.db, fixture.tenantB, {
+      id: "b-priya",
+      name: "Private Priya",
+      networkingStatus: "waiting_for_reply",
+      nextAction: "Private follow-up",
+      followUpOn: asOfOn,
+    });
+
+    const beforeEvents = fixture.rowCount("activity_event");
+    expect(
+      completeDerivedDueItem(fixture.client.db, fixture.tenantA, {
+        sourceKey,
+        now,
+      }),
+    ).toEqual({ outcome: "completed" });
+    expect(
+      completeDerivedDueItem(fixture.client.db, fixture.tenantA, {
+        sourceKey,
+        now: new Date(now.valueOf() + 1_000),
+      }),
+    ).toEqual({ outcome: "already_completed" });
+
+    expect(getContact(fixture.client.db, fixture.tenantA, "priya")).toMatchObject({
+      nextAction: null,
+      followUpOn: null,
+    });
+    expect(getContact(fixture.client.db, fixture.tenantB, "b-priya")).toMatchObject({
+      nextAction: "Private follow-up",
+      followUpOn: asOfOn,
+    });
+    expect(
+      getTodaySnapshot(fixture.client.db, fixture.tenantA, { now }).doNow,
+    ).toEqual([]);
+    expect(
+      fixture.client.sqlite
+        .prepare("select count(*) as count from task where workspace_id = ?")
+        .get(fixture.tenantA.workspaceId),
+    ).toEqual({ count: 0 });
+    expect(fixture.rowCount("activity_event")).toBe(beforeEvents + 1);
+    expect(
+      fixture.client.sqlite
+        .prepare(
+          "select kind, entity_type as entityType, entity_id as entityId from activity_event where workspace_id = ? and kind = 'FOLLOW_UP_COMPLETED'",
+        )
+        .get(fixture.tenantA.workspaceId),
+    ).toEqual({
+      kind: "FOLLOW_UP_COMPLETED",
+      entityType: "contact",
+      entityId: "priya",
+    });
+  });
+
+  it("treats a foreign contact follow-up source as missing without writing activity", () => {
+    const fixture = newFixture();
+    createContact(fixture.client.db, fixture.tenantB, {
+      id: "private-priya",
+      name: "Private Priya",
+      followUpOn: calendarDateInZone("America/New_York", now),
+    });
+    const beforeEvents = fixture.rowCount("activity_event");
+
+    expect(
+      completeDerivedDueItem(fixture.client.db, fixture.tenantA, {
+        sourceKey: dueSourceKey("contact_next_action", "private-priya"),
+        now,
+      }),
+    ).toBeUndefined();
+    expect(fixture.rowCount("activity_event")).toBe(beforeEvents);
   });
 
   it("keeps Do Now count the same after Create task and leaves a manual task visible", () => {

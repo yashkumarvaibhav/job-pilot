@@ -314,3 +314,56 @@ export function ConvertDueItemButton({
     </span>
   );
 }
+
+export function CompleteDueItemButton({
+  sourceKey,
+  title,
+}: {
+  sourceKey: string;
+  title: string;
+}) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function complete() {
+    setPending(true);
+    setMessage(null);
+    try {
+      const response = await fetch("/api/today/complete", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sourceKey }),
+      });
+      if (!response.ok) {
+        const body: unknown = await response.json().catch(() => null);
+        setMessage(responseError(body, "Could not complete this follow-up."));
+        return;
+      }
+      router.refresh();
+    } catch {
+      setMessage("Could not reach Job Pilot. Check the connection and retry.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <span className="task-complete">
+      <button
+        aria-label={`Complete: ${title}`}
+        className="btn"
+        disabled={pending}
+        onClick={() => void complete()}
+        type="button"
+      >
+        {pending ? "Completing…" : "Complete"}
+      </button>
+      {message ? (
+        <span className="form-alert" role="alert">
+          {message}
+        </span>
+      ) : null}
+    </span>
+  );
+}

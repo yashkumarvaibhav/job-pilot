@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { dueSourceKey } from "../../../domain/due-source";
 import { calendarDateInZone } from "../../../domain/referral";
 import { createCompany } from "../../../server/repos/companies";
 import { createContact, updateContact } from "../../../server/repos/contacts";
@@ -18,6 +19,15 @@ vi.mock("@/server/db/runtime", () => ({
 }));
 
 import { GET } from "./route";
+import { POST as completeDueItem } from "./complete/route";
+
+function jsonRequest(body: unknown) {
+  return new Request("http://localhost/api/today/complete", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
 
 describe("today route handlers", () => {
   const fixtures: { dispose: () => void }[] = [];
@@ -79,5 +89,44 @@ describe("today route handlers", () => {
     mocks.tenant = undefined;
     const response = await GET();
     expect(response.status).toBe(401);
+  });
+
+  it("completes a contact follow-up idempotently without creating a task", async () => {
+    const fixture = newFixture();
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "rahul",
+      name: "Rahul Sharma",
+      nextAction: "Ask about openings",
+      followUpOn: calendarDateInZone("Asia/Kolkata"),
+    });
+    const request = () =>
+      jsonRequest({
+        sourceKey: dueSourceKey("contact_next_action", "rahul"),
+      });
+
+    const first = await completeDueItem(request());
+    expect(first.status).toBe(200);
+    expect(await first.json()).toEqual({ outcome: "completed" });
+    const retry = await completeDueItem(request());
+    expect(retry.status).toBe(200);
+    expect(await retry.json()).toEqual({ outcome: "already_completed" });
+    expect(fixture.rowCount("task")).toBe(0);
+  });
+
+  it("returns not found for another workspace's follow-up", async () => {
+    const fixture = newFixture();
+    createContact(fixture.client.db, fixture.tenantB, {
+      id: "private-contact",
+      name: "Private Contact",
+      followUpOn: calendarDateInZone("America/New_York"),
+    });
+    const before = fixture.rowCount("activity_event");
+    const response = await completeDueItem(
+      jsonRequest({
+        sourceKey: dueSourceKey("contact_next_action", "private-contact"),
+      }),
+    );
+    expect(response.status).toBe(404);
+    expect(fixture.rowCount("activity_event")).toBe(before);
   });
 });

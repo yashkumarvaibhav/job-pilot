@@ -105,6 +105,24 @@ test("a follow-up date set on a contact comes back on Today", async ({ page }) =
   await expect(doNow.getByText("Ask about referrals").first()).toBeVisible();
 });
 
+test("a due contact follow-up completes once without becoming a task", async ({
+  page,
+}) => {
+  await page.goto("/today");
+  const doNow = page.getByRole("region", { name: "Do Now" });
+  await saveAndSettle(
+    page,
+    doNow.getByRole("button", { name: "Complete: Ask about referrals" }).first(),
+    "/api/today/complete",
+  );
+  await expect(doNow.getByText(CONTACT)).toHaveCount(0);
+  await page.reload();
+  await expect(doNow.getByText(CONTACT)).toHaveCount(0);
+
+  await page.goto("/tasks?status=completed");
+  await expect(page.getByText("Ask about referrals")).toHaveCount(0);
+});
+
 test("the status change survives a reload rather than living in the tab", async ({
   page,
 }) => {

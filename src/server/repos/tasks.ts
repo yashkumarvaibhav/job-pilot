@@ -107,6 +107,15 @@ export type ConvertDerivedInput = {
   now?: Date;
 };
 
+export type CompleteDerivedInput = {
+  sourceKey: string;
+  now?: Date;
+};
+
+export type CompleteDerivedResult = {
+  outcome: "completed" | "already_completed";
+};
+
 export function parseTaskListFilter(
   searchParams: URLSearchParams,
   asOfOn: string,
@@ -961,6 +970,66 @@ export function createTaskFromDerived(
       source: "manual",
       now: input.now,
     });
+  });
+}
+
+export function completeDerivedDueItem(
+  database: AppDatabase,
+  tenant: TenantContext,
+  input: CompleteDerivedInput,
+): CompleteDerivedResult | undefined {
+  const parsed = parseDueSourceKey(input.sourceKey);
+  if (!parsed || parsed.kind !== "contact_next_action") {
+    return undefined;
+  }
+
+  return database.transaction((transaction) => {
+    const current = transaction
+      .select({
+        id: contact.id,
+        networkingStatus: contact.networkingStatus,
+        nextAction: contact.nextAction,
+        followUpOn: contact.followUpOn,
+      })
+      .from(contact)
+      .where(
+        and(
+          eq(contact.workspaceId, tenant.workspaceId),
+          eq(contact.id, parsed.entityId),
+        ),
+      )
+      .get();
+    if (!current) {
+      return undefined;
+    }
+    if (
+      current.followUpOn === null ||
+      isNetworkingTerminalStatus(current.networkingStatus)
+    ) {
+      return { outcome: "already_completed" };
+    }
+
+    transaction
+      .update(contact)
+      .set({ nextAction: null, followUpOn: null })
+      .where(
+        and(
+          eq(contact.workspaceId, tenant.workspaceId),
+          eq(contact.id, parsed.entityId),
+        ),
+      )
+      .run();
+    logEvent(transaction, tenant, {
+      at: input.now ?? new Date(),
+      kind: "FOLLOW_UP_COMPLETED",
+      entityType: "contact",
+      entityId: parsed.entityId,
+      payload: {
+        sourceKey: input.sourceKey,
+        action: derivedDueItemTitle("contact_next_action", current.nextAction),
+      },
+    });
+    return { outcome: "completed" };
   });
 }
 

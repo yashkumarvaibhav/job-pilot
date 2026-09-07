@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { AlarmClock } from "lucide-react";
 
-import { ConvertDueItemButton, TaskActions } from "@/components/task-forms";
+import {
+  CompleteDueItemButton,
+  ConvertDueItemButton,
+  TaskActions,
+} from "@/components/task-forms";
 import { taskEntityHref } from "@/components/task-status";
 import { isOverdueOn } from "@/domain/assessment";
 import { parseDueSourceKey } from "@/domain/due-source";
@@ -22,7 +26,8 @@ function OverdueChip() {
 }
 
 function DueItemNextStep({ row }: { row: DueItem }) {
-  if (parseDueSourceKey(row.sourceKey)?.kind === "sequence_follow_up") {
+  const parsed = parseDueSourceKey(row.sourceKey);
+  if (parsed?.kind === "sequence_follow_up") {
     return (
       <Link
         className="btn"
@@ -31,6 +36,9 @@ function DueItemNextStep({ row }: { row: DueItem }) {
         Review
       </Link>
     );
+  }
+  if (row.origin === "derived" && parsed?.kind === "contact_next_action") {
+    return <CompleteDueItemButton sourceKey={row.sourceKey} title={row.title} />;
   }
   if (row.origin === "derived") {
     return <ConvertDueItemButton sourceKey={row.sourceKey} title={row.title} />;

@@ -85,7 +85,8 @@ describe("Today screen", () => {
     const html = renderToStaticMarkup(await TodayPage());
     expect(html).toContain("Follow up with Rahul Sharma");
     expect(html).toContain("Follow up about Microsoft openings");
-    expect(html).toContain("Create task");
+    expect(html).toContain("Complete");
+    expect(html).not.toContain("Create task");
     expect(html).not.toContain(TODAY_EMPTY);
   });
 

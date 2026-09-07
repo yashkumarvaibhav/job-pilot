@@ -23,6 +23,7 @@ const KIND_VERBS: Record<string, string> = {
   OFFER_DEADLINE_SET: "Offer deadline set",
   REFERRAL_CREATED: "Referral requested",
   REFERRAL_UPDATED: "Referral updated",
+  FOLLOW_UP_COMPLETED: "Follow-up completed",
   TASK_CREATED: "Task created",
   TASK_UPDATED: "Task updated",
   TASK_COMPLETED: "Task completed",
