@@ -2,14 +2,21 @@ import Link from "next/link";
 
 import { ReferralCreateForm } from "@/components/referral-forms";
 import { ReferralCollection } from "@/components/referral-list";
-import { SavedSearchPanel } from "@/components/saved-search-panel";
+import { ListToolbar, type AppliedFilter } from "@/components/list-toolbar";
+import {
+  SavedSearchForm,
+  SavedSearchLinks,
+} from "@/components/saved-search-panel";
 import {
   REFERRAL_LIST_PRESETS,
   REFERRAL_STAGES,
   calendarDateInZone,
 } from "@/domain/referral";
 import {
+  listHref,
   pageSearchParams,
+  recordCountLabel,
+  withoutParams,
   type PageSearchParams,
 } from "@/domain/list-filter";
 import { requireTenant } from "@/server/auth/current-session";
@@ -74,6 +81,45 @@ export default async function ReferralsPage({ searchParams }: Props) {
     filter.stage !== undefined ||
     filter.companyId !== undefined ||
     filter.noResponseDays !== undefined;
+  const companyName = companies.find(
+    (company) => company.id === filter.companyId,
+  )?.name;
+  // The preset is a tab, so only the panel's own fields become chips (D-063).
+  const applied: AppliedFilter[] = [
+    ...(filter.companyId !== undefined
+      ? [
+          {
+            key: "company",
+            label: "Company",
+            value: companyName ?? filter.companyId,
+          },
+        ]
+      : []),
+    ...(filter.stage !== undefined
+      ? [
+          {
+            key: "stage",
+            label: "Stage",
+            value:
+              REFERRAL_STAGES.find((item) => item.value === filter.stage)
+                ?.label ?? filter.stage,
+          },
+        ]
+      : []),
+    ...(filter.noResponseDays !== undefined
+      ? [
+          {
+            key: "noResponseDays",
+            label: "No response for",
+            value: `At least ${filter.noResponseDays} days`,
+          },
+        ]
+      : []),
+  ].map((item) => ({
+    ...item,
+    clearHref: listHref("/referrals", withoutParams(query, item.key)),
+  }));
+  const savedSearchQuery = query.toString();
 
   return (
     <section className="referral-page">
@@ -87,80 +133,88 @@ export default async function ReferralsPage({ searchParams }: Props) {
           </p>
         </div>
       </header>
-      <nav aria-label="Referral presets" className="filter-tabs">
-        {tabs.map((tab) => (
-          <Link
-            aria-current={tab.current ? "page" : undefined}
-            href={tab.href}
-            key={tab.href}
-          >
-            {tab.label}
-          </Link>
-        ))}
-      </nav>
-      <form aria-label="Filter referrals" className="list-filter" method="get">
-        <div className="list-filter__fields">
-          <div className="field">
-            <label htmlFor="referral-company-filter">Company</label>
-            <select
-              defaultValue={filter.companyId ?? ""}
-              id="referral-company-filter"
-              name="company"
-            >
-              <option value="">All companies</option>
-              {companies.map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.name}
-                </option>
-              ))}
-            </select>
+      <ListToolbar
+        applied={applied}
+        clearAllHref="/referrals"
+        countLabel={recordCountLabel(referrals.length, "request", "requests")}
+        filterFormLabel="referral"
+        savedSearches={<SavedSearchLinks searches={searches} />}
+        tabs={
+          <nav aria-label="Referral presets" className="filter-tabs">
+            {tabs.map((tab) => (
+              <Link
+                aria-current={tab.current ? "page" : undefined}
+                href={tab.href}
+                key={tab.href}
+              >
+                {tab.label}
+              </Link>
+            ))}
+          </nav>
+        }
+      >
+        <form aria-label="Filter referrals" className="list-filter" method="get">
+          <div className="list-filter__fields">
+            <div className="field">
+              <label htmlFor="referral-company-filter">Company</label>
+              <select
+                defaultValue={filter.companyId ?? ""}
+                id="referral-company-filter"
+                name="company"
+              >
+                <option value="">All companies</option>
+                {companies.map((company) => (
+                  <option key={company.id} value={company.id}>
+                    {company.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="referral-stage-filter">Stage</label>
+              <select
+                defaultValue={filter.stage ?? ""}
+                id="referral-stage-filter"
+                name="stage"
+              >
+                <option value="">All stages</option>
+                {REFERRAL_STAGES.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="referral-response-filter">No response for</label>
+              <select
+                defaultValue={filter.noResponseDays?.toString() ?? ""}
+                id="referral-response-filter"
+                name="noResponseDays"
+              >
+                <option value="">Any response age</option>
+                <option value="3">At least 3 days</option>
+                <option value="7">At least 7 days</option>
+                <option value="14">At least 14 days</option>
+                <option value="30">At least 30 days</option>
+              </select>
+            </div>
           </div>
-          <div className="field">
-            <label htmlFor="referral-stage-filter">Stage</label>
-            <select
-              defaultValue={filter.stage ?? ""}
-              id="referral-stage-filter"
-              name="stage"
-            >
-              <option value="">All stages</option>
-              {REFERRAL_STAGES.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="referral-response-filter">No response for</label>
-            <select
-              defaultValue={filter.noResponseDays?.toString() ?? ""}
-              id="referral-response-filter"
-              name="noResponseDays"
-            >
-              <option value="">Any response age</option>
-              <option value="3">At least 3 days</option>
-              <option value="7">At least 7 days</option>
-              <option value="14">At least 14 days</option>
-              <option value="30">At least 30 days</option>
-            </select>
-          </div>
-        </div>
         <div className="list-filter__actions">
-          <button className="btn" type="submit">
-            Apply filters
-          </button>
-          {hasFilters ? (
-            <Link className="btn btn--ghost" href="/referrals">
-              Clear filters
-            </Link>
-          ) : null}
-        </div>
-      </form>
-      <SavedSearchPanel
-        entityType="referrals"
-        query={query.toString()}
-        searches={searches}
-      />
+            <button className="btn" type="submit">
+              Apply filters
+            </button>
+            {applied.length > 0 ? (
+              <Link className="btn btn--ghost" href="/referrals">
+                Clear filters
+              </Link>
+            ) : null}
+          </div>
+        </form>
+        {savedSearchQuery ? (
+          <SavedSearchForm entityType="referrals" query={savedSearchQuery} />
+        ) : null}
+      </ListToolbar>
       {referrals.length === 0 ? (
         <div className="data-state data-state--empty">
           <p>

@@ -17,7 +17,7 @@ vi.mock("next/dynamic", () => ({
 }));
 
 import CommandPalette from "./command-palette";
-import { SavedSearchPanel } from "./saved-search-panel";
+import { SavedSearchForm, SavedSearchLinks } from "./saved-search-panel";
 
 describe("command palette", () => {
   it("lazy-loads the cmdk module from the shell instead of the eager Today graph", () => {
@@ -64,10 +64,8 @@ describe("command palette", () => {
   });
 
   it("lists saved searches and a save control on the relevant page", () => {
-    const html = renderToStaticMarkup(
-      <SavedSearchPanel
-        entityType="opportunities"
-        query="priority=High"
+    const links = renderToStaticMarkup(
+      <SavedSearchLinks
         searches={[
           {
             id: "high",
@@ -77,9 +75,13 @@ describe("command palette", () => {
         ]}
       />,
     );
-    expect(html).toContain("Save this filter");
-    expect(html).toContain("High Priority");
-    expect(html).toContain("/opportunities?priority=High");
-    expect(html).toContain('placeholder="High Priority"');
+    expect(links).toContain("High Priority");
+    expect(links).toContain("/opportunities?priority=High");
+
+    const form = renderToStaticMarkup(
+      <SavedSearchForm entityType="opportunities" query="priority=High" />,
+    );
+    expect(form).toContain("Save this filter");
+    expect(form).toContain('placeholder="High Priority"');
   });
 });

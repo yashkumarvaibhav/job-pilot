@@ -2,10 +2,17 @@ import Link from "next/link";
 
 import { RolledUpStageChip } from "@/components/application-status";
 import { OpportunityCreatePanel } from "@/components/opportunity-form";
-import { SavedSearchPanel } from "@/components/saved-search-panel";
+import { ListToolbar, type AppliedFilter } from "@/components/list-toolbar";
+import {
+  SavedSearchForm,
+  SavedSearchLinks,
+} from "@/components/saved-search-panel";
 import { StaleFlag } from "@/components/stale-chip";
 import {
+  listHref,
   pageSearchParams,
+  recordCountLabel,
+  withoutParams,
   type PageSearchParams,
 } from "@/domain/list-filter";
 import { calendarDateInZone } from "@/domain/referral";
@@ -82,7 +89,53 @@ export default async function OpportunitiesPage({ searchParams }: Props) {
     filter.deadlineWithinDays !== undefined ||
     filter.appliedWithinDays !== undefined ||
     filter.stale === true;
-  const hasControls = hasFilters || filter.sort !== undefined;
+  const companyName = companies.find(
+    (company) => company.id === filter.companyId,
+  )?.name;
+  // The bucket is a tab with its own visible current state, so it is never a
+  // chip; everything else the URL applies is stated here (D-063).
+  const applied: AppliedFilter[] = [
+    ...(filter.companyId !== undefined
+      ? [
+          {
+            key: "company",
+            label: "Company",
+            value: companyName ?? filter.companyId,
+          },
+        ]
+      : []),
+    ...(filter.priority !== undefined
+      ? [{ key: "priority", label: "Priority", value: filter.priority }]
+      : []),
+    ...(filter.deadlineWithinDays !== undefined
+      ? [
+          {
+            key: "deadlineWithinDays",
+            label: "Deadline",
+            value: `Within ${filter.deadlineWithinDays} days`,
+          },
+        ]
+      : []),
+    ...(filter.appliedWithinDays !== undefined
+      ? [
+          {
+            key: "appliedWithinDays",
+            label: "Applied",
+            value: `In the last ${filter.appliedWithinDays} days`,
+          },
+        ]
+      : []),
+    ...(filter.stale === true
+      ? [{ key: "stale", label: "Stale", value: "Stale only" }]
+      : []),
+    ...(filter.sort !== undefined
+      ? [{ key: "sort", label: "Sort", value: "Priority score" }]
+      : []),
+  ].map((item) => ({
+    ...item,
+    clearHref: listHref("/opportunities", withoutParams(query, item.key)),
+  }));
+  const savedSearchQuery = query.toString();
 
   return (
     <section className="opportunity-page">
@@ -102,82 +155,90 @@ export default async function OpportunitiesPage({ searchParams }: Props) {
           initiallyOpen={query.get("add") === "1"}
         />
       </header>
-      <nav aria-label="Opportunity bucket" className="filter-tabs">
-        {(["saved", "active", "all"] as const).map((item) => (
-          <Link
-            aria-current={bucket === item ? "page" : undefined}
-            href={bucketHref(item, query)}
-            key={item}
-          >
-            {item === "saved" ? "Saved" : item === "active" ? "Active" : "All"}
-          </Link>
-        ))}
-      </nav>
-      <form
-        aria-label="Filter opportunities"
-        className="list-filter"
-        method="get"
+      <ListToolbar
+        applied={applied}
+        clearAllHref="/opportunities"
+        countLabel={recordCountLabel(opportunities.length, "role", "roles")}
+        filterFormLabel="opportunity"
+        savedSearches={<SavedSearchLinks searches={searches} />}
+        tabs={
+          <nav aria-label="Opportunity bucket" className="filter-tabs">
+            {(["saved", "active", "all"] as const).map((item) => (
+              <Link
+                aria-current={bucket === item ? "page" : undefined}
+                href={bucketHref(item, query)}
+                key={item}
+              >
+                {item === "saved" ? "Saved" : item === "active" ? "Active" : "All"}
+              </Link>
+            ))}
+          </nav>
+        }
       >
-        {bucket !== "all" ? (
-          <input name="bucket" type="hidden" value={bucket} />
+        <form
+          aria-label="Filter opportunities"
+          className="list-filter"
+          method="get"
+        >
+          {bucket !== "all" ? (
+            <input name="bucket" type="hidden" value={bucket} />
+          ) : null}
+          <div className="list-filter__fields">
+            <div className="field">
+              <label htmlFor="opportunity-company-filter">Company</label>
+              <select defaultValue={filter.companyId ?? ""} id="opportunity-company-filter" name="company">
+                <option value="">All companies</option>
+                {companies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="opportunity-priority-filter">Priority</label>
+              <select defaultValue={filter.priority ?? ""} id="opportunity-priority-filter" name="priority">
+                <option value="">All priorities</option>
+                {priorities.map((priority) => <option key={priority} value={priority}>{priority}</option>)}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="opportunity-deadline-filter">Deadline</label>
+              <select defaultValue={filter.deadlineWithinDays?.toString() ?? ""} id="opportunity-deadline-filter" name="deadlineWithinDays">
+                <option value="">Any deadline</option>
+                <option value="3">Within 3 days</option>
+                <option value="7">Within 7 days</option>
+                <option value="14">Within 14 days</option>
+                <option value="30">Within 30 days</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="opportunity-applied-filter">Applied</label>
+              <select defaultValue={filter.appliedWithinDays?.toString() ?? ""} id="opportunity-applied-filter" name="appliedWithinDays">
+                <option value="">Any application date</option>
+                <option value="30">In the last 30 days</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="opportunity-stale-filter">Stale</label>
+              <select defaultValue={filter.stale ? "1" : ""} id="opportunity-stale-filter" name="stale">
+                <option value="">Any opportunity</option>
+                <option value="1">Stale only</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="opportunity-sort">Sort</label>
+              <select defaultValue={filter.sort ?? ""} id="opportunity-sort" name="sort">
+                <option value="">Company and role</option>
+                <option value="score">Priority score</option>
+              </select>
+            </div>
+          </div>
+          <div className="list-filter__actions">
+            <button className="btn" type="submit">Apply filters</button>
+            {applied.length > 0 ? <Link className="btn btn--ghost" href="/opportunities">Clear filters</Link> : null}
+          </div>
+        </form>
+        {savedSearchQuery ? (
+          <SavedSearchForm entityType="opportunities" query={savedSearchQuery} />
         ) : null}
-        <div className="list-filter__fields">
-          <div className="field">
-            <label htmlFor="opportunity-company-filter">Company</label>
-            <select defaultValue={filter.companyId ?? ""} id="opportunity-company-filter" name="company">
-              <option value="">All companies</option>
-              {companies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="opportunity-priority-filter">Priority</label>
-            <select defaultValue={filter.priority ?? ""} id="opportunity-priority-filter" name="priority">
-              <option value="">All priorities</option>
-              {priorities.map((priority) => <option key={priority} value={priority}>{priority}</option>)}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="opportunity-deadline-filter">Deadline</label>
-            <select defaultValue={filter.deadlineWithinDays?.toString() ?? ""} id="opportunity-deadline-filter" name="deadlineWithinDays">
-              <option value="">Any deadline</option>
-              <option value="3">Within 3 days</option>
-              <option value="7">Within 7 days</option>
-              <option value="14">Within 14 days</option>
-              <option value="30">Within 30 days</option>
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="opportunity-applied-filter">Applied</label>
-            <select defaultValue={filter.appliedWithinDays?.toString() ?? ""} id="opportunity-applied-filter" name="appliedWithinDays">
-              <option value="">Any application date</option>
-              <option value="30">In the last 30 days</option>
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="opportunity-stale-filter">Stale</label>
-            <select defaultValue={filter.stale ? "1" : ""} id="opportunity-stale-filter" name="stale">
-              <option value="">Any opportunity</option>
-              <option value="1">Stale only</option>
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="opportunity-sort">Sort</label>
-            <select defaultValue={filter.sort ?? ""} id="opportunity-sort" name="sort">
-              <option value="">Company and role</option>
-              <option value="score">Priority score</option>
-            </select>
-          </div>
-        </div>
-        <div className="list-filter__actions">
-          <button className="btn" type="submit">Apply filters</button>
-          {hasControls ? <Link className="btn btn--ghost" href="/opportunities">Clear filters</Link> : null}
-        </div>
-      </form>
-      <SavedSearchPanel
-        entityType="opportunities"
-        query={query.toString()}
-        searches={searches}
-      />
+      </ListToolbar>
       {opportunities.length === 0 ? (
         <div className="data-state data-state--empty">
           <p>{hasFilters ? "No opportunities match these filters." : "No opportunities. Paste a job URL or add one from a conversation."}</p>

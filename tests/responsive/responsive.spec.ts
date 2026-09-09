@@ -546,3 +546,86 @@ test("incomplete signup can be kept or explicitly deleted at mobile width", asyn
     await context.close();
   }
 });
+
+// D-063. The complaint that started this was measurable — the records began
+// roughly 620 CSS pixels down a 1280-wide page — so the fix is measured rather
+// than eyeballed, and the filter panel is proved to be genuinely operable from
+// the keyboard rather than merely collapsed.
+test("list controls stay one toolbar and keep the records near the top", async ({
+  browser,
+}) => {
+  const lists = [
+    { path: "/opportunities", records: "Opportunities" },
+    { path: "/contacts", records: "Contacts" },
+    { path: "/referrals", records: "Referral requests" },
+  ] as const;
+
+  for (const theme of THEMES) {
+    for (const viewport of VIEWPORTS) {
+      const context = await browser.newContext({ colorScheme: theme, viewport });
+      await signIn(context);
+      const page = await context.newPage();
+
+      for (const list of lists) {
+        await page.goto(list.path);
+        const panel = page.locator(".list-toolbar__panel");
+        await expect(panel, `${list.path} opens closed`).toBeHidden();
+
+        const offset = await page.evaluate(() => {
+          const main = document.querySelector("main");
+          const toolbar = document.querySelector(".list-toolbar");
+          const records = toolbar?.nextElementSibling;
+          if (!main || !records) return null;
+          return (
+            records.getBoundingClientRect().top -
+            main.getBoundingClientRect().top
+          );
+        });
+        expect(offset, `${list.path} at ${viewport.width}`).not.toBeNull();
+        expect(offset ?? 0, `${list.path} at ${viewport.width}`).toBeLessThan(
+          viewport.width < 768 ? 400 : 320,
+        );
+
+        // The disclosure is a real control: reachable, operable by keyboard, and
+        // it opens without pushing the page sideways.
+        const summary = page.locator(".list-toolbar__summary");
+        await summary.focus();
+        await expect(summary).toBeFocused();
+        await page.keyboard.press("Enter");
+        await expect(panel).toBeVisible();
+        const overflow = await page.evaluate(
+          () =>
+            document.documentElement.scrollWidth -
+            document.documentElement.clientWidth,
+        );
+        expect(overflow, `${list.path} open at ${viewport.width}`).toBeLessThanOrEqual(1);
+        await page.keyboard.press("Enter");
+        await expect(panel).toBeHidden();
+      }
+
+      await context.close();
+    }
+  }
+});
+
+test("an applied filter is stated as a chip that clears only itself", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({ viewport: VIEWPORTS[2] });
+  await signIn(context);
+  const page = await context.newPage();
+
+  await page.goto("/contacts?relationship=alumni&status=checking_for_openings");
+  await expect(page.locator(".list-toolbar__badge")).toHaveText("2 applied");
+  const chips = page.getByRole("list", { name: "Applied contact filters" });
+  await expect(chips.getByRole("link", { name: /Remove the Relationship/ })).toBeVisible();
+
+  await chips.getByRole("link", { name: /Remove the Status/ }).click();
+  await expect(page).toHaveURL(`${BASE_URL}/contacts?relationship=alumni`);
+  await expect(page.locator(".list-toolbar__badge")).toHaveText("1 applied");
+
+  await page.getByRole("link", { name: "Clear all" }).click();
+  await expect(page).toHaveURL(`${BASE_URL}/contacts`);
+  await expect(page.locator(".list-toolbar__badge")).toHaveCount(0);
+  await context.close();
+});

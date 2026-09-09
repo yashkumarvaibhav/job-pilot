@@ -154,6 +154,64 @@ describe("opportunity screens", () => {
     expect(empty).toContain("No opportunities match these filters.");
   });
 
+  it("keeps the filter fields collapsed and states what is applied", async () => {
+    const fixture = newFixture();
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "microsoft",
+      name: "Microsoft",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "ms-sde",
+      companyId: "microsoft",
+      role: "SDE",
+      priority: "High",
+    });
+
+    const bare = renderToStaticMarkup(
+      await OpportunitiesPage({ searchParams: Promise.resolve({}) }),
+    );
+    expect(bare).toContain("list-toolbar__filters");
+    expect(bare).not.toContain('open=""');
+    expect(bare).toContain("Filters");
+    expect(bare).not.toContain("Clear all");
+    expect(bare).toContain("1 role");
+
+    const filtered = renderToStaticMarkup(
+      await OpportunitiesPage({
+        searchParams: Promise.resolve({ company: "microsoft", priority: "High" }),
+      }),
+    );
+    // Applied filters are readable without opening the panel, and the panel
+    // stays closed even when the view is filtered.
+    expect(filtered).not.toContain('open=""');
+    expect(filtered).toContain("2 applied");
+    expect(filtered).toContain("Microsoft");
+    expect(filtered).toContain("Clear all");
+    // Each chip clears exactly its own parameter and keeps the others.
+    expect(filtered).toContain('href="/opportunities?priority=High"');
+    expect(filtered).toContain('href="/opportunities?company=microsoft"');
+  });
+
+  it("offers the save-this-search field only once the view is filtered", async () => {
+    const fixture = newFixture();
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "microsoft",
+      name: "Microsoft",
+    });
+
+    const bare = renderToStaticMarkup(
+      await OpportunitiesPage({ searchParams: Promise.resolve({}) }),
+    );
+    expect(bare).not.toContain("Save this filter as");
+
+    const filtered = renderToStaticMarkup(
+      await OpportunitiesPage({
+        searchParams: Promise.resolve({ company: "microsoft" }),
+      }),
+    );
+    expect(filtered).toContain("Save this filter as");
+  });
+
   it("opens company-first role creation with the existing company and Active selected", async () => {
     const fixture = newFixture();
     createCompany(fixture.client.db, fixture.tenantA, {

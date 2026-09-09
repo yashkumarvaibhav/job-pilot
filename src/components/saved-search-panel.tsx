@@ -15,14 +15,36 @@ export type SavedSearchListItem = {
   href: string;
 };
 
-export function SavedSearchPanel({
+/**
+ * The saved views themselves. They stay visible in the toolbar (D-063) while the
+ * form that creates one moves inside the filter disclosure, because naming a
+ * search is rare and reopening one is not.
+ */
+export function SavedSearchLinks({
+  searches,
+}: {
+  searches: SavedSearchListItem[];
+}) {
+  if (searches.length === 0) return null;
+  return (
+    <ul aria-label="Saved searches" className="saved-search-list">
+      {searches.map((item) => (
+        <li key={item.id}>
+          <Link className="saved-search-link" href={item.href}>
+            {item.name}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export function SavedSearchForm({
   entityType,
   query,
-  searches,
 }: {
   entityType: SavedSearchEntityType;
   query: string;
-  searches: SavedSearchListItem[];
 }) {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -63,19 +85,7 @@ export function SavedSearchPanel({
   }
 
   return (
-    <section aria-label="Saved searches" className="saved-search-panel">
-      {searches.length > 0 ? (
-        <ul className="saved-search-list">
-          {searches.map((item) => (
-            <li key={item.id}>
-              <Link className="saved-search-link" href={item.href}>
-                {item.name}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      <form className="saved-search-form" onSubmit={onSubmit}>
+    <form className="saved-search-form" onSubmit={onSubmit}>
         <div className="field">
           <label htmlFor={`${entityType}-saved-search-name`}>Save this filter as</label>
           <input
@@ -99,10 +109,9 @@ export function SavedSearchPanel({
             {error}
           </p>
         ) : null}
-        <button className="btn btn--ghost" disabled={pending} type="submit">
-          Save this filter
-        </button>
-      </form>
-    </section>
+      <button className="btn btn--ghost" disabled={pending} type="submit">
+        Save this filter
+      </button>
+    </form>
   );
 }

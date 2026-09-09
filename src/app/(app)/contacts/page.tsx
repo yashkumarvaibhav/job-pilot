@@ -2,7 +2,11 @@ import Link from "next/link";
 
 import { ContactCreatePanel } from "@/components/contact-form";
 import { ContactPreviewTrigger } from "@/components/contact-preview";
-import { SavedSearchPanel } from "@/components/saved-search-panel";
+import { ListToolbar, type AppliedFilter } from "@/components/list-toolbar";
+import {
+  SavedSearchForm,
+  SavedSearchLinks,
+} from "@/components/saved-search-panel";
 import { StaleFlag } from "@/components/stale-chip";
 import {
   ContactStatusChip,
@@ -13,7 +17,10 @@ import {
   NETWORKING_STATUSES,
 } from "@/domain/contact";
 import {
+  listHref,
   pageSearchParams,
+  recordCountLabel,
+  withoutParams,
   type PageSearchParams,
 } from "@/domain/list-filter";
 import { calendarDateInZone } from "@/domain/referral";
@@ -51,6 +58,53 @@ export default async function ContactsPage({ searchParams }: Props = {}) {
     calendarDateInZone(timeZone),
   );
   const hasFilters = Object.keys(filter).length > 0;
+  const companyName = companies.find(
+    (company) => company.id === filter.companyId,
+  )?.name;
+  const applied: AppliedFilter[] = [
+    ...(filter.companyId !== undefined
+      ? [
+          {
+            key: "company",
+            label: "Company",
+            value: companyName ?? filter.companyId,
+          },
+        ]
+      : []),
+    ...(filter.status !== undefined
+      ? [
+          {
+            key: "status",
+            label: "Status",
+            value:
+              NETWORKING_STATUSES.find((item) => item.value === filter.status)
+                ?.label ?? filter.status,
+          },
+        ]
+      : []),
+    ...(filter.relationship !== undefined
+      ? [
+          {
+            key: "relationship",
+            label: "Relationship",
+            value: relationshipLabel(filter.relationship),
+          },
+        ]
+      : []),
+    ...(filter.noResponseDays !== undefined
+      ? [
+          {
+            key: "noResponseDays",
+            label: "No response for",
+            value: `At least ${filter.noResponseDays} days`,
+          },
+        ]
+      : []),
+  ].map((item) => ({
+    ...item,
+    clearHref: listHref("/contacts", withoutParams(query, item.key)),
+  }));
+  const savedSearchQuery = query.toString();
 
   return (
     <section className="contact-page">
@@ -66,85 +120,90 @@ export default async function ContactsPage({ searchParams }: Props = {}) {
         <ContactCreatePanel companies={companies} />
       </header>
 
-      <form aria-label="Filter contacts" className="list-filter" method="get">
-        <div className="list-filter__fields">
-          <div className="field">
-            <label htmlFor="contact-company-filter">Company</label>
-            <select
-              defaultValue={filter.companyId ?? ""}
-              id="contact-company-filter"
-              name="company"
-            >
-              <option value="">All companies</option>
-              {companies.map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.name}
-                </option>
-              ))}
-            </select>
+      <ListToolbar
+        applied={applied}
+        clearAllHref="/contacts"
+        countLabel={recordCountLabel(contacts.length, "contact", "contacts")}
+        filterFormLabel="contact"
+        savedSearches={<SavedSearchLinks searches={searches} />}
+      >
+        <form aria-label="Filter contacts" className="list-filter" method="get">
+          <div className="list-filter__fields">
+            <div className="field">
+              <label htmlFor="contact-company-filter">Company</label>
+              <select
+                defaultValue={filter.companyId ?? ""}
+                id="contact-company-filter"
+                name="company"
+              >
+                <option value="">All companies</option>
+                {companies.map((company) => (
+                  <option key={company.id} value={company.id}>
+                    {company.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="contact-status-filter">Status</label>
+              <select
+                defaultValue={filter.status ?? ""}
+                id="contact-status-filter"
+                name="status"
+              >
+                <option value="">All statuses</option>
+                {NETWORKING_STATUSES.map((status) => (
+                  <option key={status.value} value={status.value}>
+                    {status.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="contact-relationship-filter">Relationship</label>
+              <select
+                defaultValue={filter.relationship ?? ""}
+                id="contact-relationship-filter"
+                name="relationship"
+              >
+                <option value="">All relationships</option>
+                {CONTACT_RELATIONSHIPS.map((relationship) => (
+                  <option key={relationship.value} value={relationship.value}>
+                    {relationship.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="contact-response-filter">No response for</label>
+              <select
+                defaultValue={filter.noResponseDays?.toString() ?? ""}
+                id="contact-response-filter"
+                name="noResponseDays"
+              >
+                <option value="">Any response age</option>
+                <option value="3">At least 3 days</option>
+                <option value="7">At least 7 days</option>
+                <option value="14">At least 14 days</option>
+                <option value="30">At least 30 days</option>
+              </select>
+            </div>
           </div>
-          <div className="field">
-            <label htmlFor="contact-status-filter">Status</label>
-            <select
-              defaultValue={filter.status ?? ""}
-              id="contact-status-filter"
-              name="status"
-            >
-              <option value="">All statuses</option>
-              {NETWORKING_STATUSES.map((status) => (
-                <option key={status.value} value={status.value}>
-                  {status.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="contact-relationship-filter">Relationship</label>
-            <select
-              defaultValue={filter.relationship ?? ""}
-              id="contact-relationship-filter"
-              name="relationship"
-            >
-              <option value="">All relationships</option>
-              {CONTACT_RELATIONSHIPS.map((relationship) => (
-                <option key={relationship.value} value={relationship.value}>
-                  {relationship.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="contact-response-filter">No response for</label>
-            <select
-              defaultValue={filter.noResponseDays?.toString() ?? ""}
-              id="contact-response-filter"
-              name="noResponseDays"
-            >
-              <option value="">Any response age</option>
-              <option value="3">At least 3 days</option>
-              <option value="7">At least 7 days</option>
-              <option value="14">At least 14 days</option>
-              <option value="30">At least 30 days</option>
-            </select>
-          </div>
-        </div>
         <div className="list-filter__actions">
-          <button className="btn" type="submit">
-            Apply filters
-          </button>
-          {hasFilters ? (
-            <Link className="btn btn--ghost" href="/contacts">
-              Clear filters
-            </Link>
-          ) : null}
-        </div>
-      </form>
-
-      <SavedSearchPanel
-        entityType="contacts"
-        query={query.toString()}
-        searches={searches}
-      />
+            <button className="btn" type="submit">
+              Apply filters
+            </button>
+            {applied.length > 0 ? (
+              <Link className="btn btn--ghost" href="/contacts">
+                Clear filters
+              </Link>
+            ) : null}
+          </div>
+        </form>
+        {savedSearchQuery ? (
+          <SavedSearchForm entityType="contacts" query={savedSearchQuery} />
+        ) : null}
+      </ListToolbar>
 
       {contacts.length === 0 ? (
         <div className="data-state data-state--empty">

@@ -154,6 +154,44 @@ describe("contact screens", () => {
     expect(empty).not.toContain("No contacts yet.");
   });
 
+  it("keeps the contact filter fields collapsed and states what is applied", async () => {
+    const fixture = newFixture();
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "microsoft",
+      name: "Microsoft",
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "rahul",
+      companyId: "microsoft",
+      name: "Rahul Sharma",
+      relationship: "alumni",
+    });
+
+    const bare = renderToStaticMarkup(
+      await ContactsPage({ searchParams: Promise.resolve({}) }),
+    );
+    expect(bare).toContain("list-toolbar__filters");
+    expect(bare).not.toContain('open=""');
+    expect(bare).not.toContain("Clear all");
+    expect(bare).not.toContain("Save this filter as");
+    expect(bare).toContain("1 contact");
+
+    const filtered = renderToStaticMarkup(
+      await ContactsPage({
+        searchParams: Promise.resolve({
+          company: "microsoft",
+          relationship: "alumni",
+        }),
+      }),
+    );
+    expect(filtered).not.toContain('open=""');
+    expect(filtered).toContain("2 applied");
+    expect(filtered).toContain("Clear all");
+    expect(filtered).toContain("Save this filter as");
+    expect(filtered).toContain('href="/contacts?relationship=alumni"');
+    expect(filtered).toContain('href="/contacts?company=microsoft"');
+  });
+
   it("renders contact identity, methods and every networking status on detail", async () => {
     const fixture = newFixture();
     const microsoft = createCompany(fixture.client.db, fixture.tenantA, {

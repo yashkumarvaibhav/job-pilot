@@ -45,3 +45,31 @@ export function queryFlagEnabled(value: string | null): boolean {
   const normalized = value?.trim().toLocaleLowerCase("en-US");
   return normalized === "1" || normalized === "true" || normalized === "yes";
 }
+
+/** The list URL for a set of parameters — bare path when nothing is set. */
+export function listHref(basePath: string, query: URLSearchParams): string {
+  const value = query.toString();
+  return value ? `${basePath}?${value}` : basePath;
+}
+
+/**
+ * The same view with one filter removed. Every other parameter survives, which
+ * is what lets a chip clear only itself rather than resetting the whole view.
+ */
+export function withoutParams(
+  query: URLSearchParams,
+  ...keys: string[]
+): URLSearchParams {
+  const next = new URLSearchParams(query);
+  for (const key of keys) next.delete(key);
+  return next;
+}
+
+/** "1 contact" / "12 contacts" — the toolbar states how many records it found. */
+export function recordCountLabel(
+  count: number,
+  singular: string,
+  plural: string,
+): string {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
