@@ -629,3 +629,69 @@ test("an applied filter is stated as a chip that clears only itself", async ({
   await expect(page.locator(".list-toolbar__badge")).toHaveCount(0);
   await context.close();
 });
+
+// D-064. The point of one card grid is that a record renders once, so the count
+// of triggers is the check that matters most — a passing render tells you
+// nothing about whether the table's hidden twin came back.
+test("records render once as cards at every width and theme", async ({
+  browser,
+}) => {
+  for (const theme of THEMES) {
+    for (const viewport of VIEWPORTS) {
+      const context = await browser.newContext({ colorScheme: theme, viewport });
+      await signIn(context);
+      const page = await context.newPage();
+
+      for (const path of ["/contacts", "/opportunities", "/companies"]) {
+        await page.goto(path);
+        await expect(page.locator("table"), path).toHaveCount(0);
+        const cards = page.locator(".record-card");
+        expect(await cards.count(), path).toBeGreaterThan(0);
+
+        // Every destination is either a real link to elsewhere or a control that
+        // says why it cannot act. Neither may be a dead or nameless button.
+        const actions = await page.locator(".record-action").all();
+        expect(actions.length, path).toBeGreaterThan(0);
+        for (const action of actions) {
+          const box = await action.boundingBox();
+          expect(box?.height ?? 0, path).toBeGreaterThanOrEqual(44);
+          const text = (await action.innerText()).trim();
+          expect(text.length, path).toBeGreaterThan(0);
+          if ((await action.evaluate((el) => el.tagName)) === "A") {
+            expect(await action.getAttribute("href"), path).toBeTruthy();
+          } else {
+            await expect(action, path).toBeDisabled();
+          }
+        }
+
+        const overflow = await page.evaluate(
+          () =>
+            document.documentElement.scrollWidth -
+            document.documentElement.clientWidth,
+        );
+        expect(overflow, `${path} at ${viewport.width}`).toBeLessThanOrEqual(1);
+      }
+
+      await context.close();
+    }
+  }
+});
+
+test("a card's saved destination opens in its own tab", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: VIEWPORTS[2] });
+  await signIn(context);
+  const page = await context.newPage();
+  await page.goto("/contacts");
+
+  const linkedin = page
+    .locator(".record-action")
+    .filter({ hasText: "LinkedIn" })
+    .first();
+  await expect(linkedin).toHaveAttribute("target", "_blank");
+  await expect(linkedin).toHaveAttribute("rel", "noopener noreferrer");
+
+  await page.goto("/companies");
+  const website = page.locator(".record-action").filter({ hasText: "Website" }).first();
+  await expect(website).toHaveAttribute("target", "_blank");
+  await context.close();
+});

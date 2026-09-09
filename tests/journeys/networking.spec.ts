@@ -76,10 +76,10 @@ test("a networking status is a labelled state, never a bare colour", async ({
   // §6's thirteen networking states are most of what this screen conveys, so
   // the status has to survive as words for anyone who cannot separate the
   // chips by hue. brand-kit calls this non-negotiable; assert it where a user
-  // would actually read it — inside this contact's own row, not anywhere on a
+  // would actually read it — inside this contact's own card, not anywhere on a
   // page that also carries every status as a filter option.
-  const row = page.getByRole("row").filter({ hasText: CONTACT });
-  await expect(row.getByText("Ready to Contact")).toBeVisible();
+  const card = page.getByRole("listitem").filter({ hasText: CONTACT });
+  await expect(card.getByText("Ready to Contact")).toBeVisible();
   });
 
 test("contact preview preserves the list and opens details and profiles in new tabs", async ({

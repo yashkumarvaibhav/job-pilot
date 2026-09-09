@@ -4003,6 +4003,22 @@ main:focus {
   .list-toolbar__count {
     margin-left: 0;
   }
+
+  /* Three saved views wrapped to three rows on a phone and cost more height
+     than the panel they sit beside. One row that scrolls, as the tabs do. */
+  .list-toolbar .saved-search-list {
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+
+  .list-toolbar .saved-search-link {
+    flex: none;
+    white-space: nowrap;
+  }
 }
 
 .list-filter {
@@ -5818,11 +5834,22 @@ main:focus {
   overflow-wrap: anywhere;
 }
 
+/* The heading and any link inside a fact are controls, so they carry the 44px
+   target like every other one — a 16px hit area is the rule's usual casualty. */
 .record-card__name a,
 .record-card__name button {
+  display: inline-flex;
+  min-height: var(--target-min);
+  align-items: center;
   color: inherit;
   font: inherit;
   text-align: left;
+}
+
+.record-card__fact dd a {
+  display: inline-flex;
+  min-height: var(--target-min);
+  align-items: center;
 }
 
 .record-card__subtitle {

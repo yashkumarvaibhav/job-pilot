@@ -66,6 +66,9 @@ function seedWorkspace(
     name: `${label} Labs`,
     industry: "Developer tools",
     target: true,
+    // A website but no careers page, so one card destination is a live link and
+    // its neighbour is the disabled control that names what is missing (D-064).
+    website: `https://${label.toLowerCase()}.invalid.test`,
     nextAction: "Review open roles",
     nextActionDue: TODAY,
     now: NOW,
@@ -84,6 +87,11 @@ function seedWorkspace(
         kind: "email",
         value: `${label.toLowerCase()}@contacts.invalid.test`,
         isPrimary: true,
+      },
+      {
+        id: `${ids.contactId}-linkedin`,
+        kind: "linkedin",
+        value: `linkedin.invalid.test/in/${label.toLowerCase()}`,
       },
     ],
     now: NOW,
