@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import {
   JOURNEY_ACCOUNTS,
@@ -18,6 +18,18 @@ test.describe.configure({ mode: "serial" });
 
 const COMPANY = "Halcyon Systems";
 const CONTACT = "Ananya Rao";
+
+async function openContactDetailFromList(page: Page) {
+  await page.goto("/contacts");
+  await page.getByRole("button", { name: `Preview ${CONTACT}` }).click();
+  const dialog = page.getByRole("dialog", { name: CONTACT });
+  await expect(dialog).toBeVisible();
+  const popup = page.waitForEvent("popup");
+  await dialog.getByRole("link", { name: "Open contact in new tab" }).click();
+  const detail = await popup;
+  await expect(detail.getByRole("heading", { level: 1, name: CONTACT })).toBeVisible();
+  return detail;
+}
 
 test.beforeEach(async ({ page }) => {
   await signIn(page, JOURNEY_ACCOUNTS.networking);
@@ -44,6 +56,10 @@ test("a contact can be added against a tracked company", async ({ page }) => {
   await form
     .getByLabel("Networking status", { exact: true })
     .selectOption("ready_to_contact");
+  await form.getByLabel("LinkedIn", { exact: true }).fill("linkedin.com/in/ananya-rao");
+  await form
+    .getByLabel("Other", { exact: true })
+    .fill("https://profile.invalid.test/ananya");
   await form.getByRole("button", { name: "Save contact" }).click();
 
   await expect(page.getByRole("heading", { level: 1, name: CONTACT })).toBeVisible();
@@ -51,9 +67,11 @@ test("a contact can be added against a tracked company", async ({ page }) => {
 
 test("a networking status is a labelled state, never a bare colour", async ({
   page,
-}) => {
-  await page.goto("/contacts");
-  await expect(page.getByRole("link", { name: CONTACT })).toBeVisible();
+  }) => {
+    await page.goto("/contacts");
+    await expect(
+      page.getByRole("button", { name: `Preview ${CONTACT}` }),
+    ).toBeVisible();
 
   // §6's thirteen networking states are most of what this screen conveys, so
   // the status has to survive as words for anyone who cannot separate the
@@ -62,15 +80,77 @@ test("a networking status is a labelled state, never a bare colour", async ({
   // page that also carries every status as a filter option.
   const row = page.getByRole("row").filter({ hasText: CONTACT });
   await expect(row.getByText("Ready to Contact")).toBeVisible();
+  });
+
+test("contact preview preserves the list and opens details and profiles in new tabs", async ({
+  page,
+}) => {
+  await page.goto("/contacts?status=ready_to_contact");
+  const trigger = page.getByRole("button", { name: `Preview ${CONTACT}` });
+  await trigger.focus();
+  await trigger.click();
+
+  const dialog = page.getByRole("dialog", { name: CONTACT });
+  const closeIcon = dialog.getByRole("button", { name: "Close contact preview" });
+  await expect(page).toHaveURL(/\/contacts\?status=ready_to_contact$/u);
+  await expect(dialog).toBeVisible();
+  await expect(closeIcon).toBeFocused();
+  await expect(dialog.getByText("Halcyon Systems")).toBeVisible();
+  await expect(dialog.getByText("Ready to Contact")).toBeVisible();
+
+  const linkedin = dialog.getByRole("link", {
+    name: "Open LinkedIn profile in a new tab",
+  });
+  const otherProfile = dialog.getByRole("link", {
+    name: "Open external profile in a new tab",
+  });
+  await expect(linkedin).toHaveAttribute(
+    "href",
+    "https://linkedin.com/in/ananya-rao",
+  );
+  await expect(linkedin).toHaveAttribute("target", "_blank");
+  await expect(linkedin).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(otherProfile).toHaveAttribute(
+    "href",
+    "https://profile.invalid.test/ananya",
+  );
+  await page.context().route("https://linkedin.com/**", async (route) => {
+    await route.fulfill({ body: "Profile destination", contentType: "text/plain" });
+  });
+  const profilePopup = page.waitForEvent("popup");
+  await linkedin.click();
+  const profile = await profilePopup;
+  await expect(profile).toHaveURL("https://linkedin.com/in/ananya-rao");
+  await profile.close();
+
+  const footerClose = dialog.getByRole("button", { name: "Close", exact: true });
+  await footerClose.focus();
+  await page.keyboard.press("Tab");
+  await expect(closeIcon).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(trigger).toBeFocused();
+
+  await trigger.click();
+  const reopened = page.getByRole("dialog", { name: CONTACT });
+  const detailPopup = page.waitForEvent("popup");
+  await reopened.getByRole("link", { name: "Open contact in new tab" }).click();
+  const detail = await detailPopup;
+  await expect(detail).toHaveURL(/\/contacts\//u);
+  await expect(detail.getByRole("heading", { level: 1, name: CONTACT })).toBeVisible();
+  await detail.close();
+
+  await reopened.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(reopened).toBeHidden();
+  await expect(page).toHaveURL(/\/contacts\?status=ready_to_contact$/u);
 });
 
 test("logging a conversation puts it on the contact's timeline", async ({
   page,
 }) => {
-  await page.goto("/contacts");
-  await page.getByRole("link", { name: CONTACT }).click();
+  const contactPage = await openContactDetailFromList(page);
 
-  const log = page.getByRole("region", { name: "Log interaction" });
+  const log = contactPage.getByRole("region", { name: "Log interaction" });
   await log.getByLabel("Channel", { exact: true }).selectOption("linkedin_dm");
   await log.getByLabel("Direction", { exact: true }).selectOption("outbound");
   await log
@@ -78,26 +158,27 @@ test("logging a conversation puts it on the contact's timeline", async ({
     .fill("Asked whether the platform team is hiring new grads.");
   await log.getByRole("button", { name: "Log interaction" }).click();
 
-  const timeline = page.getByRole("region", { name: "Interaction timeline" });
+  const timeline = contactPage.getByRole("region", { name: "Interaction timeline" });
   await expect(timeline.getByText(/platform team is hiring/)).toBeVisible();
+  await contactPage.close();
 });
 
 test("a follow-up date set on a contact comes back on Today", async ({ page }) => {
   const today = workspaceDate();
-  await page.goto("/contacts");
-  await page.getByRole("link", { name: CONTACT }).click();
+  const contactPage = await openContactDetailFromList(page);
 
-  const edit = page.getByRole("region", { name: "Edit contact" });
+  const edit = contactPage.getByRole("region", { name: "Edit contact" });
   await edit.getByLabel("Next action", { exact: true }).fill("Ask about referrals");
   await edit.getByLabel("Follow-up date", { exact: true }).fill(today);
   await edit
     .getByLabel("Networking status", { exact: true })
     .selectOption("checking_for_openings");
   await saveAndSettle(
-    page,
+    contactPage,
     edit.getByRole("button", { name: "Save changes" }),
     "/api/contacts/",
   );
+  await contactPage.close();
 
   await page.goto("/today");
   const doNow = page.getByRole("region", { name: "Do Now" });
@@ -127,16 +208,16 @@ test("a due contact follow-up completes once without becoming a task", async ({
 test("marking a follow-up notification done resolves the new source action", async ({
   page,
 }) => {
-  await page.goto("/contacts");
-  await page.getByRole("link", { name: CONTACT }).click();
-  const edit = page.getByRole("region", { name: "Edit contact" });
+  const contactPage = await openContactDetailFromList(page);
+  const edit = contactPage.getByRole("region", { name: "Edit contact" });
   await edit.getByLabel("Next action", { exact: true }).fill("Send resume");
   await edit.getByLabel("Follow-up date", { exact: true }).fill(workspaceDate());
   await saveAndSettle(
-    page,
+    contactPage,
     edit.getByRole("button", { name: "Save changes" }),
     "/api/contacts/",
   );
+  await contactPage.close();
 
   await page.goto("/notifications");
   const row = page.getByRole("row").filter({ hasText: CONTACT });
@@ -151,30 +232,32 @@ test("marking a follow-up notification done resolves the new source action", asy
   await expect(
     page.getByRole("region", { name: "Do Now" }).getByText(CONTACT),
   ).toHaveCount(0);
-  await page.goto("/contacts");
-  await page.getByRole("link", { name: CONTACT }).click();
+  const reloadedContact = await openContactDetailFromList(page);
   await expect(
-    page
+    reloadedContact
       .getByRole("region", { name: "Edit contact" })
       .getByLabel("Follow-up date", { exact: true }),
   ).toHaveValue("");
+  await reloadedContact.close();
 });
 
 test("the status change survives a reload rather than living in the tab", async ({
   page,
 }) => {
-  await page.goto("/contacts");
-  await page.getByRole("link", { name: CONTACT }).click();
+  const contactPage = await openContactDetailFromList(page);
   // Reloading before the click's navigation resolves would just reload the
   // list, which passes vacuously for the wrong reason.
-  await expect(page.getByRole("heading", { level: 1, name: CONTACT })).toBeVisible();
-  await page.reload();
+  await expect(
+    contactPage.getByRole("heading", { level: 1, name: CONTACT }),
+  ).toBeVisible();
+  await contactPage.reload();
 
   await expect(
-    page
+    contactPage
       .getByRole("region", { name: "Edit contact" })
       .getByLabel("Networking status", { exact: true }),
   ).toHaveValue("checking_for_openings");
+  await contactPage.close();
 });
 
 test("a contact filter narrows the list and can be saved for next time", async ({
@@ -183,7 +266,9 @@ test("a contact filter narrows the list and can be saved for next time", async (
   await page.goto("/contacts");
   await page.getByLabel("Status", { exact: true }).selectOption("checking_for_openings");
   await page.getByRole("button", { name: "Apply filters" }).click();
-  await expect(page.getByRole("link", { name: CONTACT })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: `Preview ${CONTACT}` }),
+  ).toBeVisible();
 
   await page.getByLabel("Save this filter as", { exact: true }).fill("Warm leads");
   await saveAndSettle(

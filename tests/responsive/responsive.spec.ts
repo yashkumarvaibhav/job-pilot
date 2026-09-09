@@ -299,6 +299,79 @@ test("quick add traps focus and returns it on close", async ({ browser }) => {
   }
 });
 
+test("contact preview fits every width and theme with contained focus", async ({
+  browser,
+}) => {
+  for (const theme of THEMES) {
+    for (const viewport of VIEWPORTS) {
+      const context = await browser.newContext({ colorScheme: theme, viewport });
+      await signIn(context);
+      const page = await context.newPage();
+      await page.goto("/contacts");
+      await page.evaluate((value) => localStorage.setItem("theme", value), theme);
+      await page.reload();
+
+      const trigger = page.getByRole("button", { name: "Preview Atlas Person" });
+      await trigger.focus();
+      await trigger.click();
+      const dialog = page.getByRole("dialog", { name: "Atlas Person" });
+      const close = dialog.getByRole("button", { name: "Close contact preview" });
+      await expect(dialog).toBeVisible();
+      await expect(close).toBeFocused();
+      await expect(dialog.getByText("Checking for Openings")).toBeVisible();
+
+      const audit = await dialog.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        const content = element.querySelector<HTMLElement>(".contact-preview-content");
+        const controls = [
+          ...element.querySelectorAll<HTMLElement>("a[href], button:not([disabled])"),
+        ].map((control) => {
+          const bounds = control.getBoundingClientRect();
+          return { height: bounds.height, width: bounds.width };
+        });
+        return {
+          bottom: rect.bottom,
+          controls,
+          innerHeight,
+          innerWidth,
+          left: rect.left,
+          pageScrollWidth: document.documentElement.scrollWidth,
+          right: rect.right,
+          top: rect.top,
+          contentOverflow: content ? getComputedStyle(content).overflowY : null,
+        };
+      });
+      expect(audit.left).toBeGreaterThanOrEqual(0);
+      expect(audit.top).toBeGreaterThanOrEqual(0);
+      expect(audit.right).toBeLessThanOrEqual(audit.innerWidth);
+      expect(audit.bottom).toBeLessThanOrEqual(audit.innerHeight);
+      expect(audit.pageScrollWidth).toBeLessThanOrEqual(audit.innerWidth);
+      expect(audit.contentOverflow).toBe("auto");
+      expect(audit.controls.every(({ height, width }) => height >= 44 && width >= 44)).toBe(
+        true,
+      );
+
+      const focus = await close.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return {
+          outlineOffset: style.outlineOffset,
+          outlineStyle: style.outlineStyle,
+          outlineWidth: style.outlineWidth,
+        };
+      });
+      expect(focus).toEqual({
+        outlineOffset: "2px",
+        outlineStyle: "solid",
+        outlineWidth: "2px",
+      });
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+      await expect(trigger).toBeFocused();
+      await context.close();
+    }
+  }
+});
+
 test("landing account dialogs trap focus and preserve browser history", async ({ browser }) => {
   const context = await browser.newContext({ viewport: VIEWPORTS[2] });
   const page = await context.newPage();
