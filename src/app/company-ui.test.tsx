@@ -123,23 +123,24 @@ describe("company screens", () => {
 
     const html = renderToStaticMarkup(await CompaniesPage());
 
-    expect(html).toContain('class="tbl company-table"');
-    expect(html).toContain('class="company-card-list"');
+    // One card grid at every width now (D-064), not a table beside a hidden copy.
+    expect(html).toContain('class="record-cards"');
     expect(html).toContain("Microsoft");
     expect(html).toContain("Technology");
     expect(html).toContain("Target");
-    expect(html.match(/>2 contacts</g)).toHaveLength(2);
-    expect(html.match(/>1 contact</g)).toHaveLength(2);
-    expect(html.match(/>2 open roles</g)).toHaveLength(2);
+    // Once each. Every one of these counted two while a row rendered twice.
+    expect(html.match(/>2 contacts</g)).toHaveLength(1);
+    expect(html.match(/>1 contact</g)).toHaveLength(1);
+    expect(html.match(/>2 open roles</g)).toHaveLength(1);
     expect(
       html.match(/href="\/companies\/microsoft#company-contacts"/g),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
     expect(html.match(/href="\/companies\/exl#company-contacts"/g)).toHaveLength(
-      2,
+      1,
     );
     expect(
       html.match(/href="\/companies\/microsoft#company-opportunities"/g),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
     expect(html).not.toContain("3 contacts");
     expect(html).not.toContain("3 open roles");
     expect(html).not.toContain("Hidden Contact");

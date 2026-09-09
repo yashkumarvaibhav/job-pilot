@@ -270,12 +270,12 @@ export function ContactPreviewDialog({
 
 export function ContactPreviewTrigger({
   children,
-  className,
+  className = "contact-preview-trigger",
   contactId,
   contactName,
 }: {
   children: ReactNode;
-  className: string;
+  className?: string;
   contactId: string;
   contactName: string;
 }) {

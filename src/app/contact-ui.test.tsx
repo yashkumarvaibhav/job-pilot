@@ -84,15 +84,16 @@ describe("contact screens", () => {
 
     const html = renderToStaticMarkup(await ContactsPage());
 
-    expect(html).toContain('class="tbl contact-table"');
-    expect(html).toContain('class="contact-card-list"');
+    // One card grid at every width now (D-064), not a table beside a hidden copy.
+    expect(html).toContain('class="record-cards"');
     expect(html).toContain("Rahul Sharma");
     expect(html).toContain("Microsoft");
     expect(html).toContain("Checking for Openings");
     expect(html).toContain("Independent Contact");
     expect(html).toContain("No company");
     expect(html).toContain('aria-hidden="true"');
-    expect(html.match(/aria-haspopup="dialog"/g)).toHaveLength(4);
+    // Two contacts, two triggers. It was four while every row rendered twice.
+    expect(html.match(/aria-haspopup="dialog"/g)).toHaveLength(2);
     expect(html).toContain('aria-label="Preview Rahul Sharma"');
     expect(html).not.toContain('href="/contacts/rahul"');
   });
@@ -190,6 +191,70 @@ describe("contact screens", () => {
     expect(filtered).toContain("Save this filter as");
     expect(filtered).toContain('href="/contacts?relationship=alumni"');
     expect(filtered).toContain('href="/contacts?company=microsoft"');
+  });
+
+  it("renders one card per contact carrying its destinations", async () => {
+    const fixture = newFixture();
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "microsoft",
+      name: "Microsoft",
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "rahul",
+      companyId: "microsoft",
+      name: "Rahul Sharma",
+      designation: "SDE II",
+      relationship: "alumni",
+      networkingStatus: "checking_for_openings",
+      methods: [
+        { kind: "email", value: "rahul@invalid.test", isPrimary: true },
+        { kind: "linkedin", value: "linkedin.com/in/rahul" },
+      ],
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "priya",
+      name: "Priya Nair",
+      relationship: "employee",
+      methods: [{ kind: "phone", value: "+919999900000" }],
+    });
+
+    const html = renderToStaticMarkup(
+      await ContactsPage({ searchParams: Promise.resolve({}) }),
+    );
+
+    // One rendering per record: the table and its hidden mobile twin are gone.
+    expect(html).not.toContain('class="tbl contact-table"');
+    expect(html).not.toContain("contact-card-list");
+    expect(html).toContain("record-cards");
+    expect(html).toContain("record-card__name");
+
+    // Every column the table carried survives as a labelled fact.
+    for (const expected of [
+      "Rahul Sharma",
+      "SDE II",
+      "Microsoft",
+      "Alumni",
+      "Checking for Openings",
+      "Last interaction",
+      "Follow-up",
+      "Next action",
+    ]) {
+      expect(html).toContain(expected);
+    }
+
+    // A saved destination opens in a new tab; a missing one is disabled and named.
+    expect(html).toContain('href="https://linkedin.com/in/rahul"');
+    expect(html).toContain('rel="noopener noreferrer"');
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain("mail.google.com/mail/?view=cm");
+    expect(html).toContain("rahul%40invalid.test");
+    expect(html).toContain("No LinkedIn saved");
+    expect(html).toContain("No email saved");
+    expect(html).toContain("disabled=\"\"");
+
+    // The heading still opens the JP-0056 preview rather than navigating.
+    expect(html).toContain("contact-preview-trigger");
+    expect(html).not.toContain('<a class="table-link" href="/contacts/rahul"');
   });
 
   it("renders contact identity, methods and every networking status on detail", async () => {

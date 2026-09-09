@@ -1,6 +1,8 @@
+import { Briefcase, Globe } from "lucide-react";
 import Link from "next/link";
 
 import { CompanyCreatePanel, TargetChip } from "@/components/company-form";
+import { RecordCard, RecordCards } from "@/components/record-card";
 import { requireTenant } from "@/server/auth/current-session";
 import { getDatabase } from "@/server/db/runtime";
 import { listCompanySummaries } from "@/server/repos/companies";
@@ -78,78 +80,56 @@ export default async function CompaniesPage() {
           <p>No companies yet. Add one to hang contacts and roles on.</p>
         </div>
       ) : (
-        <>
-          <div className="table-scroll company-table-wrap">
-            <table className="tbl company-table">
-              <thead>
-                <tr>
-                  <th scope="col">Name</th>
-                  <th scope="col">Industry</th>
-                  <th scope="col">Target</th>
-                  <th scope="col">Contacts</th>
-                  <th scope="col">Open roles</th>
-                  <th scope="col">Next action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {companies.map((company) => (
-                  <tr key={company.id}>
-                    <td>
-                      <Link className="table-link" href={`/companies/${company.id}`}>
-                        {company.name}
-                      </Link>
-                    </td>
-                    <td>{company.industry ?? "—"}</td>
-                    <td>{company.target ? <TargetChip /> : "—"}</td>
-                    <td className="tnum">
-                      <CompanyContactCount
-                        className="table-link"
-                        companyId={company.id}
-                        contactCount={company.contactCount}
-                      />
-                    </td>
-                    <td className="tnum">
-                      <CompanyOpenRoleCount
-                        className="table-link"
-                        companyId={company.id}
-                        openRoleCount={company.openRoleCount}
-                      />
-                    </td>
-                    <td>{company.nextAction ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <ul aria-label="Companies" className="company-card-list">
-            {companies.map((company) => (
-              <li className="company-list-card" key={company.id}>
-                <span className="company-list-card__heading">
-                  <Link
-                    className="company-list-card__name"
-                    href={`/companies/${company.id}`}
-                  >
-                    <strong>{company.name}</strong>
-                  </Link>
-                  {company.target ? <TargetChip /> : null}
-                </span>
-                <span>{company.industry ?? "Industry not set"}</span>
-                <CompanyContactCount
-                  className="company-list-card__relationship-link tnum"
-                  companyId={company.id}
-                  contactCount={company.contactCount}
-                />
-                <CompanyOpenRoleCount
-                  className="company-list-card__relationship-link tnum"
-                  companyId={company.id}
-                  openRoleCount={company.openRoleCount}
-                />
-                <span>{company.nextAction ?? "No next action"}</span>
-              </li>
-            ))}
-          </ul>
-        </>
+        <RecordCards label="Companies">
+          {companies.map((company) => (
+            <RecordCard
+              chips={company.target ? <TargetChip /> : null}
+              destinations={[
+                {
+                  key: "website",
+                  label: "Website",
+                  missingLabel: "No website saved",
+                  href: company.website,
+                  icon: <Globe aria-hidden="true" />,
+                },
+                {
+                  key: "careers",
+                  label: "Careers",
+                  missingLabel: "No careers page saved",
+                  href: company.careersUrl,
+                  icon: <Briefcase aria-hidden="true" />,
+                },
+              ]}
+              facts={[
+                { label: "Industry", value: company.industry ?? "Not set" },
+                {
+                  label: "Contacts",
+                  value: (
+                    <CompanyContactCount
+                      companyId={company.id}
+                      contactCount={company.contactCount}
+                    />
+                  ),
+                },
+                {
+                  label: "Open roles",
+                  value: (
+                    <CompanyOpenRoleCount
+                      companyId={company.id}
+                      openRoleCount={company.openRoleCount}
+                    />
+                  ),
+                },
+                {
+                  label: "Next action",
+                  value: company.nextAction ?? "None set",
+                },
+              ]}
+              heading={<Link href={`/companies/${company.id}`}>{company.name}</Link>}
+              key={company.id}
+            />
+          ))}
+        </RecordCards>
       )}
     </section>
   );

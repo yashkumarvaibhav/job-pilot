@@ -86,8 +86,8 @@ describe("opportunity screens", () => {
     expect(html).toContain("Saved");
     expect(html).toContain("Active");
     expect(html).toContain("All");
-    expect(html).toContain('class="tbl opportunity-table"');
-    expect(html).toContain('class="opportunity-card-list"');
+    // One card grid at every width now (D-064), not a table beside a hidden copy.
+    expect(html).toContain('class="record-cards"');
     expect(html).toContain("Software Engineer");
     expect(html).toContain("123456");
     expect(html).toContain('aria-hidden="true"');
@@ -212,6 +212,59 @@ describe("opportunity screens", () => {
     expect(filtered).toContain("Save this filter as");
   });
 
+  it("renders one card per role carrying the post and the company", async () => {
+    const fixture = newFixture();
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "rubrik",
+      name: "Rubrik",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "rubrik-swe",
+      companyId: "rubrik",
+      role: "Software Engineer",
+      jobId: "R-4821",
+      url: "https://rubrik.example/jobs/4821",
+      priority: "High",
+      deadlineOn: "2026-09-30",
+      nextAction: "Find people and ask for referral",
+    });
+    createOpportunity(fixture.client.db, fixture.tenantA, {
+      id: "rubrik-intern",
+      companyId: "rubrik",
+      role: "Winter Intern",
+    });
+
+    const html = renderToStaticMarkup(
+      await OpportunitiesPage({ searchParams: Promise.resolve({}) }),
+    );
+
+    expect(html).not.toContain('class="tbl opportunity-table"');
+    expect(html).not.toContain("opportunity-card-list");
+    expect(html).toContain("record-cards");
+
+    for (const expected of [
+      "Software Engineer",
+      "Rubrik",
+      "R-4821",
+      "Job ID",
+      "Bucket",
+      "Priority",
+      "Score",
+      "Deadline",
+      "Next action",
+      "Find people and ask for referral",
+    ]) {
+      expect(html).toContain(expected);
+    }
+
+    expect(html).toContain('href="https://rubrik.example/jobs/4821"');
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain("No job URL saved");
+    // The company is an ordinary in-app link, not a new-tab destination.
+    expect(html).toContain('href="/companies/rubrik"');
+    expect(html).toContain('href="/opportunities/rubrik-swe"');
+  });
+
   it("opens company-first role creation with the existing company and Active selected", async () => {
     const fixture = newFixture();
     createCompany(fixture.client.db, fixture.tenantA, {
@@ -267,7 +320,8 @@ describe("opportunity screens", () => {
     expect(html.indexOf("New Grad Engineer")).toBeLessThan(
       html.indexOf("Software Engineer"),
     );
-    expect(html).toContain('class="tnum">6</td>');
+    // The score is a labelled fact on the card now, not a table cell.
+    expect(html).toContain("<dt>Score</dt><dd>6</dd>");
     expect(html).not.toContain("score--success");
     expect(html).not.toContain("score--warning");
     expect(html).not.toContain("score--danger");

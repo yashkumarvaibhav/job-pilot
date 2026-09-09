@@ -1,8 +1,10 @@
+import { Building2, ExternalLink } from "lucide-react";
 import Link from "next/link";
 
 import { RolledUpStageChip } from "@/components/application-status";
 import { OpportunityCreatePanel } from "@/components/opportunity-form";
 import { ListToolbar, type AppliedFilter } from "@/components/list-toolbar";
+import { RecordCard, RecordCards } from "@/components/record-card";
 import {
   SavedSearchForm,
   SavedSearchLinks,
@@ -244,17 +246,52 @@ export default async function OpportunitiesPage({ searchParams }: Props) {
           <p>{hasFilters ? "No opportunities match these filters." : "No opportunities. Paste a job URL or add one from a conversation."}</p>
         </div>
       ) : (
-        <>
-          <div className="table-scroll opportunity-table-wrap">
-            <table className="tbl opportunity-table">
-              <thead><tr><th scope="col">Company</th><th scope="col">Role</th><th scope="col">Job ID</th><th scope="col">Bucket</th><th scope="col">Stage</th><th scope="col">Stale</th><th scope="col">Priority</th><th scope="col">Score</th><th scope="col">Deadline</th><th scope="col">Next action</th></tr></thead>
-              <tbody>{opportunities.map((row) => <tr key={row.id}><td>{row.companyName}</td><td><Link className="table-link" href={`/opportunities/${row.id}`}>{row.role}</Link></td><td className="tnum mono-value">{row.jobId ?? "—"}</td><td>{row.bucket === "saved" ? "Saved" : "Active"}</td><td><RolledUpStageChip applicationStage={row.application?.stage} opportunityStage={row.stage} /></td><td><StaleFlag reasons={stale.opportunity.get(row.id) ?? []} /></td><td>{row.priority ?? "—"}</td><td className="tnum">{row.score}</td><td className="tnum">{row.deadlineOn ?? "—"}</td><td>{row.nextAction ?? "—"}</td></tr>)}</tbody>
-            </table>
-          </div>
-          <ul aria-label="Opportunities" className="opportunity-card-list">
-            {opportunities.map((row) => <li key={row.id}><Link className="opportunity-list-card" href={`/opportunities/${row.id}`}><span className="opportunity-list-card__heading"><strong>{row.role}</strong><span>{row.bucket === "saved" ? "Saved" : "Active"}</span></span><span>{row.companyName}{row.jobId ? ` · ${row.jobId}` : ""}</span><span className="tnum">Priority score {row.score}</span><RolledUpStageChip applicationStage={row.application?.stage} opportunityStage={row.stage} /><StaleFlag reasons={stale.opportunity.get(row.id) ?? []} /><span className="tnum">{row.deadlineOn ? `Deadline ${row.deadlineOn}` : "No deadline"}</span></Link></li>)}
-          </ul>
-        </>
+        <RecordCards label="Opportunities">
+          {opportunities.map((row) => (
+            <RecordCard
+              chips={<StaleFlag reasons={stale.opportunity.get(row.id) ?? []} />}
+              destinations={[
+                {
+                  key: "post",
+                  label: "Job post",
+                  missingLabel: "No job URL saved",
+                  href: row.url,
+                  icon: <ExternalLink aria-hidden="true" />,
+                },
+                {
+                  key: "company",
+                  label: "Company",
+                  missingLabel: "No company",
+                  href: `/companies/${row.companyId}`,
+                  icon: <Building2 aria-hidden="true" />,
+                  external: false,
+                },
+              ]}
+              facts={[
+                { label: "Job ID", value: row.jobId ?? "Not recorded" },
+                {
+                  label: "Bucket",
+                  value: row.bucket === "saved" ? "Saved" : "Active",
+                },
+                { label: "Priority", value: row.priority ?? "Not set" },
+                { label: "Score", value: row.score },
+                { label: "Deadline", value: row.deadlineOn ?? "None set" },
+                { label: "Next action", value: row.nextAction ?? "None set" },
+              ]}
+              heading={
+                <Link href={`/opportunities/${row.id}`}>{row.role}</Link>
+              }
+              key={row.id}
+              status={
+                <RolledUpStageChip
+                  applicationStage={row.application?.stage}
+                  opportunityStage={row.stage}
+                />
+              }
+              subtitle={row.companyName}
+            />
+          ))}
+        </RecordCards>
       )}
     </section>
   );

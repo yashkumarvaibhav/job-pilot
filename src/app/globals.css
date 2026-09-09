@@ -3397,13 +3397,6 @@ main:focus {
   min-height: var(--target-min);
 }
 
-.company-card-list {
-  display: none;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
 .back-link {
   display: inline-flex;
   width: fit-content;
@@ -4575,10 +4568,6 @@ main:focus {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .company-table-wrap {
-    display: none;
-  }
-
   .opportunity-table-wrap,
   .application-table-wrap,
   .referral-table-wrap,
@@ -4586,11 +4575,6 @@ main:focus {
   .interview-table-wrap,
   .assessment-table-wrap {
     display: none;
-  }
-
-  .company-card-list {
-    display: grid;
-    gap: var(--space-3);
   }
 
   .opportunity-card-list,
@@ -4640,57 +4624,6 @@ main:focus {
     justify-content: space-between;
     gap: var(--space-2);
     color: var(--ink);
-  }
-
-  .company-list-card {
-    display: grid;
-    min-height: var(--target-min);
-    gap: var(--space-1);
-    padding: var(--space-3);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-    background: var(--raised);
-    color: var(--muted);
-    font-size: 0.82rem;
-  }
-
-  .company-list-card:hover {
-    border-color: var(--line-strong);
-    background: var(--hover);
-  }
-
-  .company-list-card__heading {
-    display: flex;
-    min-width: 0;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-2);
-  }
-
-  .company-list-card__heading strong {
-    overflow: hidden;
-    color: var(--ink);
-    font-family: var(--font-serif);
-    font-size: var(--h3-size);
-    font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .company-list-card__name,
-  .company-list-card__relationship-link {
-    display: inline-flex;
-    min-height: var(--target-min);
-    align-items: center;
-    color: var(--accent);
-    font-weight: 700;
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 3px;
-  }
-
-  .company-list-card__name {
-    min-width: 0;
   }
 
   .company-tiles {
@@ -5819,4 +5752,199 @@ main:focus {
 .sequence-enroll-form {
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
   align-items: end;
+}
+
+/* ── Record cards (D-064) ───────────────────────────────────────────────────
+   One rendering per record at every width, replacing the desktop table and the
+   mobile-only duplicate list that used to sit beside it. Each card is its own
+   layout container, so what it can place side by side depends on the width the
+   card has rather than the width of the window — a card in a three-up grid and
+   the same card alone on a phone are the same component. */
+
+.record-cards {
+  --record-card-min: 21rem;
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(min(var(--record-card-min), 100%), 1fr)
+  );
+  /* Each card is its own height. Stretching to the tallest in the row left a
+     band of dead space above the shorter one's footer. */
+  align-items: start;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.record-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--raised);
+  container-type: inline-size;
+  container-name: record-card;
+}
+
+.record-card:hover {
+  border-color: var(--line-strong);
+}
+
+.record-card__head {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.record-card__identity {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.record-card__name {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: var(--h3-size);
+  font-weight: 500;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.record-card__name a,
+.record-card__name button {
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.record-card__subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+/* Facts pair up once the card is wide enough for two; auto-fit collapses the
+   empty track, so a lone fact still gets the whole width. */
+.record-card__facts {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
+  align-content: start;
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+}
+
+.record-card__fact {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 2px;
+}
+
+.record-card__fact dt {
+  color: var(--faint);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.record-card__fact dd {
+  margin: 0;
+  min-width: 0;
+  color: var(--body);
+  font-size: 0.84rem;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.record-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-3);
+}
+
+.record-card__chips:empty {
+  display: none;
+}
+
+.record-card__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--line);
+  background: var(--sidebar);
+  border-radius: 0 0 calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px);
+}
+
+.record-action {
+  display: inline-flex;
+  min-height: var(--target-min);
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--raised);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.record-action:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+}
+
+.record-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Nothing to do, so it is not in the tab order; the words say why, because a
+   dimmed control with no explanation reads as a bug. */
+.record-action:disabled {
+  border-style: dashed;
+  color: var(--faint);
+  cursor: not-allowed;
+}
+
+.record-action svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.record-action__external {
+  width: 13px;
+  height: 13px;
+  color: var(--faint);
+}
+
+/* Given room, the identity and the facts sit side by side instead of stacking. */
+@container record-card (min-width: 30rem) {
+  .record-card__facts {
+    grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
+  }
 }

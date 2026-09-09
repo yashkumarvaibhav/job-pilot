@@ -1,8 +1,15 @@
 import Link from "next/link";
 
+import { Link2, Mail } from "lucide-react";
+
 import { ContactCreatePanel } from "@/components/contact-form";
 import { ContactPreviewTrigger } from "@/components/contact-preview";
 import { ListToolbar, type AppliedFilter } from "@/components/list-toolbar";
+import {
+  RecordCard,
+  RecordCards,
+  gmailComposeUrl,
+} from "@/components/record-card";
 import {
   SavedSearchForm,
   SavedSearchLinks,
@@ -214,76 +221,61 @@ export default async function ContactsPage({ searchParams }: Props = {}) {
           </p>
         </div>
       ) : (
-        <>
-          <div className="table-scroll contact-table-wrap">
-            <table className="tbl contact-table">
-              <thead>
-                <tr>
-                  <th scope="col">Name</th>
-                  <th scope="col">Company</th>
-                  <th scope="col">Relationship</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Last interaction</th>
-                  <th scope="col">Follow-up</th>
-                  <th scope="col">Next action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {contacts.map((contact) => (
-                  <tr key={contact.id}>
-                    <td>
-                      <ContactPreviewTrigger
-                        className="table-link"
-                        contactId={contact.id}
-                        contactName={contact.name}
-                      >
-                        {contact.name}
-                      </ContactPreviewTrigger>
-                    </td>
-                    <td>{contact.companyName ?? "No company"}</td>
-                    <td>{relationshipLabel(contact.relationship)}</td>
-                    <td>
-                      <ContactStatusChip status={contact.networkingStatus} />
-                      <StaleFlag reasons={stale.contact.get(contact.id) ?? []} />
-                    </td>
-                    <td className="tnum">
-                      {contact.lastInteractionAt?.toISOString().slice(0, 10) ?? "—"}
-                    </td>
-                    <td className="tnum">{contact.followUpOn ?? "—"}</td>
-                    <td>{contact.nextAction ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <ul aria-label="Contacts" className="contact-card-list">
-            {contacts.map((contact) => (
-              <li key={contact.id}>
+        <RecordCards label="Contacts">
+          {contacts.map((contact) => (
+            <RecordCard
+              chips={<StaleFlag reasons={stale.contact.get(contact.id) ?? []} />}
+              destinations={[
+                {
+                  key: "linkedin",
+                  label: "LinkedIn",
+                  missingLabel: "No LinkedIn saved",
+                  href: contact.linkedinUrl,
+                  icon: <Link2 aria-hidden="true" />,
+                },
+                {
+                  key: "email",
+                  label: "Gmail",
+                  missingLabel: "No email saved",
+                  href: gmailComposeUrl(contact.emailAddress),
+                  icon: <Mail aria-hidden="true" />,
+                },
+              ]}
+              facts={[
+                {
+                  label: "Company",
+                  value: contact.companyName ?? "No company",
+                },
+                {
+                  label: "Relationship",
+                  value: relationshipLabel(contact.relationship),
+                },
+                {
+                  label: "Last interaction",
+                  value:
+                    contact.lastInteractionAt?.toISOString().slice(0, 10) ??
+                    "None logged",
+                },
+                { label: "Follow-up", value: contact.followUpOn ?? "None set" },
+                {
+                  label: "Next action",
+                  value: contact.nextAction ?? "None set",
+                },
+              ]}
+              heading={
                 <ContactPreviewTrigger
-                  className="contact-list-card"
                   contactId={contact.id}
                   contactName={contact.name}
                 >
-                  <span className="contact-list-card__heading">
-                    <strong>{contact.name}</strong>
-                    <ContactStatusChip status={contact.networkingStatus} />
-                  </span>
-                  <StaleFlag reasons={stale.contact.get(contact.id) ?? []} />
-                  <span>
-                    {contact.companyName ?? "No company"}
-                    {contact.designation ? ` · ${contact.designation}` : ""}
-                  </span>
-                  <span>{relationshipLabel(contact.relationship)}</span>
-                  <span className="tnum">
-                    {contact.nextAction ?? "No next action"}
-                    {contact.followUpOn ? ` · ${contact.followUpOn}` : ""}
-                  </span>
+                  {contact.name}
                 </ContactPreviewTrigger>
-              </li>
-            ))}
-          </ul>
-        </>
+              }
+              key={contact.id}
+              status={<ContactStatusChip status={contact.networkingStatus} />}
+              subtitle={contact.designation}
+            />
+          ))}
+        </RecordCards>
       )}
     </section>
   );
