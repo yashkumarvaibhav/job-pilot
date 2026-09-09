@@ -264,12 +264,22 @@ test("a contact filter narrows the list and can be saved for next time", async (
   page,
 }) => {
   await page.goto("/contacts");
+  // The fields live behind the toolbar's disclosure now (D-063), so filtering
+  // starts by opening it — and the applied filter is stated without reopening it.
+  // <summary> has no portable ARIA role, so this one control is addressed by
+  // class; every assertion below it is still role- or label-based.
+  const openFilters = page.locator(".list-toolbar__summary");
+  await openFilters.click();
   await page.getByLabel("Status", { exact: true }).selectOption("checking_for_openings");
   await page.getByRole("button", { name: "Apply filters" }).click();
   await expect(
     page.getByRole("button", { name: `Preview ${CONTACT}` }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Remove the Status filter/ }),
+  ).toBeVisible();
 
+  await openFilters.click();
   await page.getByLabel("Save this filter as", { exact: true }).fill("Warm leads");
   await saveAndSettle(
     page,
