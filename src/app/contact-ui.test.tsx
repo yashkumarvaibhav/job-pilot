@@ -92,6 +92,9 @@ describe("contact screens", () => {
     expect(html).toContain("Independent Contact");
     expect(html).toContain("No company");
     expect(html).toContain('aria-hidden="true"');
+    expect(html.match(/aria-haspopup="dialog"/g)).toHaveLength(4);
+    expect(html).toContain('aria-label="Preview Rahul Sharma"');
+    expect(html).not.toContain('href="/contacts/rahul"');
   });
 
   it("renders URL-backed contact filters and filtered empty copy", async () => {

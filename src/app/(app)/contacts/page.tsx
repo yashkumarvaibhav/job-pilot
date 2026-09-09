@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ContactCreatePanel } from "@/components/contact-form";
+import { ContactPreviewTrigger } from "@/components/contact-preview";
 import { SavedSearchPanel } from "@/components/saved-search-panel";
 import { StaleFlag } from "@/components/stale-chip";
 import {
@@ -172,9 +173,13 @@ export default async function ContactsPage({ searchParams }: Props = {}) {
                 {contacts.map((contact) => (
                   <tr key={contact.id}>
                     <td>
-                      <Link className="table-link" href={`/contacts/${contact.id}`}>
+                      <ContactPreviewTrigger
+                        className="table-link"
+                        contactId={contact.id}
+                        contactName={contact.name}
+                      >
                         {contact.name}
-                      </Link>
+                      </ContactPreviewTrigger>
                     </td>
                     <td>{contact.companyName ?? "No company"}</td>
                     <td>{relationshipLabel(contact.relationship)}</td>
@@ -196,7 +201,11 @@ export default async function ContactsPage({ searchParams }: Props = {}) {
           <ul aria-label="Contacts" className="contact-card-list">
             {contacts.map((contact) => (
               <li key={contact.id}>
-                <Link className="contact-list-card" href={`/contacts/${contact.id}`}>
+                <ContactPreviewTrigger
+                  className="contact-list-card"
+                  contactId={contact.id}
+                  contactName={contact.name}
+                >
                   <span className="contact-list-card__heading">
                     <strong>{contact.name}</strong>
                     <ContactStatusChip status={contact.networkingStatus} />
@@ -211,7 +220,7 @@ export default async function ContactsPage({ searchParams }: Props = {}) {
                     {contact.nextAction ?? "No next action"}
                     {contact.followUpOn ? ` · ${contact.followUpOn}` : ""}
                   </span>
-                </Link>
+                </ContactPreviewTrigger>
               </li>
             ))}
           </ul>
