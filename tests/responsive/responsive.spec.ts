@@ -683,15 +683,75 @@ test("a card's saved destination opens in its own tab", async ({ browser }) => {
   const page = await context.newPage();
   await page.goto("/contacts");
 
+  // `a.record-action`, not `.record-action`: a record without the destination
+  // renders a disabled button carrying the same word, and this test is about
+  // the saved one.
   const linkedin = page
-    .locator(".record-action")
+    .locator("a.record-action")
     .filter({ hasText: "LinkedIn" })
     .first();
   await expect(linkedin).toHaveAttribute("target", "_blank");
   await expect(linkedin).toHaveAttribute("rel", "noopener noreferrer");
 
   await page.goto("/companies");
-  const website = page.locator(".record-action").filter({ hasText: "Website" }).first();
+  const website = page
+    .locator("a.record-action")
+    .filter({ hasText: "Website" })
+    .first();
   await expect(website).toHaveAttribute("target", "_blank");
   await context.close();
+});
+
+// The owner's /companies screenshot: two cards in one row were taller than the
+// third because a contact count that links is a 44px target and plain "0
+// contacts" is not. Height is measured per surface, across rows rather than
+// within one, because a grid sizes its rows independently.
+test("cards in one list are one size", async ({ browser }) => {
+  for (const theme of THEMES) {
+    for (const viewport of VIEWPORTS) {
+      const context = await browser.newContext({ colorScheme: theme, viewport });
+      await signIn(context);
+      const page = await context.newPage();
+
+      for (const path of ["/contacts", "/opportunities", "/companies"]) {
+        await page.goto(path);
+        const heights = await page
+          .locator(".record-card")
+          .evaluateAll((cards) =>
+            cards.map((card) => Math.round(card.getBoundingClientRect().height)),
+          );
+        expect(heights.length, path).toBeGreaterThan(0);
+        expect(
+          new Set(heights).size,
+          `${path} at ${viewport.width} ${theme}: ${heights.join(", ")}`,
+        ).toBe(1);
+
+        // Equal height must not be bought by clipping what a card has to say.
+        const clipped = await page
+          .locator(".record-card")
+          .evaluateAll((cards) =>
+            cards.filter((card) => card.scrollHeight > card.clientHeight + 1)
+              .length,
+          );
+        expect(clipped, path).toBe(0);
+
+        // The footer sits on the bottom edge, not floating under short content.
+        const gaps = await page.locator(".record-card").evaluateAll((cards) =>
+          cards.flatMap((card) => {
+            const foot = card.querySelector(".record-card__foot");
+            if (!foot) return [];
+            return [
+              Math.round(
+                card.getBoundingClientRect().bottom -
+                  foot.getBoundingClientRect().bottom,
+              ),
+            ];
+          }),
+        );
+        for (const gap of gaps) expect(gap, path).toBeLessThanOrEqual(2);
+      }
+
+      await context.close();
+    }
+  }
 });

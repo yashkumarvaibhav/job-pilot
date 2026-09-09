@@ -184,6 +184,30 @@ function seedWorkspace(
     dueAt: "2026-09-03T14:00:00.000Z",
     now: NOW,
   });
+  // A second, deliberately sparse record on each card surface. Cards are only
+  // provably one size when the list holds records that differ in how much they
+  // have to say — a company with a linked contact count beside one reading "0
+  // contacts" is the exact pair the owner reported as ragged (JP-0062).
+  createCompany(database, tenant, {
+    id: `${ids.companyId}-sparse`,
+    name: `${label} Holdings`,
+    now: NOW,
+  });
+  createContact(database, tenant, {
+    id: `${ids.contactId}-sparse`,
+    name: `${label} Stranger`,
+    relationship: "unknown_cold_contact",
+    networkingStatus: "not_contacted",
+    now: NOW,
+  });
+  createOpportunity(database, tenant, {
+    id: `${ids.opportunityId}-sparse`,
+    companyId: `${ids.companyId}-sparse`,
+    role: `${label} Unscoped Role`,
+    bucket: "saved",
+    now: NOW,
+  });
+
   materializeNotifications(database, tenant, { now: NOW });
 }
 

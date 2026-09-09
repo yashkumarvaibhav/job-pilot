@@ -5784,9 +5784,13 @@ main:focus {
     auto-fill,
     minmax(min(var(--record-card-min), 100%), 1fr)
   );
-  /* Each card is its own height. Stretching to the tallest in the row left a
-     band of dead space above the shorter one's footer. */
-  align-items: start;
+  /* One height for every card in the list, not merely within a row — a grid
+     sizes its rows independently, so `1fr` rows are what stops the second row
+     from finding its own height. The card is a flex column whose facts absorb
+     the slack, so the extra space lands above the footer rather than inside the
+     content. */
+  grid-auto-rows: 1fr;
+  align-items: stretch;
   gap: var(--space-3);
   margin: 0;
   padding: 0;
@@ -5885,9 +5889,17 @@ main:focus {
   text-transform: uppercase;
 }
 
+/* Every value box is one height whether or not it holds a link. Giving the link
+   its 44px target and leaving plain text at its natural height is what made two
+   cards in the same row differ, which is how this was first reported.
+   `overflow-wrap` is inherited, so the anonymous flex item wrapping this text
+   can still shrink below its longest word rather than widening the card. */
 .record-card__fact dd {
-  margin: 0;
+  display: flex;
+  min-height: var(--target-min);
   min-width: 0;
+  align-items: center;
+  margin: 0;
   color: var(--body);
   font-size: 0.84rem;
   line-height: 1.45;
