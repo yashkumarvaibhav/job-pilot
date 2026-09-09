@@ -1432,6 +1432,9 @@ describe("migrateDatabase", () => {
     }
   });
 
+  // A full migration plus the first import of a script module living outside the
+  // Vite root; both are the point of the test, and together they outran the
+  // default budget whenever anything else was using the box.
   it("satisfies the backup document contract the moment the table lands", async () => {
     const directory = mkdtempSync(join(tmpdir(), "job-pilot-migrate-"));
     temporaryDirectories.push(directory);
@@ -1451,5 +1454,5 @@ describe("migrateDatabase", () => {
     } finally {
       client.close();
     }
-  });
+  }, 30_000);
 });

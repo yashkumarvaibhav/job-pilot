@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { documentVersionLabel } from "../../domain/document";
 import { createTenantTestFixture } from "../../test/tenant-fixture";
@@ -21,6 +21,33 @@ import {
 import { applyToOpportunity } from "./applications";
 import { createCompany } from "./companies";
 import { createOpportunity } from "./opportunities";
+
+/**
+ * The real backup module, so rows and files are checked the way a restore checks
+ * them (D-026). It lives outside the Vite root, so its first import pays a
+ * transform cost — loaded once here rather than inside whichever test happened
+ * to reach it first, where on a loaded box it blew the default timeout.
+ */
+type BackupModule = {
+  readDocumentEntries: (sqlite: unknown) => {
+    present: boolean;
+    entries: unknown[];
+  };
+  verifyDocumentEntries: (
+    entries: unknown[],
+    root: string,
+  ) => {
+    verified: Record<string, { sha256: string; bytes: number }>;
+    problems: string[];
+  };
+};
+let backup: BackupModule;
+
+beforeAll(async () => {
+  backup = (await import(
+    "../../../scripts/backup/documents.mjs"
+  )) as unknown as BackupModule;
+}, 30_000);
 
 const PDF = new Uint8Array([37, 80, 68, 70, 45, 49, 46, 52, 10, 37]);
 
@@ -103,12 +130,8 @@ describe("document repository", () => {
     ).toThrow(DocumentInputError);
   });
 
-  it("records the hash of the file it wrote, and backup verification agrees", async () => {
-    // The real backup module, so the row and the file are checked the way a
-    // restore checks them (D-026).
-    const { readDocumentEntries, verifyDocumentEntries } = await import(
-      "../../../scripts/backup/documents.mjs"
-    );
+  it("records the hash of the file it wrote, and backup verification agrees", () => {
+    const { readDocumentEntries, verifyDocumentEntries } = backup;
     const fixture = newFixture();
     createDocument(fixture.client.db, fixture.tenantA, {
       id: "doc-java",
@@ -128,10 +151,7 @@ describe("document repository", () => {
     const { verified, problems } = verifyDocumentEntries(
       entries.entries,
       fixture.root,
-    ) as {
-      verified: Record<string, { sha256: string; bytes: number }>;
-      problems: string[];
-    };
+    );
     expect(problems).toEqual([]);
     expect(verified["version-java-3"].sha256).toBe(version.sha256);
 
@@ -337,6 +357,9 @@ describe("document repository", () => {
     );
   });
 
+  // Proving a 200 MB workspace quota means writing 200 MB. That is the test, not
+  // an accident of it, so it gets a budget that says so rather than sharing the
+  // default with tests that touch nothing.
   it("stops one workspace filling the disk, and says so", () => {
     const fixture = newFixture();
     // Real PDF bytes: content sniffing runs before the quota does.
@@ -400,5 +423,5 @@ describe("document repository", () => {
         fixture.root,
       ),
     ).not.toThrow();
-  });
+  }, 60_000);
 });
