@@ -89,6 +89,54 @@ describe("contact repository", () => {
     expect(listContacts(fixture.client.db, fixture.tenantB)).toEqual([]);
   });
 
+  it("carries each contact's reachable destinations onto the list row", () => {
+    const fixture = newFixture();
+    createCompany(fixture.client.db, fixture.tenantA, {
+      id: "microsoft",
+      name: "Microsoft",
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "rahul",
+      companyId: "microsoft",
+      name: "Rahul Sharma",
+      relationship: "friend",
+      methods: [
+        { kind: "email", value: "second@invalid.test" },
+        { kind: "email", value: "Rahul@Invalid.Test", isPrimary: true },
+        { kind: "linkedin", value: "linkedin.com/in/rahul" },
+        { kind: "whatsapp", value: "+919999988888" },
+      ],
+    });
+    createContact(fixture.client.db, fixture.tenantA, {
+      id: "priya",
+      name: "Priya Nair",
+      relationship: "alumni",
+      methods: [{ kind: "phone", value: "+919999900000" }],
+    });
+    // A neighbour's identically shaped rows must never supply a destination.
+    createContact(fixture.client.db, fixture.tenantB, {
+      id: "neighbour",
+      name: "Neighbour",
+      relationship: "alumni",
+      methods: [
+        { kind: "email", value: "neighbour@invalid.test", isPrimary: true },
+        { kind: "linkedin", value: "linkedin.com/in/neighbour" },
+      ],
+    });
+
+    const rows = listContacts(fixture.client.db, fixture.tenantA);
+    const rahul = rows.find((row) => row.id === "rahul");
+    const priya = rows.find((row) => row.id === "priya");
+
+    // The primary email wins over the one that merely sorts first.
+    expect(rahul?.emailAddress).toBe("Rahul@Invalid.Test");
+    expect(rahul?.linkedinUrl).toBe("https://linkedin.com/in/rahul");
+    // A contact with neither destination says so rather than borrowing one.
+    expect(priya?.emailAddress).toBeNull();
+    expect(priya?.linkedinUrl).toBeNull();
+    expect(rows.map((row) => row.id)).toEqual(["priya", "rahul"]);
+  });
+
   it("saves and reloads a contact without a company or opportunity", () => {
     const fixture = newFixture();
 
@@ -199,6 +247,7 @@ describe("contact repository", () => {
         value: "https://linkedin.com/in/Rahul",
         valueNormalized: "https://linkedin.com/in/Rahul",
       }),
+      // Within a kind the order is the normalized value, not the row's uuid.
       expect.objectContaining({
         kind: "other",
         value: "https://portfolio.example/rahul",

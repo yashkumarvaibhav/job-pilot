@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { and, asc, eq, lte } from "drizzle-orm";
+import { and, asc, eq, inArray, lte } from "drizzle-orm";
 
 import {
   CONTACT_RELATIONSHIPS,
@@ -36,8 +36,21 @@ import { syncContactSuppressionInTransaction } from "./send-safety";
 
 export type Contact = typeof contact.$inferSelect;
 export type ContactMethod = typeof contactMethod.$inferSelect;
-export type ContactListItem = Contact & { companyName: string | null };
-export type ContactDetail = ContactListItem & { methods: ContactMethod[] };
+/**
+ * A list row carries the destinations a card offers (D-064) so the list costs
+ * two queries rather than one per contact. Null means the contact genuinely has
+ * no such destination saved, which is what the disabled control states.
+ */
+export type ContactListItem = Contact & {
+  companyName: string | null;
+  emailAddress: string | null;
+  linkedinUrl: string | null;
+};
+/** Detail holds every method, so it does not carry the list row's two picks. */
+export type ContactDetail = Contact & {
+  companyName: string | null;
+  methods: ContactMethod[];
+};
 
 export type ContactListFilter = {
   companyId?: string;
@@ -448,7 +461,7 @@ export function listContacts(
     conditions.push(eq(contact.networkingStatus, "waiting_for_reply"));
     conditions.push(lte(contact.lastInteractionAt, threshold));
   }
-  return database
+  const rows = database
     .select({ contact, companyName: company.name })
     .from(contact)
     .leftJoin(
@@ -460,8 +473,78 @@ export function listContacts(
     )
     .where(and(...conditions))
     .orderBy(asc(contact.name), asc(contact.id))
-    .all()
-    .map(({ contact: row, companyName }) => ({ ...row, companyName }));
+    .all();
+  const destinations = contactDestinations(
+    database,
+    tenant,
+    rows.map(({ contact: row }) => row.id),
+  );
+  return rows.map(({ contact: row, companyName }) => ({
+    ...row,
+    companyName,
+    emailAddress: destinations.get(row.id)?.emailAddress ?? null,
+    linkedinUrl: destinations.get(row.id)?.linkedinUrl ?? null,
+  }));
+}
+
+/**
+ * One workspace-scoped pass over the two method kinds a card can act on. A
+ * contact's primary method wins; otherwise the first by normalized value, so the
+ * choice does not change between two identical page loads.
+ */
+function contactDestinations(
+  database: AppDatabase,
+  tenant: TenantContext,
+  contactIds: string[],
+): Map<string, { emailAddress: string | null; linkedinUrl: string | null }> {
+  const found = new Map<
+    string,
+    { emailAddress: string | null; linkedinUrl: string | null }
+  >();
+  if (contactIds.length === 0) return found;
+
+  const methods = database
+    .select({
+      contactId: contactMethod.contactId,
+      kind: contactMethod.kind,
+      value: contactMethod.value,
+      isPrimary: contactMethod.isPrimary,
+    })
+    .from(contactMethod)
+    .where(
+      and(
+        eq(contactMethod.workspaceId, tenant.workspaceId),
+        inArray(contactMethod.contactId, contactIds),
+        inArray(contactMethod.kind, ["email", "linkedin"]),
+      ),
+    )
+    .orderBy(
+      asc(contactMethod.contactId),
+      asc(contactMethod.kind),
+      asc(contactMethod.valueNormalized),
+      asc(contactMethod.id),
+    )
+    .all();
+
+  const chosenIsPrimary = new Set<string>();
+  for (const method of methods) {
+    const key = method.kind === "email" ? "emailAddress" : "linkedinUrl";
+    const current = found.get(method.contactId) ?? {
+      emailAddress: null,
+      linkedinUrl: null,
+    };
+    const marker = `${method.contactId}:${key}`;
+    const unset = current[key] === null;
+    // The primary wins; among equals the first in the deterministic order does.
+    if (unset || (method.isPrimary && !chosenIsPrimary.has(marker))) {
+      current[key] = method.value;
+      if (method.isPrimary) chosenIsPrimary.add(marker);
+      found.set(method.contactId, current);
+    } else if (unset) {
+      found.set(method.contactId, current);
+    }
+  }
+  return found;
 }
 
 export function parseContactListFilter(
@@ -520,7 +603,14 @@ export function getContact(
         eq(contactMethod.contactId, id),
       ),
     )
-    .orderBy(asc(contactMethod.kind), asc(contactMethod.id))
+    // Two methods of one kind were ordered by a random uuid, so the list came
+    // back in a different order run to run — random on screen, and a coin-flip
+    // in the tests that assert it.
+    .orderBy(
+      asc(contactMethod.kind),
+      asc(contactMethod.valueNormalized),
+      asc(contactMethod.id),
+    )
     .all();
   return { ...found.contact, companyName: found.companyName, methods };
 }

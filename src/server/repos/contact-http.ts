@@ -157,7 +157,10 @@ export async function readUpdateContactInput(
   return inputFrom(body) as UpdateContactInput;
 }
 
-export function contactListResponse(contact: ContactListItem) {
+// Reads only what a row and a detail record share, so it serves both.
+export function contactListResponse(
+  contact: Omit<ContactListItem, "emailAddress" | "linkedinUrl">,
+) {
   return {
     id: contact.id,
     companyId: contact.companyId,
