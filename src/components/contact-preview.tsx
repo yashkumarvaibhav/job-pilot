@@ -16,6 +16,7 @@ import {
   ContactStatusChip,
   relationshipLabel,
 } from "./contact-status";
+import { ContactMethodValue } from "./contact-method-value";
 import { trapDialogTab } from "./quick-add-dialog";
 
 type ContactPreviewMethod = {
@@ -237,7 +238,7 @@ export function ContactPreviewDialog({
                     {contact.methods.map((method) => (
                       <li key={method.id}>
                         <span>{contactMethodKindLabel(method.kind)}</span>
-                        <strong>{method.value}</strong>
+                        <ContactMethodValue kind={method.kind} value={method.value} />
                         {method.isPrimary ? <small>Primary</small> : null}
                       </li>
                     ))}

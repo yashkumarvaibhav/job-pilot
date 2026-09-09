@@ -14,6 +14,7 @@ import {
   type ContactRelationship,
   type NetworkingStatus,
 } from "../../domain/contact";
+import { canonicalHttpUrl } from "../../domain/web-url";
 import {
   filterOptionValue,
   positiveDayCount,
@@ -197,36 +198,36 @@ function normalizePhone(value: string): string | null {
   return digits.length >= 7 ? `${leadingPlus ? "+" : ""}${digits}` : null;
 }
 
-function normalizeLinkedIn(value: string): string | null {
-  try {
-    const parsed = new URL(value.trim());
-    return parsed.protocol === "http:" || parsed.protocol === "https:"
-      ? parsed.toString().replace(/\/$/, "")
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-function normalizeMethodValue(kind: ContactMethodKind, value: string): string {
+function prepareMethodValue(
+  kind: ContactMethodKind,
+  value: string,
+): { normalized: string; value: string } {
   const trimmed = value.trim();
   if (trimmed.length === 0) {
     throw new ContactInputError("Contact method value is required.");
   }
 
-  const normalized =
-    kind === "email"
-      ? normalizeEmail(trimmed)
-      : kind === "linkedin"
-        ? normalizeLinkedIn(trimmed)
-        : kind === "phone" || kind === "whatsapp"
-          ? normalizePhone(trimmed)
-          : trimmed.toLowerCase();
+  if (kind === "linkedin") {
+    const url = canonicalHttpUrl(trimmed, { inferHttps: true });
+    if (!url) {
+      throw new ContactInputError("Enter a valid linkedin contact method.");
+    }
+    return { normalized: url, value: url };
+  }
+
+  if (kind === "other") {
+    const url = canonicalHttpUrl(trimmed);
+    return url
+      ? { normalized: url, value: url }
+      : { normalized: trimmed.toLowerCase(), value: trimmed };
+  }
+
+  const normalized = kind === "email" ? normalizeEmail(trimmed) : normalizePhone(trimmed);
 
   if (normalized === null) {
     throw new ContactInputError(`Enter a valid ${kind} contact method.`);
   }
-  return normalized;
+  return { normalized, value: trimmed };
 }
 
 type PreparedMethod = ContactMethodInput & { value: string; normalized: string };
@@ -240,11 +241,10 @@ function prepareMethods(methods: ContactMethodInput[] | undefined): PreparedMeth
     if (!isContactMethodKind(method.kind)) {
       throw new ContactInputError("Choose a valid contact method kind.");
     }
-    const value = method.value.trim();
+    const preparedValue = prepareMethodValue(method.kind, method.value);
     return {
       ...method,
-      value,
-      normalized: normalizeMethodValue(method.kind, value),
+      ...preparedValue,
     };
   });
   if (prepared.filter(({ isPrimary }) => isPrimary === true).length > 1) {

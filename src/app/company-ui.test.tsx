@@ -185,6 +185,12 @@ describe("company screens", () => {
     ]) {
       expect(html).toContain(expected);
     }
+    expect(html).toContain("Open website");
+    expect(html).toContain("Open careers page");
+    expect(html).toContain('href="https://microsoft.com"');
+    expect(html).toContain('href="https://careers.microsoft.com"');
+    expect(html.match(/target="_blank"/g)).toHaveLength(2);
+    expect(html.match(/rel="noopener noreferrer"/g)).toHaveLength(2);
   });
 
   it("uses the same Company not found state for missing and foreign ids", async () => {

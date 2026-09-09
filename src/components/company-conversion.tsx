@@ -139,7 +139,7 @@ export function CompanyRelatedLists({
                             aria-label="Open job post in a new tab"
                             className="table-link"
                             href={row.url}
-                            rel="noreferrer"
+                            rel="noopener noreferrer"
                             target="_blank"
                           >
                             Open job post
@@ -178,7 +178,7 @@ export function CompanyRelatedLists({
                       aria-label="Open job post in a new tab"
                       className="table-link"
                       href={row.url}
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                       target="_blank"
                     >
                       Open job post

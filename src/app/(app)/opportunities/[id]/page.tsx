@@ -74,7 +74,7 @@ function Field({
             aria-label="Open job post in a new tab"
             className="table-link"
             href={href}
-            rel="noreferrer"
+            rel="noopener noreferrer"
             target="_blank"
           >
             Open job post

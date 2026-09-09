@@ -174,7 +174,10 @@ describe("contact screens", () => {
       notes: "Ask about platform roles.",
       methods: [
         { kind: "email", value: "rahul@invalid.test", isPrimary: true },
+        { kind: "linkedin", value: "linkedin.com/in/rahul-sharma" },
         { kind: "whatsapp", value: "+91 99999 88888" },
+        { kind: "other", value: "https://portfolio.invalid.test/rahul" },
+        { kind: "other", value: "Matrix: @rahul" },
       ],
     });
 
@@ -190,6 +193,9 @@ describe("contact screens", () => {
       "College network",
       "Checking for Openings",
       "rahul@invalid.test",
+      "Open LinkedIn profile",
+      "Open external profile",
+      "Matrix: @rahul",
       "+91 99999 88888",
       "backend",
       "alumni",
@@ -204,6 +210,10 @@ describe("contact screens", () => {
     ]) {
       expect(html).toContain(expected);
     }
+    expect(html).toContain('href="https://linkedin.com/in/rahul-sharma"');
+    expect(html).toContain('href="https://portfolio.invalid.test/rahul"');
+    expect(html.match(/target="_blank"/g)).toHaveLength(2);
+    expect(html.match(/rel="noopener noreferrer"/g)).toHaveLength(2);
     for (const status of [
       "Not Contacted",
       "Ready to Contact",
@@ -354,6 +364,9 @@ describe("contact screens", () => {
     expect(html).toContain(
       "Type a name. A new company is created if this workspace does not",
     );
+    expect(html).toContain('name="method-linkedin"');
+    expect(html).toContain('inputMode="url"');
+    expect(html).toContain('placeholder="linkedin.com/in/name"');
   });
 
   it("uses one Contact not found state for missing and foreign ids", async () => {

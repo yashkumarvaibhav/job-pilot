@@ -59,7 +59,8 @@ describe("contact preview", () => {
     expect(html).toContain("Rahul Sharma");
     expect(html).toContain("Microsoft");
     expect(html).toContain("Checking for Openings");
-    expect(html).toContain("https://www.linkedin.com/in/rahul");
+    expect(html).toContain("Open LinkedIn profile");
+    expect(html).toContain('href="https://www.linkedin.com/in/rahul"');
   });
 
   it("keeps loading, failure and missing-contact results inside the dialog", () => {

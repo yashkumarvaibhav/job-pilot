@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Reply } from "lucide-react";
 
 import { ActivityTimeline } from "@/components/activity-timeline";
+import { ContactMethodValue } from "@/components/contact-method-value";
 import { ContactEditForm } from "@/components/contact-form";
 import {
   contactMethodKindLabel,
@@ -205,7 +206,7 @@ export default async function ContactDetailPage({
             {contact.methods.map((method) => (
               <li key={method.id}>
                 <span>{contactMethodKindLabel(method.kind)}</span>
-                <strong>{method.value}</strong>
+                <ContactMethodValue kind={method.kind} value={method.value} />
                 {method.isPrimary ? <small>Primary</small> : null}
               </li>
             ))}

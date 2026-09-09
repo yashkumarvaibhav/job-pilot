@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ActivityTimeline } from "@/components/activity-timeline";
+import { SafeExternalLink } from "@/components/external-link";
 import { CompanyEditForm, TargetChip } from "@/components/company-form";
 import {
   CompanyConversionTiles,
@@ -27,11 +28,25 @@ type CompanyDetailPageProps = {
   params: Promise<{ id: string }>;
 };
 
-function Field({ label, value }: { label: string; value: string | null }) {
+function Field({
+  externalLabel,
+  label,
+  value,
+}: {
+  externalLabel?: string;
+  label: string;
+  value: string | null;
+}) {
   return (
     <div>
       <dt>{label}</dt>
-      <dd>{value ?? "Not set"}</dd>
+      <dd>
+        {value && externalLabel ? (
+          <SafeExternalLink href={value} label={externalLabel} />
+        ) : (
+          value ?? "Not set"
+        )}
+      </dd>
     </div>
   );
 }
@@ -102,8 +117,12 @@ export default async function CompanyDetailPage({
       <section aria-labelledby="company-fields" className="detail-section">
         <h2 id="company-fields">Company details</h2>
         <dl className="company-field-grid">
-          <Field label="Website" value={company.website} />
-          <Field label="Careers URL" value={company.careersUrl} />
+          <Field externalLabel="Open website" label="Website" value={company.website} />
+          <Field
+            externalLabel="Open careers page"
+            label="Careers URL"
+            value={company.careersUrl}
+          />
           <Field label="Industry" value={company.industry} />
           <Field label="Company type" value={company.type} />
           <Field label="Locations" value={company.locations} />

@@ -181,6 +181,52 @@ describe("contact repository", () => {
     ).toMatchObject({ id: "contact-b" });
   });
 
+  it("stores web contact methods as safe canonical URLs", () => {
+    const fixture = newFixture();
+    const created = createContact(fixture.client.db, fixture.tenantA, {
+      id: "linked-profile",
+      name: "Linked Profile",
+      methods: [
+        { kind: "linkedin", value: " LinkedIn.com/in/Rahul " },
+        { kind: "other", value: "https://Portfolio.Example/rahul" },
+        { kind: "other", value: "Matrix: @rahul" },
+      ],
+    });
+
+    expect(created.methods).toEqual([
+      expect.objectContaining({
+        kind: "linkedin",
+        value: "https://linkedin.com/in/Rahul",
+        valueNormalized: "https://linkedin.com/in/Rahul",
+      }),
+      expect.objectContaining({
+        kind: "other",
+        value: "https://portfolio.example/rahul",
+        valueNormalized: "https://portfolio.example/rahul",
+      }),
+      expect.objectContaining({
+        kind: "other",
+        value: "Matrix: @rahul",
+        valueNormalized: "matrix: @rahul",
+      }),
+    ]);
+
+    expect(() =>
+      createContact(fixture.client.db, fixture.tenantA, {
+        name: "Unsafe Profile",
+        methods: [{ kind: "linkedin", value: "javascript:alert(1)" }],
+      }),
+    ).toThrowError(ContactInputError);
+    expect(() =>
+      createContact(fixture.client.db, fixture.tenantA, {
+        name: "Duplicate Profile",
+        methods: [
+          { kind: "linkedin", value: "https://linkedin.com/in/Rahul" },
+        ],
+      }),
+    ).toThrowError("That contact method is already used in this workspace.");
+  });
+
   it("requires an explicit override to leave Do Not Contact", () => {
     const fixture = newFixture();
     createContact(fixture.client.db, fixture.tenantA, {

@@ -289,18 +289,17 @@ function ContactForm({
                 inputMode={
                   kind.value === "email"
                     ? "email"
+                    : kind.value === "linkedin"
+                      ? "url"
                     : kind.value === "phone" || kind.value === "whatsapp"
                       ? "tel"
                       : "text"
                 }
                 name={`method-${kind.value}`}
-                type={
-                  kind.value === "email"
-                    ? "email"
-                    : kind.value === "linkedin"
-                      ? "url"
-                      : "text"
+                placeholder={
+                  kind.value === "linkedin" ? "linkedin.com/in/name" : undefined
                 }
+                type={kind.value === "email" ? "email" : "text"}
               />
             </div>
           ))}
