@@ -189,8 +189,8 @@ export function PreviewLink({ children, href, preview = false, previewTitle, asB
   if (!enabled)
     return <Anchor href={href} {...props}>{children}</Anchor>;
   return <>
-  {asButton ? <button disabled={!hydrated} data-preview-ready={hydrated} className={`contact-preview-trigger ${props.className ?? ""}`} type="button" aria-label={props["aria-label"]} aria-haspopup="dialog" onClick={open}>{children}</button> :
-      <Anchor {...props} href={href} inert={!hydrated} data-preview-ready={hydrated} aria-haspopup="dialog" onClick={(event) => { props.onClick?.(event); open(event); }}>{children}</Anchor>}
+  {asButton ? <button data-preview-ready={hydrated} className={`contact-preview-trigger ${props.className ?? ""}`} type="button" aria-label={props["aria-label"]} aria-haspopup="dialog" onClick={open}>{children}</button> :
+      <Anchor {...props} href={href} data-preview-ready={hydrated} aria-haspopup="dialog" onClick={(event) => { props.onClick?.(event); open(event); }}>{children}</Anchor>}
   {selected ? <RecordPreview href={url} title={selected.title} opener={selected.opener} onClose={close}/> : null}
   </>;
 }

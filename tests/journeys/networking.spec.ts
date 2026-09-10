@@ -21,7 +21,9 @@ const CONTACT = "Ananya Rao";
 
 async function openContactDetailFromList(page: Page) {
   await page.goto("/contacts");
-  await page.getByRole("button", { name: `Preview ${CONTACT}` }).click();
+  const trigger = page.getByRole("button", { name: `Preview ${CONTACT}` });
+  await expect(trigger).toHaveAttribute("data-preview-ready", "true");
+  await trigger.click();
   const dialog = page.getByRole("dialog", { name: CONTACT });
   await expect(dialog).toBeVisible();
   const popup = page.waitForEvent("popup");
@@ -87,6 +89,7 @@ test("contact preview preserves the list and opens details and profiles in new t
 }) => {
   await page.goto("/contacts?status=ready_to_contact");
   const trigger = page.getByRole("button", { name: `Preview ${CONTACT}` });
+  await expect(trigger).toHaveAttribute("data-preview-ready", "true");
   await trigger.focus();
   await trigger.click();
 

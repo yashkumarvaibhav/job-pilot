@@ -312,6 +312,7 @@ test("contact preview fits every width and theme with contained focus", async ({
       await page.reload();
 
       const trigger = page.getByRole("button", { name: "Preview Atlas Person" });
+      await expect(trigger).toHaveAttribute("data-preview-ready", "true");
       await trigger.focus();
       await trigger.click();
       const dialog = page.getByRole("dialog", { name: "Atlas Person" });

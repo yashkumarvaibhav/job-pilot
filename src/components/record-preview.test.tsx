@@ -64,15 +64,19 @@ describe("what a forced preview is allowed to cover", () => {
 });
 
 describe("preview links", () => {
-  it("marks a record link as opening a dialog, and leaves it inert until it can", () => {
+  it("marks a record link as opening a dialog without taking it out of the tab order", () => {
     const html = renderToStaticMarkup(
       <PreviewLink className="table-link" href="/contacts/rahul">
         Rahul Sharma
       </PreviewLink>,
     );
     expect(html).toContain('aria-haspopup="dialog"');
+    // Until it can open the dialog it stays an ordinary, reachable link to the
+    // record page: taking it out of the tab order to win a race would cost the
+    // keyboard and the no-script reader the whole product.
     expect(html).toContain('data-preview-ready="false"');
-    expect(html).toContain("inert");
+    expect(html).toContain('href="/contacts/rahul"');
+    expect(html).not.toContain("inert");
   });
 
   it("leaves an internal action button as an ordinary link", () => {
