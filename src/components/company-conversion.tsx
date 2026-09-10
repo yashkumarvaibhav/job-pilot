@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
+import { PreviewLink as Link } from "./record-preview";
 
 import { ApplicationStageChip } from "@/components/application-status";
 import { ContactStatusChip } from "@/components/contact-status";
@@ -135,15 +135,15 @@ export function CompanyRelatedLists({
                       </td>
                       <td>
                         {row.url ? (
-                          <a
-                            aria-label="Open job post in a new tab"
+                          <Link preview
+                            aria-label="Preview job post"
                             className="table-link"
                             href={row.url}
                             rel="noopener noreferrer"
                             target="_blank"
                           >
                             Open job post
-                          </a>
+                          </Link>
                         ) : (
                           "—"
                         )}
@@ -174,15 +174,15 @@ export function CompanyRelatedLists({
                   </span>
                   <span>{opportunityBucketLabel(row.bucket)}</span>
                   {row.url ? (
-                    <a
-                      aria-label="Open job post in a new tab"
+                    <Link preview
+                      aria-label="Preview job post"
                       className="table-link"
                       href={row.url}
                       rel="noopener noreferrer"
                       target="_blank"
                     >
                       Open job post
-                    </a>
+                    </Link>
                   ) : (
                     <span>No job link</span>
                   )}

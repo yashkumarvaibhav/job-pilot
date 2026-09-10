@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { PreviewLink as Link } from "./record-preview";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 import {
@@ -300,7 +300,7 @@ export function NotificationCollection({
                   </td>
                   <td>
                     {target ? (
-                      <Link className="table-link" href={target.href}>
+                      <Link preview className="table-link" href={target.href}>
                         {target.label}
                       </Link>
                     ) : (
@@ -348,7 +348,7 @@ export function NotificationCollection({
               {reason ? <span>{reason}</span> : null}
               <span className="tnum">Due {lead.dueOn}</span>
               {target ? (
-                <Link className="inline-link" href={target.href}>
+                <Link preview className="inline-link" href={target.href}>
                   {target.label}
                 </Link>
               ) : null}

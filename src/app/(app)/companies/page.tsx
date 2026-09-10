@@ -1,5 +1,5 @@
 import { Briefcase, Globe } from "lucide-react";
-import Link from "next/link";
+import { PreviewLink as Link } from "@/components/record-preview";
 
 import { CompanyCreatePanel, TargetChip } from "@/components/company-form";
 import { RecordCard, RecordCards } from "@/components/record-card";

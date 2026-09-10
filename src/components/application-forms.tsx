@@ -1,5 +1,7 @@
 "use client";
 
+import { PreviewLink } from "./record-preview";
+
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 
@@ -32,7 +34,7 @@ function VersionPicker({
     return (
       <p className="field-hint" id={`${id}-empty`}>
         No document versions yet. Upload one in{" "}
-        <a href="/settings/documents">Settings → Documents</a> to record which
+        <PreviewLink preview href="/settings/documents">Settings → Documents</PreviewLink> to record which
         resume you used.
       </p>
     );

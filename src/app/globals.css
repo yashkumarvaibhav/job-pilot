@@ -161,7 +161,12 @@ body {
   background: color-mix(in srgb, var(--ink) 36%, transparent);
 }
 
+.preview-related-list { margin: 0; padding-left: var(--space-5); }
+.preview-related-list a { display: inline-flex; min-height: var(--target-min); min-width: var(--target-min); align-items: center; }
+
 .contact-preview-dialog {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-width: 0;
   display: grid;
   width: min(100%, 44rem);
   max-height: calc(100dvh - 2 * var(--space-4));
@@ -185,6 +190,9 @@ body {
   align-items: flex-start;
   border-bottom: 1px solid var(--line);
 }
+
+.contact-preview-header h2 { overflow-wrap: anywhere; }
+.contact-preview-header > div { min-width: 0; }
 
 .contact-preview-header .eyebrow {
   margin: 0 0 var(--space-1);

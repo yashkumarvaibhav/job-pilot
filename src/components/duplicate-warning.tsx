@@ -5,6 +5,8 @@ import {
   type DuplicateConflict,
 } from "@/domain/duplicate";
 
+import { PreviewLink } from "./record-preview";
+
 type Props = {
   conflict: DuplicateConflict;
   pending?: boolean;
@@ -37,7 +39,7 @@ export function DuplicateWarning({
       <ul>
         {conflict.candidates.map((candidate) => (
           <li key={candidate.id}>
-            <a href={candidate.href}>{candidate.label}</a>
+            <PreviewLink href={candidate.href}>{candidate.label}</PreviewLink>
             <span>
               {candidate.signals
                 .map((signal) => duplicateSignalLabel(signal))

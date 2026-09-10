@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PreviewLink as Link } from "./record-preview";
 import { AlarmClock } from "lucide-react";
 
 import {
@@ -31,7 +31,7 @@ function DueItemNextStep({ row }: { row: DueItem }) {
   const parsed = parseDueSourceKey(row.sourceKey);
   if (parsed?.kind === "sequence_follow_up") {
     return (
-      <Link
+      <Link preview
         className="btn"
         href={`/settings/queue?review=${encodeURIComponent(row.sourceKey)}`}
       >
@@ -56,7 +56,7 @@ function DueItemNextStep({ row }: { row: DueItem }) {
           ? { label: "Decide", anchor: "#application" }
           : { label: "Apply", anchor: "#application" };
     return (
-      <Link className="btn" href={`${href}${next.anchor}`}>
+      <Link preview className="btn" href={`${href}${next.anchor}`}>
         {next.label}
       </Link>
     );
@@ -87,7 +87,7 @@ export function DueItemCollection({
     return (
       <div className="data-state data-state--empty">
         <p>{empty}</p>
-        <Link className="btn" href="/add">
+        <Link preview className="btn" href="/add">
           Add
         </Link>
       </div>
@@ -117,7 +117,7 @@ export function DueItemCollection({
                   <td>{verb}</td>
                   <td>
                     {href ? (
-                      <Link className="table-link" href={href}>
+                      <Link preview className="table-link" href={href}>
                         {row.entityLabel}
                       </Link>
                     ) : (
@@ -159,7 +159,7 @@ export function DueItemCollection({
               <span>{row.title}</span>
               <span>
                 {href ? (
-                  <Link className="inline-link" href={href}>
+                  <Link preview className="inline-link" href={href}>
                     {row.entityLabel}
                   </Link>
                 ) : (

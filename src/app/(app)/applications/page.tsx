@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PreviewLink as Link } from "@/components/record-preview";
 
 import { ApplicationStageChip } from "@/components/application-status";
 import { applicationResultLabel } from "@/domain/application";

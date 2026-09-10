@@ -1,5 +1,7 @@
 "use client";
 
+import { PreviewLink } from "./record-preview";
+
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -381,7 +383,7 @@ export function InboxWorkspace({
         <section className="data-state data-state--empty">
           <Inbox aria-hidden="true" />
           <h2>Connect Gmail in Settings to pull recruiting threads.</h2>
-          <a className="btn" href="/settings">Open Gmail settings</a>
+          <PreviewLink preview className="btn" href="/settings">Open Gmail settings</PreviewLink>
         </section>
       ) : filteredThreads.length === 0 ? (
         <section className="data-state data-state--empty">

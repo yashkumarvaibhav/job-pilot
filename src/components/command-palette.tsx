@@ -2,7 +2,9 @@
 
 import { Command } from "cmdk";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import { RecordPreview } from "./record-preview";
 
 import { railItems } from "@/lib/navigation";
 import { trapDialogTab } from "./quick-add-dialog";
@@ -48,6 +50,9 @@ export default function CommandPalette({
   const dialogRef = useRef<HTMLElement>(null);
   const [query, setQuery] = useState("");
   const [fetched, setFetched] = useState<PaletteCatalog>(EMPTY_CATALOG);
+  const [preview, setPreview] = useState<{ href: string; title: string } | null>(null);
+  const paletteOpen = open && !preview;
+  const closePreview = useCallback(() => { setPreview(null); onOpenChange(false); }, [onOpenChange]);
   const loaded = catalog ?? fetched;
 
   function close() {
@@ -74,7 +79,7 @@ export default function CommandPalette({
   }, [catalog, open, query]);
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!paletteOpen) return undefined;
     const dialog = dialogRef.current;
     if (!dialog) return undefined;
     const container = dialog;
@@ -98,8 +103,9 @@ export default function CommandPalette({
       document.body.style.overflow = previousOverflow;
       window.requestAnimationFrame(() => returnFocusTo?.focus());
     };
-  }, [open, onOpenChange, returnFocusTo]);
+  }, [paletteOpen, onOpenChange, returnFocusTo]);
 
+  if (preview) return <RecordPreview href={preview.href} title={preview.title} opener={returnFocusTo} onClose={closePreview} />;
   if (!open) return null;
 
   function go(href: string) {
@@ -189,7 +195,7 @@ export default function CommandPalette({
                 {loaded.contacts.map((item) => (
                   <Command.Item
                     key={item.id}
-                    onSelect={() => go(`/contacts/${item.id}`)}
+                    onSelect={() => setPreview({ href: `/contacts/${item.id}`, title: item.name })}
                     value={`contact ${item.name}`}
                   >
                     {item.name}
@@ -202,7 +208,7 @@ export default function CommandPalette({
                 {loaded.companies.map((item) => (
                   <Command.Item
                     key={item.id}
-                    onSelect={() => go(`/companies/${item.id}`)}
+                    onSelect={() => setPreview({ href: `/companies/${item.id}`, title: item.name })}
                     value={`company ${item.name}`}
                   >
                     {item.name}
@@ -215,7 +221,7 @@ export default function CommandPalette({
                 {loaded.opportunities.map((item) => (
                   <Command.Item
                     key={item.id}
-                    onSelect={() => go(`/opportunities/${item.id}`)}
+                    onSelect={() => setPreview({ href: `/opportunities/${item.id}`, title: item.role })}
                     value={`job ${item.companyName} ${item.role}`}
                   >
                     {item.role}

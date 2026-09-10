@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import {
   JOURNEY_ACCOUNTS,
   openCreateForm,
+  openRecordDetail,
   saveAndSettle,
   signIn,
   workspaceDate,
@@ -72,7 +73,7 @@ test("asking for a referral schedules the chase without being asked twice", asyn
 }) => {
   const requestedOn = workspaceDate();
   await page.goto("/opportunities");
-  await page.getByRole("link", { name: new RegExp(ROLE, "i") }).click();
+  page = await openRecordDetail(page, page.getByRole("link", { name: new RegExp(ROLE, "i") }));
 
   const referrals = page.getByRole("region", { name: "Referral requests" });
   await referrals.getByLabel("Contact", { exact: true }).selectOption({ label: CONTACT });
@@ -105,12 +106,7 @@ test("a referral arriving moves the role to Ready to Apply on its own", async ({
   // Open the request from its own row rather than by a name pattern: the page
   // also carries preset links, and matching one of those would leave the test
   // filling the filter form instead of the referral.
-  await page
-    .getByRole("row")
-    .filter({ hasText: CONTACT })
-    .getByRole("link")
-    .first()
-    .click();
+  page = await openRecordDetail(page, page.getByRole("row").filter({ hasText: CONTACT }).getByRole("link").first());
 
   const detail = page.getByRole("region", { name: "Edit referral" });
   await detail.getByLabel("Stage", { exact: true }).selectOption("referral_received");
@@ -121,7 +117,7 @@ test("a referral arriving moves the role to Ready to Apply on its own", async ({
   );
 
   await page.goto("/opportunities");
-  await page.getByRole("link", { name: new RegExp(ROLE, "i") }).click();
+  page = await openRecordDetail(page, page.getByRole("link", { name: new RegExp(ROLE, "i") }));
 
   await expect(
     page
@@ -134,7 +130,7 @@ test("the funnel separates a referred application from a cold one", async ({
   page,
 }) => {
   await page.goto("/opportunities");
-  await page.getByRole("link", { name: new RegExp(ROLE, "i") }).click();
+  page = await openRecordDetail(page, page.getByRole("link", { name: new RegExp(ROLE, "i") }));
 
   await page.getByLabel("Portal", { exact: true }).fill("Referral portal");
   await page.getByLabel("Applied date", { exact: true }).fill(workspaceDate());

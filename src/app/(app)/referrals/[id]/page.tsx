@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PreviewLink as Link } from "@/components/record-preview";
 
 import { InteractionChannelMark } from "@/components/interaction-channel";
 import { ReferralEditForm } from "@/components/referral-forms";

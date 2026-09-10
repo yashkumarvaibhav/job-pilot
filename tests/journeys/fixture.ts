@@ -161,3 +161,20 @@ export async function expectRow(page: Page, text: string) {
     timeout: 15_000,
   });
 }
+
+/** Inspect a record, then continue its workflow through the explicit full-page action. */
+export async function openRecordDetail(page: Page, trigger: Locator): Promise<Page> {
+  const originalUrl = page.url();
+  await expect(trigger).toHaveAttribute("data-preview-ready", "true");
+  await trigger.click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await expect(page).toHaveURL(originalUrl);
+  const [detail] = await Promise.all([
+    page.waitForEvent("popup"),
+    dialog.getByRole("link", { name: /Open (company|contact|opportunity|referral) in new tab/ }).click(),
+  ]);
+  await expect(detail.locator("h1")).toBeVisible();
+  await page.close();
+  return detail;
+}

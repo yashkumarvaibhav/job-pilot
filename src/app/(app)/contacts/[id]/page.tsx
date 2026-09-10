@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PreviewLink as Link } from "@/components/record-preview";
 import type { ReactNode } from "react";
 
 import { Reply } from "lucide-react";

@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import {
   JOURNEY_ACCOUNTS,
   openCreateForm,
+  openRecordDetail,
   signIn,
   workspaceDate,
 } from "./fixture";
@@ -105,7 +106,7 @@ test("applying to a role records the application and moves the count", async ({
   page,
 }) => {
   await page.goto("/opportunities");
-  await page.getByRole("link", { name: new RegExp(ROLE, "i") }).click();
+  page = await openRecordDetail(page, page.getByRole("link", { name: new RegExp(ROLE, "i") }));
   await expect(page.getByRole("heading", { name: "Application" })).toBeVisible();
 
   await page.getByLabel("Portal", { exact: true }).fill("Careers site");

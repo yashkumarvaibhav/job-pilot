@@ -70,6 +70,6 @@ export function taskEntityHref(
   if (entityType === "contact") return `/contacts/${entityId}`;
   if (entityType === "opportunity") return `/opportunities/${entityId}`;
   if (entityType === "referral") return `/referrals/${entityId}`;
-  if (entityType === "application") return "/applications";
+  if (entityType === "application") return `/applications?preview=${encodeURIComponent(entityId)}`;
   return null;
 }

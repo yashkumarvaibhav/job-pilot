@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { PreviewLink as Link } from "./record-preview";
 import { useMemo, useState } from "react";
 import { AlertTriangle, CheckCircle2, Plus, Trash2 } from "lucide-react";
 
@@ -223,7 +223,7 @@ export function TemplateManager({
               <p className="eyebrow">Owner-written</p>
               <h2>Edit template</h2>
             </div>
-            <Link className="btn btn--ghost" href="/compose">
+            <Link preview className="btn btn--ghost" href="/compose">
               Preview in composer
             </Link>
           </div>

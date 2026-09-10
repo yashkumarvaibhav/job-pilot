@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PreviewLink as Link } from "@/components/record-preview";
 
 import {
   ApplicationEditForm,
@@ -70,15 +70,15 @@ function Field({
       <dt>{label}</dt>
       <dd>
         {href ? (
-          <a
-            aria-label="Open job post in a new tab"
+          <Link preview
+            aria-label="Preview job post"
             className="table-link"
             href={href}
             rel="noopener noreferrer"
             target="_blank"
           >
             Open job post
-          </a>
+          </Link>
         ) : value === null || value === ""
           ? "Not set"
           : typeof value === "boolean"

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PreviewLink as Link } from "./record-preview";
 
 import { ReferralStageChip } from "@/components/referral-status";
 import { StaleFlag } from "@/components/stale-chip";

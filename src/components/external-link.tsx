@@ -1,22 +1,26 @@
 import { ExternalLink as ExternalLinkIcon } from "lucide-react";
 
+import { PreviewLink } from "./record-preview";
+
 import { canonicalHttpUrl } from "@/domain/web-url";
 
 export function SafeExternalLink({
   className = "table-link",
   href,
   label,
+  preview = true,
 }: {
   className?: string;
   href: string;
   label: string;
+  preview?: boolean;
 }) {
   const safeHref = canonicalHttpUrl(href);
   if (!safeHref) return null;
 
   return (
-    <a
-      aria-label={`${label} in a new tab`}
+    <PreviewLink preview={preview}
+      aria-label={preview ? `Preview ${label}` : `${label} in a new tab`}
       className={className}
       href={safeHref}
       rel="noopener noreferrer"
@@ -24,6 +28,6 @@ export function SafeExternalLink({
     >
       {label}
       <ExternalLinkIcon aria-hidden="true" />
-    </a>
+    </PreviewLink>
   );
 }

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PreviewLink as Link } from "./record-preview";
 
 import { TaskActions } from "@/components/task-forms";
 import {
@@ -47,7 +47,7 @@ export function TaskCollection({
                   <td>{row.title}</td>
                   <td>
                     {href && row.entityLabel ? (
-                      <Link className="table-link" href={href}>
+                      <Link preview className="table-link" href={href}>
                         {row.entityLabel}
                       </Link>
                     ) : (
@@ -88,7 +88,7 @@ export function TaskCollection({
               </span>
               <span>
                 {href && row.entityLabel ? (
-                  <Link className="inline-link" href={href}>
+                  <Link preview className="inline-link" href={href}>
                     {row.entityLabel}
                   </Link>
                 ) : (

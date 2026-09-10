@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { PreviewLink as Link } from "./record-preview";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 
@@ -171,7 +171,7 @@ export function MorningDigestPanel({
         <button className="btn" disabled={pending} type="submit">
           {pending ? "Saving…" : "Save digest"}
         </button>
-        <Link className="btn btn--ghost" href="/settings/digest/preview">
+        <Link preview className="btn btn--ghost" href="/settings/digest/preview">
           Preview
         </Link>
         <p aria-live="polite" className="settings-saved" role="status">

@@ -1,5 +1,5 @@
 import { Building2, ExternalLink } from "lucide-react";
-import Link from "next/link";
+import { PreviewLink as Link } from "@/components/record-preview";
 
 import { RolledUpStageChip } from "@/components/application-status";
 import { OpportunityCreatePanel } from "@/components/opportunity-form";

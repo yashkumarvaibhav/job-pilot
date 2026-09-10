@@ -1,5 +1,5 @@
 import { ExternalLink as ExternalLinkIcon } from "lucide-react";
-import Link from "next/link";
+import { PreviewLink as Link } from "./record-preview";
 import type { ReactNode } from "react";
 
 import { canonicalHttpUrl } from "@/domain/web-url";
@@ -18,7 +18,7 @@ export type RecordDestination = {
   missingLabel: string;
   href: string | null;
   icon: ReactNode;
-  /** External destinations open in a new tab; internal ones navigate normally. */
+  /** External destinations use validated HTTP URLs. */
   external?: boolean;
 };
 
@@ -110,7 +110,7 @@ function RecordDestinationControl({
 
   if (!external) {
     return (
-      <Link className="record-action" href={safeHref}>
+      <Link preview className="record-action" href={safeHref}>
         {icon}
         {label}
       </Link>
@@ -118,8 +118,8 @@ function RecordDestinationControl({
   }
 
   return (
-    <a
-      aria-label={`${label} in a new tab`}
+    <Link preview
+      aria-label={`Preview ${label}`}
       className="record-action"
       href={safeHref}
       rel="noopener noreferrer"
@@ -128,6 +128,6 @@ function RecordDestinationControl({
       {icon}
       {label}
       <ExternalLinkIcon aria-hidden="true" className="record-action__external" />
-    </a>
+    </Link>
   );
 }
