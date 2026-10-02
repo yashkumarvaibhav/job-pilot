@@ -2,7 +2,7 @@
 
 **A multi-tenant job-search CRM and outreach engine with deterministic workflows, explicit send approval, and verifiable data safety.**
 
-[Try the public early-access build](https://jobpilot.yashkumarvaibhav.me) · [Check readiness](https://jobpilot.yashkumarvaibhav.me/api/ready)
+Not hosted publicly at the moment; see [Local development](#local-development).
 
 ![Job Pilot — run your job search from one clear workspace](public/og.png)
 
